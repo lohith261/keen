@@ -1,8 +1,15 @@
 /**
  * KEEN API Client — typed fetch wrapper for the backend REST API.
+ *
+ * In development the Vite proxy forwards /api and /ws to localhost:8000.
+ * In production set VITE_API_URL to your Cloud Run backend URL, e.g.:
+ *   VITE_API_URL=https://keen-backend-xxxx.run.app
  */
 
-const API_BASE = '/api/v1';
+// In dev VITE_API_URL is empty → relative paths hit the Vite proxy.
+// In production it's the full Cloud Run URL.
+const BACKEND_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+const API_BASE = `${BACKEND_URL}/api/v1`;
 
 /** Read the current data mode from localStorage without needing React context. */
 function isDemoMode(): boolean {
@@ -153,10 +160,18 @@ export function connectAgentStatus(
   engagementId?: string,
   onMessage?: (event: Record<string, unknown>) => void,
 ): WebSocket {
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsHost = window.location.host;
+  // Derive WebSocket URL from VITE_API_URL if set, otherwise use current host
+  let wsBase: string;
+  if (BACKEND_URL) {
+    // Convert https://... → wss://... or http://... → ws://...
+    wsBase = BACKEND_URL.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+  } else {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsBase = `${wsProtocol}//${window.location.host}`;
+  }
+
   const params = engagementId ? `?engagement_id=${engagementId}` : '';
-  const ws = new WebSocket(`${wsProtocol}//${wsHost}/ws/agent-status${params}`);
+  const ws = new WebSocket(`${wsBase}/ws/agent-status${params}`);
 
   ws.onmessage = (event) => {
     try {

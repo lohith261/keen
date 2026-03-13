@@ -1,0 +1,63 @@
+# Google Cloud Build — builds and deploys the KEEN backend to Cloud Run.
+#
+# Trigger: push to main branch
+# Required substitutions (set in Cloud Build trigger):
+#   _REGION          e.g. us-central1
+#   _SERVICE_NAME    e.g. keen-backend
+#   _PROJECT_ID      your GCP project ID (usually auto-set as $PROJECT_ID)
+
+steps:
+  # 1. Build the production Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build
+    args:
+      - build
+      - -f
+      - Dockerfile.backend
+      - -t
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA
+      - -t
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest
+      - .
+
+  # 2. Push to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push
+    args:
+      - push
+      - --all-tags
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}
+
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image=gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --min-instances=0
+      - --max-instances=3
+      - --memory=512Mi
+      - --cpu=1
+      - --timeout=3600
+      # Secrets injected from Secret Manager at deploy time.
+      # Add them via: gcloud secrets create <NAME> --data-file=-
+      - --set-secrets=DATABASE_URL=KEEN_DATABASE_URL:latest,REDIS_URL=KEEN_REDIS_URL:latest,SECRET_KEY=KEEN_SECRET_KEY:latest,CREDENTIAL_ENCRYPTION_KEY=KEEN_CREDENTIAL_ENCRYPTION_KEY:latest,ANTHROPIC_API_KEY=KEEN_ANTHROPIC_API_KEY:latest,GEMINI_API_KEY=KEEN_GEMINI_API_KEY:latest,TINYFISH_API_KEY=KEEN_TINYFISH_API_KEY:latest
+      - --set-env-vars=ENVIRONMENT=production,DEBUG=false
+
+images:
+  - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA
+  - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE_NAME: keen-backend
+
+options:
+  logging: CLOUD_LOGGING_ONLY
