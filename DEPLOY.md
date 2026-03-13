@@ -1,107 +1,66 @@
 # KEEN — Production Deployment Guide
 
-**Frontend → Vercel** | **Backend → Google Cloud Run**
+**Frontend → Vercel** | **Backend → Fly.io**
+
+Total time: ~15 minutes
 
 ---
 
 ## Prerequisites
 
-- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud`)
-- [Vercel CLI](https://vercel.com/docs/cli) (`npm i -g vercel`) — or use the Vercel dashboard
-- A GCP project with billing enabled
-- A Supabase project (PostgreSQL)
-- An Upstash Redis instance (free tier at [upstash.com](https://upstash.com))
+- [flyctl](https://fly.io/docs/hands-on/install-flyctl/) — `brew install flyctl` (Mac) or `curl -L https://fly.io/install.sh | sh` (Linux)
+- A [Vercel](https://vercel.com) account (free)
+- A [Fly.io](https://fly.io) account (free — no credit card for hobby plan)
 
 ---
 
-## Part 1 — Backend on Google Cloud Run
+## Part 1 — Backend on Fly.io
 
-### 1. Set up GCP project
-
-```bash
-# Authenticate
-gcloud auth login
-
-# Set your project
-export PROJECT_ID=your-gcp-project-id
-gcloud config set project $PROJECT_ID
-
-# Enable required APIs
-gcloud services enable \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  secretmanager.googleapis.com \
-  containerregistry.googleapis.com
-```
-
-### 2. Store secrets in Secret Manager
+### 1. Login and create the app
 
 ```bash
-# Run each command and paste the value when prompted (Ctrl+D to save)
+flyctl auth login
 
-echo -n "postgresql+asyncpg://user:pass@host/db" | gcloud secrets create KEEN_DATABASE_URL --data-file=-
-echo -n "rediss://default:token@host:port" | gcloud secrets create KEEN_REDIS_URL --data-file=-
-echo -n "$(openssl rand -hex 32)" | gcloud secrets create KEEN_SECRET_KEY --data-file=-
-echo -n "your-32-byte-base64-key" | gcloud secrets create KEEN_CREDENTIAL_ENCRYPTION_KEY --data-file=-
-echo -n "sk-ant-..." | gcloud secrets create KEEN_ANTHROPIC_API_KEY --data-file=-
-echo -n "AIza..." | gcloud secrets create KEEN_GEMINI_API_KEY --data-file=-
-echo -n "tf-..." | gcloud secrets create KEEN_TINYFISH_API_KEY --data-file=-
-```
-
-### 3. Grant Cloud Run access to secrets
-
-```bash
-# Get the Cloud Run service account email
-export SA=$(gcloud iam service-accounts list --filter="displayName:Compute Engine default" --format="value(email)")
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:$SA" \
-  --role="roles/secretmanager.secretAccessor"
-```
-
-### 4. Build and deploy manually (first time)
-
-```bash
 # From the repo root:
-docker build -f Dockerfile.backend -t gcr.io/$PROJECT_ID/keen-backend .
-docker push gcr.io/$PROJECT_ID/keen-backend
-
-gcloud run deploy keen-backend \
-  --image=gcr.io/$PROJECT_ID/keen-backend \
-  --region=us-central1 \
-  --platform=managed \
-  --allow-unauthenticated \
-  --port=8080 \
-  --memory=512Mi \
-  --cpu=1 \
-  --timeout=3600 \
-  --min-instances=0 \
-  --max-instances=3 \
-  --set-secrets=DATABASE_URL=KEEN_DATABASE_URL:latest,REDIS_URL=KEEN_REDIS_URL:latest,SECRET_KEY=KEEN_SECRET_KEY:latest,CREDENTIAL_ENCRYPTION_KEY=KEEN_CREDENTIAL_ENCRYPTION_KEY:latest,ANTHROPIC_API_KEY=KEEN_ANTHROPIC_API_KEY:latest,GEMINI_API_KEY=KEEN_GEMINI_API_KEY:latest,TINYFISH_API_KEY=KEEN_TINYFISH_API_KEY:latest \
-  --set-env-vars=ENVIRONMENT=production,DEBUG=false
+cd backend
+fly launch --name keen-backend --region iad --no-deploy
+# When prompted "Would you like to set up a Postgresql database?" → Yes
+# When prompted "Would you like to set up an Upstash Redis database?" → Yes
+# This creates both and links them automatically.
 ```
 
-> Cloud Run will print your service URL, e.g. `https://keen-backend-xxxx.run.app`
+> `fly launch` reads `fly.toml` and sets up everything. It will print your app URL: `https://keen-backend.fly.dev`
 
-### 5. Set CORS to allow Vercel frontend
+### 2. Set secrets
 
 ```bash
-export BACKEND_URL=https://keen-backend-xxxx.run.app   # your Cloud Run URL
+# Run from the /backend directory.
+# Paste each value after the = sign.
 
-gcloud run services update keen-backend \
-  --region=us-central1 \
-  --update-env-vars=CORS_ORIGINS=https://keen-sigma.vercel.app,http://localhost:5173
+fly secrets set \
+  SECRET_KEY="$(openssl rand -hex 32)" \
+  CREDENTIAL_ENCRYPTION_KEY="your-32-byte-base64-key" \
+  ANTHROPIC_API_KEY="sk-ant-..." \
+  GEMINI_API_KEY="AIza..." \
+  TINYFISH_API_KEY="tf-..."
 ```
 
-### 6. (Optional) Auto-deploy on push with Cloud Build
+> `DATABASE_URL` and `REDIS_URL` are set automatically by `fly launch` when you accept the Postgres and Redis prompts.
+
+### 3. Deploy
 
 ```bash
-# Connect your GitHub repo in Cloud Build triggers:
-# GCP Console → Cloud Build → Triggers → Connect Repository
-# Then create a trigger:
-#   - Event: Push to main branch
-#   - Config: cloudbuild.yaml (at repo root)
-#   - Substitutions: _PROJECT_ID, _REGION=us-central1, _SERVICE_NAME=keen-backend
+# From /backend:
+fly deploy
+```
+
+That's it. Fly builds your Docker image, pushes it, runs `alembic upgrade head`, and starts the server.
+
+### 4. Verify
+
+```bash
+curl https://keen-backend.fly.dev/api/v1/health
+# → {"status":"healthy","version":"0.1.0","environment":"production"}
 ```
 
 ---
@@ -117,7 +76,7 @@ Go to [vercel.com/new](https://vercel.com/new) → Import your `keen` GitHub rep
 | Setting | Value |
 |---|---|
 | **Root Directory** | `frontend` |
-| **Framework Preset** | Vite |
+| **Framework Preset** | Vite (auto-detected) |
 | **Build Command** | `npm run build` |
 | **Output Directory** | `dist` |
 
@@ -125,37 +84,47 @@ Go to [vercel.com/new](https://vercel.com/new) → Import your `keen` GitHub rep
 
 | Key | Value |
 |---|---|
-| `VITE_API_URL` | `https://keen-backend-xxxx.run.app` |
-
-> Replace with your actual Cloud Run URL from Part 1 Step 4.
+| `VITE_API_URL` | `https://keen-backend.fly.dev` |
 
 ### 4. Deploy
 
-Click **Deploy**. Your existing `keen-sigma.vercel.app` domain will automatically use the new build.
+Click **Deploy**. Your `keen-sigma.vercel.app` URL is now live and talking to the Fly.io backend.
 
 ---
 
-## Part 3 — Verify deployment
+## Part 3 — Update CORS on the backend
 
 ```bash
-# Health check
-curl https://keen-backend-xxxx.run.app/api/v1/health
-
-# Expected:
-# {"status":"healthy","version":"0.1.0","environment":"production"}
+# From /backend — let the backend accept requests from your Vercel domain:
+fly secrets set CORS_ORIGINS="https://keen-sigma.vercel.app,http://localhost:5173"
 ```
 
-Then open `https://keen-sigma.vercel.app` → click **DASHBOARD** → create a demo engagement → watch the pipeline run live.
+---
+
+## Future deploys
+
+Every time you push to `main` and want to redeploy:
+
+```bash
+# From /backend:
+fly deploy
+```
+
+Or set up automatic deploys via Fly's GitHub integration:
+```bash
+fly ext github-actions
+```
 
 ---
 
 ## Local development (unchanged)
 
 ```bash
-# Backend
-cd backend && uvicorn app.main:app --reload --port 8000
+# Start all services with Docker Compose:
+docker compose up
 
-# Frontend (proxies /api and /ws to localhost:8000 via vite.config.ts)
+# Or run individually:
+cd backend && uvicorn app.main:app --reload --port 8000
 cd frontend && npm run dev
 ```
 
@@ -163,28 +132,29 @@ No `VITE_API_URL` needed locally — the Vite proxy handles it.
 
 ---
 
-## Architecture diagram
+## Architecture
 
 ```
-Browser (Vercel)
+Browser (Vercel — keen-sigma.vercel.app)
     │
-    ├── REST: VITE_API_URL/api/v1/*  ─────────────────────────► Cloud Run (FastAPI)
-    │                                                               │
-    └── WebSocket: wss://VITE_API_URL/ws/agent-status              ├── Supabase (PostgreSQL)
-                                                                    ├── Upstash (Redis)
-                                                                    └── TinyFish (browser automation)
+    ├── REST:      VITE_API_URL/api/v1/*   ──► Fly.io (FastAPI)
+    │                                              │
+    └── WebSocket: wss://VITE_API_URL/ws/*         ├── Fly Postgres
+                                                   ├── Upstash Redis
+                                                   └── TinyFish (browser automation)
 ```
 
 ---
 
 ## Secrets reference
 
-| Secret Manager key | Maps to env var | Description |
-|---|---|---|
-| `KEEN_DATABASE_URL` | `DATABASE_URL` | Supabase PostgreSQL async URL |
-| `KEEN_REDIS_URL` | `REDIS_URL` | Upstash Redis URL (`rediss://...`) |
-| `KEEN_SECRET_KEY` | `SECRET_KEY` | JWT signing key (64 hex chars) |
-| `KEEN_CREDENTIAL_ENCRYPTION_KEY` | `CREDENTIAL_ENCRYPTION_KEY` | AES-256-GCM vault key |
-| `KEEN_ANTHROPIC_API_KEY` | `ANTHROPIC_API_KEY` | Claude (primary LLM) |
-| `KEEN_GEMINI_API_KEY` | `GEMINI_API_KEY` | Gemini (fallback LLM) |
-| `KEEN_TINYFISH_API_KEY` | `TINYFISH_API_KEY` | TinyFish browser automation |
+| Secret | Description |
+|---|---|
+| `DATABASE_URL` | Auto-set by Fly Postgres |
+| `REDIS_URL` | Auto-set by Upstash Redis |
+| `SECRET_KEY` | JWT signing key |
+| `CREDENTIAL_ENCRYPTION_KEY` | AES-256-GCM vault key (32-byte base64) |
+| `ANTHROPIC_API_KEY` | Claude (primary LLM) |
+| `GEMINI_API_KEY` | Gemini (fallback LLM) |
+| `TINYFISH_API_KEY` | TinyFish browser automation |
+| `CORS_ORIGINS` | Comma-separated allowed origins |
