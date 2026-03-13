@@ -8,10 +8,13 @@ human analyst would, storing structured records with source attribution.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 from app.agents.base import BaseAgent, StepResult
+from app.llm.exceptions import LLMError
+from app.llm.prompts import SYSTEM_PLAN_EXTRACTION, USER_PLAN_EXTRACTION
 
 logger = logging.getLogger(__name__)
 
@@ -167,21 +170,56 @@ class ResearchAgent(BaseAgent):
     # ── Step implementations ─────────────────────────────
 
     async def _plan_extraction(self) -> StepResult:
-        """Plan which data sources to access and what to extract."""
-        # In production, this would use LLM to create an intelligent extraction plan
-        # based on the engagement type and target company
+        """Plan which data sources to access and what to extract using LLM."""
+        # Idempotency: skip if already planned (checkpoint resume)
+        if self.state.get("extraction_plan"):
+            plan = self.state["extraction_plan"]
+            return StepResult(
+                success=True,
+                data={"sources_planned": len(plan), "plan": plan},
+                message=f"Extraction plan restored from checkpoint ({len(plan)} sources)",
+            )
 
-        sources_planned = []
-        for source_id, source_info in DATA_SOURCES.items():
-            sources_planned.append({
-                "source": source_id,
-                "name": source_info["name"],
-                "category": source_info["category"],
-                "extractions": source_info["extractions"],
-            })
+        config = self.state.get("pipeline_config", {})
+
+        try:
+            from app.llm import get_llm_client
+
+            llm = get_llm_client()
+
+            sources_json = json.dumps(
+                {sid: info for sid, info in DATA_SOURCES.items()},
+                indent=2,
+            )
+            user_prompt = USER_PLAN_EXTRACTION.format(
+                company_name=config.get("company_name", "Unknown"),
+                industry=config.get("industry", "Unknown"),
+                engagement_type=config.get("engagement_type", "full_diligence"),
+                sources_json=sources_json,
+            )
+
+            result = await llm.complete_json(SYSTEM_PLAN_EXTRACTION, user_prompt)
+            sources_planned = result.get("sources", [])
+            logger.info(
+                "LLM planned extraction for %d sources: %s",
+                len(sources_planned),
+                result.get("reasoning", ""),
+            )
+        except LLMError:
+            logger.warning("LLM unavailable for extraction planning, using all sources")
+            sources_planned = [
+                {
+                    "source": sid,
+                    "name": info["name"],
+                    "category": info["category"],
+                    "extractions": info["extractions"],
+                    "priority": 3,
+                    "rationale": "Fallback — LLM unavailable",
+                }
+                for sid, info in DATA_SOURCES.items()
+            ]
 
         self.state["extraction_plan"] = sources_planned
-        logger.info(f"Planned extraction from {len(sources_planned)} sources")
 
         return StepResult(
             success=True,
