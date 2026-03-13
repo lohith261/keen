@@ -22,6 +22,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "anthropic>=0.40.0",
     "google-generativeai>=0.8.0",
+    "psycopg2-binary>=2.9.9",
 ]
 
 [project.optional-dependencies]

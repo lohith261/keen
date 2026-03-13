@@ -1,40 +1,37 @@
-# Fly.io configuration for KEEN backend (FastAPI)
-# Deploy with: fly deploy (from the /backend directory)
+# fly.toml app configuration file for keen-backend
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
-app = "keen-backend"
-primary_region = "iad"   # US East — change to "lhr" for Europe, "nrt" for Asia
+app = 'keen-backend'
+primary_region = 'iad'
 
 [build]
-  dockerfile = "../Dockerfile.backend"
-  build_target = ""
+  dockerfile = '../Dockerfile.backend'
 
 [env]
-  ENVIRONMENT = "production"
-  DEBUG       = "false"
-  PORT        = "8080"
+  DEBUG = 'false'
+  ENVIRONMENT = 'production'
+  PORT = '8080'
 
 [http_service]
-  internal_port        = 8080
-  force_https          = true
-  auto_stop_machines   = false   # Keep alive — no cold starts
-  auto_start_machines  = true
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
   min_machines_running = 1
 
   [http_service.concurrency]
-    type       = "requests"
+    type = 'requests'
     hard_limit = 200
     soft_limit = 150
 
-[[vm]]
-  memory = "512mb"
-  cpu_kind = "shared"
-  cpus = 1
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '10s'
+    grace_period = '15s'
+    method = 'GET'
+    path = '/api/v1/health'
 
-# Health check — Fly restarts the machine if this fails
-[[services.http_checks]]
-  interval      = "30s"
-  timeout       = "10s"
-  grace_period  = "15s"
-  method        = "GET"
-  path          = "/api/v1/health"
-  protocol      = "https"
+[[vm]]
+  memory = '512mb'
+  cpus = 1

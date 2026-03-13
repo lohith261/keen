@@ -22,8 +22,11 @@ config = context.config
 settings = get_settings()
 
 # Override sqlalchemy.url with our settings
-# Convert async URL to sync for Alembic
-sync_url = settings.database_url.replace("+asyncpg", "")
+# Normalize to plain postgresql:// for Alembic (sync driver)
+_raw_url = settings.database_url
+if _raw_url.startswith("postgres://"):
+    _raw_url = _raw_url.replace("postgres://", "postgresql://", 1)
+sync_url = _raw_url.replace("+asyncpg", "")
 config.set_main_option("sqlalchemy.url", sync_url)
 
 if config.config_file_name is not None:
