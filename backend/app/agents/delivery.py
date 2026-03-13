@@ -10,11 +10,19 @@ Receives validated analysis from the Analysis Agent and:
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from app.agents.base import BaseAgent, StepResult
+from app.llm.exceptions import LLMError
+from app.llm.prompts import (
+    SYSTEM_DETAILED_REPORT,
+    SYSTEM_EXECUTIVE_SUMMARY,
+    USER_DETAILED_REPORT,
+    USER_EXECUTIVE_SUMMARY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,61 +105,166 @@ class DeliveryAgent(BaseAgent):
         )
 
     async def _generate_executive_summary(self) -> StepResult:
-        """
-        Generate a one-page executive summary.
+        """Generate a one-page executive summary using LLM."""
+        # Idempotency
+        existing = self.state.get("executive_summary", {})
+        if existing.get("key_findings"):
+            return StepResult(
+                success=True,
+                data={"summary_generated": True, "section_count": len(existing.get("key_findings", []))},
+                message="Executive summary restored from checkpoint",
+            )
 
-        TODO: In production, use LLM to synthesize findings into a
-        compelling executive narrative with key takeaways.
-        """
         analysis = self.state.get("analysis_input", {})
+        config = self.state.get("pipeline_config", {})
 
-        # Placeholder structure — LLM generates this in production
-        executive_summary = {
-            "title": "Due Diligence Executive Summary",
-            "date": datetime.now(timezone.utc).isoformat(),
-            "key_findings": [],
-            "risk_assessment": "pending",
-            "recommendation": "pending",
-            "source_count": analysis.get("source_count", 0),
-        }
+        try:
+            from app.llm import get_llm_client
+
+            llm = get_llm_client()
+
+            user_prompt = USER_EXECUTIVE_SUMMARY.format(
+                company_name=config.get("company_name", "Target Company"),
+                source_count=analysis.get("source_count", 0),
+                revenue_variances=json.dumps(analysis.get("revenue_variances", []), default=str)[:5000],
+                cost_variances=json.dumps(analysis.get("cost_variances", []), default=str)[:5000],
+                customer_analysis=json.dumps(analysis.get("customer_analysis", {}), default=str)[:5000],
+                market_analysis=json.dumps(analysis.get("market_analysis", {}), default=str)[:5000],
+                exceptions=json.dumps(analysis.get("exceptions", {}), default=str)[:3000],
+                cross_references=json.dumps(analysis.get("cross_references", {}), default=str)[:5000],
+            )
+
+            result = await llm.complete_json(
+                SYSTEM_EXECUTIVE_SUMMARY, user_prompt, max_tokens=4096
+            )
+
+            executive_summary = {
+                "title": "Due Diligence Executive Summary",
+                "date": datetime.now(timezone.utc).isoformat(),
+                "key_findings": result.get("key_findings", []),
+                "risk_assessment": result.get("risk_assessment", "pending"),
+                "recommendation": result.get("recommendation", "pending"),
+                "recommendation_rationale": result.get("recommendation_rationale", ""),
+                "source_count": analysis.get("source_count", 0),
+            }
+
+            logger.info(
+                "LLM generated executive summary: %d findings, recommendation=%s",
+                len(executive_summary["key_findings"]),
+                executive_summary["recommendation"],
+            )
+
+        except LLMError:
+            logger.warning("LLM unavailable for executive summary, using placeholder")
+            executive_summary = {
+                "title": "Due Diligence Executive Summary",
+                "date": datetime.now(timezone.utc).isoformat(),
+                "key_findings": [],
+                "risk_assessment": "pending — LLM unavailable",
+                "recommendation": "insufficient_data",
+                "recommendation_rationale": "Executive summary could not be generated — LLM unavailable.",
+                "source_count": analysis.get("source_count", 0),
+            }
 
         self.state["executive_summary"] = executive_summary
 
         return StepResult(
             success=True,
-            data={"summary_generated": True, "section_count": 5},
+            data={
+                "summary_generated": True,
+                "findings_count": len(executive_summary.get("key_findings", [])),
+            },
             message="Executive summary generated",
         )
 
     async def _generate_detailed_report(self) -> StepResult:
-        """
-        Generate full detailed report with all findings.
+        """Generate full detailed report with all findings using batched LLM calls."""
+        # Idempotency
+        existing = self.state.get("detailed_report", {})
+        if existing.get("status") == "generated":
+            sections = existing.get("sections", [])
+            return StepResult(
+                success=True,
+                data={"report_sections": len(sections)},
+                message=f"Detailed report restored from checkpoint ({len(sections)} sections)",
+            )
 
-        TODO: In production, generates a complete due diligence report
-        with sections for financial analysis, market positioning,
-        customer metrics, risk factors, and recommendations.
-        """
-        report = {
-            "sections": [
-                "Executive Summary",
-                "Financial Analysis",
-                "Revenue Deep-Dive",
-                "Cost Structure Analysis",
-                "Customer Metrics & Retention",
-                "Market Position & Competition",
-                "Risk Factors & Exceptions",
-                "Recommendations",
-                "Data Sources & Methodology",
-            ],
-            "status": "pending_llm_integration",
-        }
+        analysis = self.state.get("analysis_input", {})
+        config = self.state.get("pipeline_config", {})
+        exec_summary = self.state.get("executive_summary", {})
+        company_name = config.get("company_name", "Target Company")
+
+        # Define 3 batches of sections
+        batches = [
+            ["Executive Summary", "Financial Analysis", "Revenue Deep-Dive"],
+            ["Cost Structure Analysis", "Customer Metrics & Retention", "Market Position & Competition"],
+            ["Risk Factors & Exceptions", "Recommendations", "Data Sources & Methodology"],
+        ]
+
+        all_sections: list[dict] = []
+        # Resume from partially completed batches
+        completed_batches = self.state.get("report_batches_completed", 0)
+
+        try:
+            from app.llm import get_llm_client
+
+            llm = get_llm_client()
+
+            exec_summary_str = json.dumps(exec_summary, default=str)[:8000]
+            analysis_str = json.dumps(analysis, default=str)[:20_000]
+
+            for batch_idx, batch_sections in enumerate(batches):
+                if batch_idx < completed_batches:
+                    # Already completed in a previous run
+                    all_sections.extend(
+                        self.state.get(f"report_batch_{batch_idx}", [])
+                    )
+                    continue
+
+                user_prompt = USER_DETAILED_REPORT.format(
+                    company_name=company_name,
+                    section_names=", ".join(batch_sections),
+                    executive_summary=exec_summary_str,
+                    analysis_data=analysis_str,
+                )
+
+                result = await llm.complete_json(
+                    SYSTEM_DETAILED_REPORT, user_prompt, max_tokens=4096
+                )
+
+                batch_result = result.get("sections", [])
+                all_sections.extend(batch_result)
+
+                # Save batch progress for checkpoint resilience
+                self.state[f"report_batch_{batch_idx}"] = batch_result
+                self.state["report_batches_completed"] = batch_idx + 1
+
+            logger.info("LLM generated detailed report with %d sections", len(all_sections))
+
+            report = {"sections": all_sections, "status": "generated"}
+
+        except LLMError:
+            logger.warning("LLM unavailable for detailed report, using placeholders")
+            placeholder_sections = [
+                {
+                    "section_title": name,
+                    "content": "Content generation unavailable — LLM service not reachable.",
+                    "data_points": [],
+                    "confidence_level": "unavailable",
+                }
+                for batch in batches
+                for name in batch
+                if name not in [s.get("section_title") for s in all_sections]
+            ]
+            all_sections.extend(placeholder_sections)
+            report = {"sections": all_sections, "status": "partial"}
 
         self.state["detailed_report"] = report
 
         return StepResult(
             success=True,
-            data={"report_sections": len(report["sections"])},
-            message=f"Detailed report generated with {len(report['sections'])} sections",
+            data={"report_sections": len(all_sections), "status": report["status"]},
+            message=f"Detailed report generated with {len(all_sections)} sections",
         )
 
     async def _generate_data_appendix(self) -> StepResult:

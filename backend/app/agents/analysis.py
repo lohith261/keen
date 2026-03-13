@@ -10,10 +10,18 @@ Receives structured data from the Research Agent and performs:
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 from app.agents.base import BaseAgent, StepResult
+from app.llm.exceptions import LLMError
+from app.llm.prompts import (
+    SYSTEM_CROSS_REFERENCE,
+    SYSTEM_SCORE_FINDINGS,
+    USER_CROSS_REFERENCE,
+    USER_SCORE_FINDINGS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,22 +117,75 @@ class AnalysisAgent(BaseAgent):
         )
 
     async def _cross_reference_sources(self) -> StepResult:
-        """Cross-reference data across multiple sources to find overlaps and gaps."""
-        # TODO: In production, use LLM to intelligently cross-reference
-        # e.g., match CRM pipeline to ERP revenue, marketing spend to ROI
+        """Cross-reference data across multiple sources using LLM."""
+        # Idempotency: skip if already cross-referenced
+        if self.state.get("cross_references", {}).get("summary"):
+            xrefs = self.state["cross_references"]
+            total = sum(len(v) for v in xrefs.values() if isinstance(v, list))
+            return StepResult(
+                success=True,
+                data={"cross_references_found": total},
+                message=f"Cross-references restored from checkpoint ({total} found)",
+            )
+
+        ingested = self.state.get("ingested_data", {})
         findings = []
 
-        self.state["cross_references"] = {
-            "crm_erp_overlap": [],
-            "marketing_revenue_correlation": [],
-            "market_data_benchmarks": [],
-        }
+        try:
+            from app.llm import get_llm_client
+
+            llm = get_llm_client()
+
+            # Compact summary of ingested data (cap at 50K chars)
+            data_summary = json.dumps(ingested, indent=1, default=str)[:50_000]
+
+            user_prompt = USER_CROSS_REFERENCE.format(
+                source_count=len(ingested),
+                data_summary=data_summary,
+            )
+
+            result = await llm.complete_json(SYSTEM_CROSS_REFERENCE, user_prompt)
+
+            cross_refs = {
+                "crm_erp_overlap": result.get("crm_erp_overlap", []),
+                "marketing_revenue_correlation": result.get("marketing_revenue_correlation", []),
+                "market_data_benchmarks": result.get("market_data_benchmarks", []),
+                "summary": result.get("summary", ""),
+            }
+
+            # Generate findings for low-quality matches
+            for xref in cross_refs["crm_erp_overlap"]:
+                if xref.get("match_quality", 1.0) < 0.5:
+                    findings.append({
+                        "type": "discrepancy",
+                        "source_system": "_vs_".join(xref.get("sources_compared", [])),
+                        "title": f"Data mismatch: {xref.get('metric', 'unknown metric')}",
+                        "description": xref.get("notes", ""),
+                        "data": xref,
+                        "severity": "warning",
+                        "requires_human_review": True,
+                    })
+
+            total = sum(len(v) for v in cross_refs.values() if isinstance(v, list))
+            logger.info("LLM cross-referencing found %d references", total)
+
+        except LLMError:
+            logger.warning("LLM unavailable for cross-referencing, returning empty")
+            cross_refs = {
+                "crm_erp_overlap": [],
+                "marketing_revenue_correlation": [],
+                "market_data_benchmarks": [],
+                "summary": "LLM unavailable — cross-referencing skipped",
+            }
+            total = 0
+
+        self.state["cross_references"] = cross_refs
 
         return StepResult(
             success=True,
-            data={"cross_references_found": 0},
+            data={"cross_references_found": total},
             findings=findings,
-            message="Cross-referencing complete",
+            message=f"Cross-referencing complete — {total} references found",
         )
 
     async def _detect_revenue_variances(self) -> StepResult:
@@ -227,12 +288,72 @@ class AnalysisAgent(BaseAgent):
         )
 
     async def _score_findings(self) -> StepResult:
-        """Assign confidence scores to all findings."""
-        # TODO: Use LLM to score each finding's reliability and impact
+        """Assign confidence scores to all findings using LLM."""
+        # Idempotency
+        if self.state.get("scored_findings"):
+            scored = self.state["scored_findings"]
+            return StepResult(
+                success=True,
+                data={
+                    "findings_scored": len(scored),
+                    "overall_confidence": self.state.get("overall_confidence", 0),
+                },
+                message=f"Scored findings restored from checkpoint ({len(scored)})",
+            )
+
+        # Gather all findings from analysis steps
+        all_findings = (
+            self.state.get("revenue_variances", [])
+            + self.state.get("cost_variances", [])
+        )
+        # Add cross-reference discrepancies
+        xrefs = self.state.get("cross_references", {})
+        for xref in xrefs.get("crm_erp_overlap", []):
+            if xref.get("match_quality", 1.0) < 0.5:
+                all_findings.append(xref)
+
+        if not all_findings:
+            return StepResult(
+                success=True,
+                data={"findings_scored": 0, "overall_confidence": 0},
+                message="No findings to score",
+            )
+
+        try:
+            from app.llm import get_llm_client
+
+            llm = get_llm_client()
+
+            findings_json = json.dumps(all_findings, indent=1, default=str)[:30_000]
+            user_prompt = USER_SCORE_FINDINGS.format(findings_json=findings_json)
+
+            result = await llm.complete_json(SYSTEM_SCORE_FINDINGS, user_prompt)
+
+            scored = result.get("scored_findings", [])
+            overall = result.get("overall_confidence", 0)
+            logger.info("LLM scored %d findings, overall confidence: %.2f", len(scored), overall)
+
+        except LLMError:
+            logger.warning("LLM unavailable for scoring, assigning default scores")
+            scored = [
+                {
+                    "finding_index": i,
+                    "reliability_score": 0.5,
+                    "impact_score": 0.5,
+                    "confidence_justification": "Default score — LLM unavailable",
+                    "recommended_action": "flag_for_review",
+                }
+                for i in range(len(all_findings))
+            ]
+            overall = 0.5
+
+        self.state["scored_findings"] = scored
+        self.state["overall_confidence"] = overall
+
         return StepResult(
             success=True,
-            data={"findings_scored": 0},
-            message="Finding scoring complete",
+            data={"findings_scored": len(scored), "overall_confidence": overall},
+            message=f"Scored {len(scored)} findings (confidence: {overall:.0%})",
         )
 
     async def _compile_analysis(self) -> StepResult:
@@ -243,7 +364,10 @@ class AnalysisAgent(BaseAgent):
             "cost_variances": self.state.get("cost_variances", []),
             "customer_analysis": self.state.get("customer_analysis", {}),
             "market_analysis": self.state.get("market_analysis", {}),
+            "cross_references": self.state.get("cross_references", {}),
             "exceptions": self.state.get("exceptions", {}),
+            "scored_findings": self.state.get("scored_findings", []),
+            "overall_confidence": self.state.get("overall_confidence", 0),
         }
 
         return StepResult(
