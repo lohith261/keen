@@ -8,6 +8,24 @@ KEEN is a multi-agent operational intelligence platform designed to replicate Mc
 
 ---
 
+## 📸 Screenshots
+
+| Hero | Performance Metrics |
+|---|---|
+| ![Hero](docs/screenshots/screenshot-hero.png) | ![Metrics](docs/screenshots/screenshot-metrics.png) |
+
+| Agent Architecture | Operational Capabilities |
+|---|---|
+| ![Agents](docs/screenshots/screenshot-agents.png) | ![Capabilities](docs/screenshots/screenshot-capabilities.png) |
+
+| Enterprise Integrations | Competitive Advantage |
+|---|---|
+| ![Integrations](docs/screenshots/screenshot-integrations.png) | ![Moat](docs/screenshots/screenshot-moat.png) |
+
+> 🌐 Live demo: [keen-sigma.vercel.app](https://keen-sigma.vercel.app)
+
+---
+
 ## 🎯 Design Targets
 
 | Metric | Target |
