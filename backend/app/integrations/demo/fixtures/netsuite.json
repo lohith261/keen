@@ -1,0 +1,59 @@
+{
+  "revenue_data": [
+    {"period": "2025-Q1", "revenue": 4850000, "arr_contribution": 19400000, "recurring_pct": 91.2, "new_logo": 620000, "expansion": 380000, "churn": -95000},
+    {"period": "2025-Q2", "revenue": 5210000, "arr_contribution": 20840000, "recurring_pct": 92.1, "new_logo": 710000, "expansion": 420000, "churn": -110000},
+    {"period": "2025-Q3", "revenue": 5580000, "arr_contribution": 22320000, "recurring_pct": 93.0, "new_logo": 680000, "expansion": 450000, "churn": -130000},
+    {"period": "2025-Q4", "revenue": 6050000, "arr_contribution": 24200000, "recurring_pct": 93.8, "new_logo": 820000, "expansion": 510000, "churn": -145000},
+    {"period": "2026-Q1 (partial)", "revenue": 1720000, "arr_contribution": 24800000, "recurring_pct": 94.1, "new_logo": 280000, "expansion": 160000, "churn": -42000}
+  ],
+  "expense_records": [
+    {"period": "2025-Q4", "category": "Cost of Revenue", "amount": 1512500, "pct_of_revenue": 25.0},
+    {"period": "2025-Q4", "category": "Sales & Marketing", "amount": 2117500, "pct_of_revenue": 35.0},
+    {"period": "2025-Q4", "category": "Research & Development", "amount": 1210000, "pct_of_revenue": 20.0},
+    {"period": "2025-Q4", "category": "General & Administrative", "amount": 847000, "pct_of_revenue": 14.0},
+    {"period": "2025-Q4", "category": "Depreciation & Amortization", "amount": 121000, "pct_of_revenue": 2.0},
+    {"period": "2025-Q3", "category": "Cost of Revenue", "amount": 1395000, "pct_of_revenue": 25.0},
+    {"period": "2025-Q3", "category": "Sales & Marketing", "amount": 1953000, "pct_of_revenue": 35.0},
+    {"period": "2025-Q3", "category": "Research & Development", "amount": 1116000, "pct_of_revenue": 20.0},
+    {"period": "2025-Q3", "category": "General & Administrative", "amount": 780600, "pct_of_revenue": 14.0}
+  ],
+  "journal_entries": [
+    {"JE_id": "JE-2025-1042", "date": "2025-12-31", "description": "Q4 Revenue Recognition", "debit_account": "Accounts Receivable", "credit_account": "Revenue", "amount": 6050000},
+    {"JE_id": "JE-2025-1041", "date": "2025-12-31", "description": "Deferred Revenue Release Q4", "debit_account": "Deferred Revenue", "credit_account": "Revenue", "amount": 310000},
+    {"JE_id": "JE-2025-1040", "date": "2025-12-15", "description": "AWS Infrastructure Invoice", "debit_account": "COGS - Hosting", "credit_account": "Accounts Payable", "amount": 387000},
+    {"JE_id": "JE-2025-1039", "date": "2025-12-15", "description": "Payroll - December", "debit_account": "Salaries Expense", "credit_account": "Cash", "amount": 1840000},
+    {"JE_id": "JE-2025-1038", "date": "2025-11-30", "description": "Q4 Sales Commission Accrual", "debit_account": "Sales Commission Expense", "credit_account": "Accrued Liabilities", "amount": 245000},
+    {"JE_id": "JE-2025-1005", "date": "2025-10-01", "description": "Prepaid Annual Software Licenses", "debit_account": "Prepaid Expenses", "credit_account": "Cash", "amount": 198000}
+  ],
+  "balance_sheet": {
+    "as_of": "2025-12-31",
+    "assets": {
+      "cash_and_equivalents": 8420000,
+      "accounts_receivable": 4150000,
+      "deferred_contract_costs": 620000,
+      "prepaid_expenses": 340000,
+      "total_current_assets": 13530000,
+      "property_equipment_net": 820000,
+      "intangible_assets_net": 1240000,
+      "total_assets": 15590000
+    },
+    "liabilities": {
+      "accounts_payable": 780000,
+      "accrued_liabilities": 1120000,
+      "deferred_revenue_current": 5840000,
+      "deferred_revenue_longterm": 1420000,
+      "total_liabilities": 9160000
+    },
+    "equity": {
+      "common_stock": 18500000,
+      "accumulated_deficit": -12070000,
+      "total_equity": 6430000
+    }
+  },
+  "_meta": {
+    "source": "netsuite",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — FY2025 total revenue $21.69M. ARR at 2025-Q4 end: $24.2M. R&D shows $1.21M in Q4, annualized $4.84M. NOTE: SAP cost centers show R&D at $4.2M annual — $640K discrepancy flagged for analysis."
+  }
+}

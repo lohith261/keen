@@ -13,6 +13,7 @@ import logging
 from typing import Any
 
 from app.agents.base import BaseAgent, StepResult
+from app.integrations.demo import DemoConnector
 from app.llm.exceptions import LLMError
 from app.llm.prompts import SYSTEM_PLAN_EXTRACTION, USER_PLAN_EXTRACTION
 
@@ -229,68 +230,82 @@ class ResearchAgent(BaseAgent):
 
     async def _authenticate_source(self, source: str) -> StepResult:
         """
-        Authenticate to an enterprise data source.
+        Authenticate to a data source.
 
-        TODO: Integrate with AuthManager for real authentication.
-        This is the plugin point for TinyFish browser automation
-        (handles the 60% of sources without APIs).
+        In demo mode (default) uses DemoConnector with fixture data.
+        In production, replace with AuthManager + real connectors.
         """
         source_info = DATA_SOURCES.get(source, {})
         auth_type = source_info.get("auth_type", "unknown")
+        demo_mode = self.state.get("pipeline_config", {}).get("demo_mode", True)
 
-        # Placeholder: In production, this calls AuthManager which handles:
-        # - OAuth flows (Salesforce, Dynamics, QuickBooks)
-        # - API key injection (HubSpot, ZoomInfo, Crunchbase)
-        # - Browser-based auth via TinyFish (Bloomberg, PitchBook, CapIQ)
-        # - SSO/MFA flows (SAP)
-        # - Public access (SEC EDGAR)
-
-        logger.info(f"Authenticating to {source} via {auth_type}")
+        if demo_mode:
+            connector = DemoConnector(source_id=source)
+            session = await connector.authenticate({})
+            # Store connector so _extract_source can reuse it without re-loading fixture
+            self.state[f"_connector_{source}"] = connector
+            logger.info("DemoConnector: authenticated to %s (demo mode)", source)
+        else:
+            # Production: call AuthManager here
+            logger.info("Authenticating to %s via %s (production)", source, auth_type)
 
         self.state[f"auth_{source}"] = {
             "authenticated": True,
-            "auth_type": auth_type,
+            "auth_type": auth_type if not demo_mode else "demo",
             "session_id": f"session_{source}_{self.agent_run_id}",
+            "demo_mode": demo_mode,
         }
 
         return StepResult(
             success=True,
-            data={"source": source, "auth_type": auth_type, "status": "authenticated"},
-            message=f"Authenticated to {source_info.get('name', source)}",
+            data={"source": source, "auth_type": auth_type, "status": "authenticated", "demo_mode": demo_mode},
+            message=f"Authenticated to {source_info.get('name', source)}" + (" (demo)" if demo_mode else ""),
         )
 
     async def _extract_source(self, source: str) -> StepResult:
         """
-        Extract data from an authenticated enterprise source.
+        Extract data from an authenticated source.
 
-        TODO: Integrate with actual data connectors.
-        Each connector handles:
-        - API calls for programmatic sources
-        - Browser automation for UI-only sources
-        - Rate limiting and pagination
-        - Data normalization
+        In demo mode uses DemoConnector fixture data.
+        In production, replace connector lookup with real connector instantiation.
         """
         source_info = DATA_SOURCES.get(source, {})
         extractions = source_info.get("extractions", [])
+        demo_mode = self.state.get("pipeline_config", {}).get("demo_mode", True)
 
-        # Placeholder: In production, this calls the appropriate connector
-        # from app.integrations (Salesforce, NetSuite, etc.)
-        extracted_data = {}
-        findings = []
+        extracted_data: dict = {}
+        findings: list = []
+        total_records = 0
 
-        for extraction_type in extractions:
-            # Simulate structured data extraction
-            extracted_data[extraction_type] = {
-                "source": source,
-                "type": extraction_type,
-                "records_extracted": 0,  # Placeholder
-                "status": "pending_integration",
-            }
+        if demo_mode:
+            # Reuse the connector created during authenticate, or create fresh
+            connector: DemoConnector = self.state.get(f"_connector_{source}") or DemoConnector(source_id=source)
+
+            if not connector._fixture:
+                await connector.authenticate({})
+
+            for extraction_type in extractions:
+                records = await connector.extract({"type": extraction_type})
+                extracted_data[extraction_type] = records
+                total_records += len(records)
+                logger.debug("DemoConnector[%s/%s]: %d records", source, extraction_type, len(records))
+        else:
+            # Production: instantiate the appropriate connector and call extract()
+            for extraction_type in extractions:
+                extracted_data[extraction_type] = {
+                    "source": source,
+                    "type": extraction_type,
+                    "records_extracted": 0,
+                    "status": "pending_live_integration",
+                }
 
         self.state[f"data_{source}"] = extracted_data
 
         logger.info(
-            f"Extracted {len(extractions)} datasets from {source_info.get('name', source)}"
+            "Extracted %d datasets (%d records) from %s",
+            len(extractions),
+            total_records,
+            source_info.get("name", source),
         )
 
         return StepResult(
@@ -299,9 +314,11 @@ class ResearchAgent(BaseAgent):
                 "source": source,
                 "datasets": list(extracted_data.keys()),
                 "total_extractions": len(extractions),
+                "total_records": total_records,
+                "demo_mode": demo_mode,
             },
             findings=findings,
-            message=f"Extracted {len(extractions)} datasets from {source_info.get('name', source)}",
+            message=f"Extracted {len(extractions)} datasets ({total_records} records) from {source_info.get('name', source)}",
         )
 
     async def _validate_extractions(self) -> StepResult:

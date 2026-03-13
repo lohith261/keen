@@ -1,0 +1,36 @@
+{
+  "market_comps": [
+    {"ticker": "DDOG", "name": "Datadog Inc.", "market_cap_m": 38200, "ev_m": 37400, "revenue_ttm_m": 2680, "ev_revenue": 13.9, "revenue_growth_pct": 26.1, "gross_margin_pct": 81.2, "rule_of_40": 35.1},
+    {"ticker": "MDB", "name": "MongoDB Inc.", "market_cap_m": 22100, "ev_m": 21600, "revenue_ttm_m": 1680, "ev_revenue": 12.9, "revenue_growth_pct": 22.3, "gross_margin_pct": 74.8, "rule_of_40": 29.8},
+    {"ticker": "ZS", "name": "Zscaler Inc.", "market_cap_m": 30400, "ev_m": 29800, "revenue_ttm_m": 2110, "ev_revenue": 14.1, "revenue_growth_pct": 31.2, "gross_margin_pct": 78.4, "rule_of_40": 42.6},
+    {"ticker": "PCTY", "name": "Paylocity Holding Corp", "market_cap_m": 8640, "ev_m": 8420, "revenue_ttm_m": 1240, "ev_revenue": 6.8, "revenue_growth_pct": 14.8, "gross_margin_pct": 68.2, "rule_of_40": 21.3},
+    {"ticker": "NCNO", "name": "nCino Inc.", "market_cap_m": 3820, "ev_m": 3640, "revenue_ttm_m": 480, "ev_revenue": 7.6, "revenue_growth_pct": 17.4, "gross_margin_pct": 61.8, "rule_of_40": 22.1},
+    {"ticker": "ALTR", "name": "Altair Engineering", "market_cap_m": 4960, "ev_m": 5100, "revenue_ttm_m": 680, "ev_revenue": 7.5, "revenue_growth_pct": 12.6, "gross_margin_pct": 72.4, "rule_of_40": 19.8}
+  ],
+  "industry_benchmarks": {
+    "segment": "B2B SaaS Analytics (Mid-Market, $20-50M ARR)",
+    "median_revenue_growth_pct": 28.4,
+    "median_gross_margin_pct": 74.6,
+    "median_ev_revenue_multiple": 8.2,
+    "median_net_revenue_retention_pct": 118.0,
+    "median_cac_payback_months": 18.4,
+    "median_magic_number": 0.82,
+    "median_rule_of_40": 24.8,
+    "top_quartile_ev_revenue": 12.4,
+    "bottom_quartile_ev_revenue": 5.1,
+    "peer_count": 84
+  },
+  "competitor_financials": [
+    {"company": "ThoughtSpot", "stage": "Private", "est_revenue_m": 180, "est_growth_pct": 22, "last_valuation_m": 4200, "ev_revenue_implied": 23.3, "differentiator": "AI-powered search analytics"},
+    {"company": "Sisense", "stage": "Private", "est_revenue_m": 120, "est_growth_pct": 18, "last_valuation_m": 1000, "ev_revenue_implied": 8.3, "differentiator": "Embedded analytics"},
+    {"company": "Looker (Google)", "stage": "Acquired", "est_revenue_m": 300, "est_growth_pct": 15, "last_valuation_m": 2600, "ev_revenue_implied": 8.7, "differentiator": "LookML semantic layer"},
+    {"company": "Metabase", "stage": "Private", "est_revenue_m": 60, "est_growth_pct": 45, "last_valuation_m": 240, "ev_revenue_implied": 4.0, "differentiator": "Open-source, low-cost"},
+    {"company": "Preset", "stage": "Private", "est_revenue_m": 18, "est_growth_pct": 55, "last_valuation_m": 58, "ev_revenue_implied": 3.2, "differentiator": "Managed Apache Superset"}
+  ],
+  "_meta": {
+    "source": "bloomberg",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — Median EV/Revenue for comps is 8.2x. At $24.2M ARR, implied valuation range $99-300M. Company at 35% growth is above median but Rule of 40 score (~36) is slightly above median."
+  }
+}

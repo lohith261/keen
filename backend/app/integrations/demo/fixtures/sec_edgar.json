@@ -1,0 +1,91 @@
+{
+  "10k_filings": [
+    {
+      "form_type": "10-K",
+      "filing_date": "2025-03-28",
+      "period_of_report": "2024-12-31",
+      "company": "Acme Analytics Corp",
+      "cik": "0001987654",
+      "accession_number": "0001987654-25-000012",
+      "revenue": 16070000,
+      "net_loss": -2840000,
+      "total_assets": 11420000,
+      "cash": 6890000,
+      "employees": 112,
+      "auditor": "Deloitte & Touche LLP",
+      "going_concern_flag": false,
+      "key_risk_factors": [
+        "Competition from well-funded incumbents (Tableau, Power BI)",
+        "Customer concentration: top 5 customers represent 31% of revenue",
+        "Dependence on AWS infrastructure",
+        "Key personnel risk: CTO holds critical institutional knowledge"
+      ]
+    }
+  ],
+  "10q_filings": [
+    {
+      "form_type": "10-Q",
+      "filing_date": "2025-11-14",
+      "period_of_report": "2025-09-30",
+      "revenue_ytd": 15640000,
+      "net_loss_ytd": -1840000,
+      "cash": 7920000,
+      "deferred_revenue": 6840000,
+      "key_disclosures": ["No material changes to risk factors", "Expanded data center presence to EU region"]
+    },
+    {
+      "form_type": "10-Q",
+      "filing_date": "2025-08-12",
+      "period_of_report": "2025-06-30",
+      "revenue_ytd": 10060000,
+      "net_loss_ytd": -1240000,
+      "cash": 7540000,
+      "deferred_revenue": 6420000,
+      "key_disclosures": ["Completed Series B extension of $3.5M", "Hired new CFO in April 2025"]
+    },
+    {
+      "form_type": "10-Q",
+      "filing_date": "2025-05-13",
+      "period_of_report": "2025-03-31",
+      "revenue_ytd": 4850000,
+      "net_loss_ytd": -620000,
+      "cash": 9240000,
+      "deferred_revenue": 5980000,
+      "key_disclosures": ["No material changes"]
+    }
+  ],
+  "insider_transactions": [
+    {"form_type": "Form 4", "date": "2026-01-15", "insider": "Alex Morgan (CEO)", "transaction": "Sale", "shares": 50000, "price_per_share": 4.82, "total_value": 241000, "shares_remaining": 2840000},
+    {"form_type": "Form 4", "date": "2025-10-22", "insider": "Jordan Lee (CTO)", "transaction": "Option Exercise + Hold", "shares": 120000, "price_per_share": 1.20, "total_value": 144000, "shares_remaining": 3100000},
+    {"form_type": "Form 4", "date": "2025-07-18", "insider": "Patricia Nguyen (CFO)", "transaction": "Purchase", "shares": 40000, "price_per_share": 4.50, "total_value": 180000, "shares_remaining": 240000},
+    {"form_type": "Form 4", "date": "2025-04-02", "insider": "Alex Morgan (CEO)", "transaction": "Sale", "shares": 80000, "price_per_share": 4.10, "total_value": 328000, "shares_remaining": 2890000}
+  ],
+  "proxy_statements": [
+    {
+      "form_type": "DEF 14A",
+      "filing_date": "2025-04-15",
+      "meeting_date": "2025-05-20",
+      "ceo_total_comp": 620000,
+      "cfo_total_comp": 420000,
+      "cto_total_comp": 580000,
+      "board_size": 7,
+      "independent_directors": 4,
+      "total_shares_outstanding": 42800000,
+      "options_outstanding": 6400000,
+      "total_funding_raised_disclosed": 17500000,
+      "largest_shareholders": [
+        {"name": "Accel Partners", "pct": 24.8},
+        {"name": "Sequoia Capital", "pct": 18.2},
+        {"name": "Alex Morgan (CEO)", "pct": 8.1},
+        {"name": "Jordan Lee (CTO)", "pct": 7.2},
+        {"name": "Employee Options Pool", "pct": 14.9}
+      ]
+    }
+  ],
+  "_meta": {
+    "source": "sec_edgar",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — Proxy shows $17.5M total funding. Crunchbase shows $18M. $500K discrepancy. CEO sold shares twice in 12 months — potential concern. Customer concentration (top 5 = 31%) is a risk factor."
+  }
+}

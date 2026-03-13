@@ -1,0 +1,79 @@
+{
+  "profit_loss": {
+    "period": "FY2025",
+    "revenue": {
+      "software_subscriptions": 19780000,
+      "professional_services": 1480000,
+      "training_and_support": 430000,
+      "total_revenue": 21690000
+    },
+    "cost_of_goods_sold": {
+      "hosting_infrastructure": 1568000,
+      "third_party_software": 824000,
+      "implementation_services": 784000,
+      "support_personnel": 1136000,
+      "depreciation": 247000,
+      "total_cogs": 4559000
+    },
+    "gross_profit": 17131000,
+    "gross_margin_pct": 78.98,
+    "operating_expenses": {
+      "salaries_benefits": 12480000,
+      "sales_commissions": 980000,
+      "marketing_programs": 2560000,
+      "rent_facilities": 728000,
+      "travel_entertainment": 312000,
+      "software_subscriptions": 496000,
+      "legal_professional": 384000,
+      "other": 248000,
+      "total_opex": 18188000
+    },
+    "operating_loss": -1057000,
+    "interest_income": 186000,
+    "net_loss": -871000
+  },
+  "balance_sheet": {
+    "as_of": "2025-12-31",
+    "cash": 8420000,
+    "accounts_receivable": 4150000,
+    "other_current_assets": 960000,
+    "fixed_assets_net": 820000,
+    "total_assets": 14350000,
+    "accounts_payable": 780000,
+    "deferred_revenue": 7260000,
+    "other_liabilities": 1120000,
+    "total_liabilities": 9160000,
+    "shareholders_equity": 5190000
+  },
+  "cash_flow": {
+    "period": "FY2025",
+    "operating_activities": {
+      "net_loss": -871000,
+      "depreciation_amortization": 461000,
+      "stock_compensation": 1840000,
+      "change_in_ar": -680000,
+      "change_in_deferred_revenue": 1420000,
+      "change_in_ap_accrued": 214000,
+      "net_cash_from_operations": 2384000
+    },
+    "investing_activities": {
+      "capex": -318000,
+      "capitalized_software": -820000,
+      "net_cash_from_investing": -1138000
+    },
+    "financing_activities": {
+      "proceeds_from_equity": 0,
+      "debt_repayment": 0,
+      "net_cash_from_financing": 0
+    },
+    "net_change_in_cash": 1246000,
+    "beginning_cash": 7174000,
+    "ending_cash": 8420000
+  },
+  "_meta": {
+    "source": "quickbooks",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — Operating cash flow positive $2.38M despite net loss (non-cash SBC). Cash runway approx 3.5 years at current burn."
+  }
+}

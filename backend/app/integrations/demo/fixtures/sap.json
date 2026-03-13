@@ -1,0 +1,57 @@
+{
+  "financial_statements": {
+    "period": "FY2025",
+    "income_statement": {
+      "revenue": 21690000,
+      "cost_of_revenue": 5423000,
+      "gross_profit": 16267000,
+      "gross_margin_pct": 75.0,
+      "operating_expenses": {
+        "sales_marketing": 8460000,
+        "research_development": 4200000,
+        "general_administrative": 3361000,
+        "total_opex": 16021000
+      },
+      "ebitda": 246000,
+      "ebitda_margin_pct": 1.1,
+      "net_loss": -512000
+    },
+    "headcount_by_department": {
+      "engineering": 52,
+      "sales": 31,
+      "marketing": 18,
+      "customer_success": 22,
+      "general_administrative": 14,
+      "total": 137
+    }
+  },
+  "cost_centers": [
+    {"cc_id": "CC-ENG-001", "name": "Core Platform Engineering", "department": "Engineering", "q4_2025_spend": 1820000, "annual_2025_spend": 6890000, "headcount": 38},
+    {"cc_id": "CC-ENG-002", "name": "Data Infrastructure", "department": "Engineering", "q4_2025_spend": 420000, "annual_2025_spend": 1640000, "headcount": 14},
+    {"cc_id": "CC-RD-001", "name": "Product R&D", "department": "R&D", "q4_2025_spend": 610000, "annual_2025_spend": 2480000, "headcount": 18},
+    {"cc_id": "CC-RD-002", "name": "Applied Research", "department": "R&D", "q4_2025_spend": 425000, "annual_2025_spend": 1720000, "headcount": 12},
+    {"cc_id": "CC-SM-001", "name": "Enterprise Sales", "department": "Sales", "q4_2025_spend": 1240000, "annual_2025_spend": 4980000, "headcount": 22},
+    {"cc_id": "CC-SM-002", "name": "SDR Team", "department": "Sales", "q4_2025_spend": 380000, "annual_2025_spend": 1490000, "headcount": 9},
+    {"cc_id": "CC-MKT-001", "name": "Demand Generation", "department": "Marketing", "q4_2025_spend": 520000, "annual_2025_spend": 2180000, "headcount": 10},
+    {"cc_id": "CC-MKT-002", "name": "Brand & Content", "department": "Marketing", "q4_2025_spend": 195000, "annual_2025_spend": 780000, "headcount": 8},
+    {"cc_id": "CC-CS-001", "name": "Customer Success", "department": "Customer Success", "q4_2025_spend": 710000, "annual_2025_spend": 2860000, "headcount": 22},
+    {"cc_id": "CC-GA-001", "name": "Finance & Legal", "department": "G&A", "q4_2025_spend": 380000, "annual_2025_spend": 1520000, "headcount": 7},
+    {"cc_id": "CC-GA-002", "name": "HR & Operations", "department": "G&A", "q4_2025_spend": 290000, "annual_2025_spend": 1160000, "headcount": 7}
+  ],
+  "purchase_orders": [
+    {"PO_id": "PO-2025-8821", "vendor": "Amazon Web Services", "category": "Cloud Infrastructure", "amount": 1548000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2025-8822", "vendor": "Snowflake Inc.", "category": "Data Warehouse", "amount": 312000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2025-8823", "vendor": "Salesforce Inc.", "category": "CRM License", "amount": 148000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2025-8824", "vendor": "HubSpot Inc.", "category": "Marketing Platform", "amount": 84000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2025-8825", "vendor": "Okta Inc.", "category": "Identity Management", "amount": 62000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2025-8826", "vendor": "Google Workspace", "category": "Productivity Suite", "amount": 48000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2025-8827", "vendor": "ZoomInfo Technologies", "category": "Sales Intelligence", "amount": 96000, "status": "Invoiced", "period": "FY2025"},
+    {"PO_id": "PO-2026-0012", "vendor": "Amazon Web Services", "category": "Cloud Infrastructure", "amount": 142000, "status": "Open", "period": "Q1-2026"}
+  ],
+  "_meta": {
+    "source": "sap",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — SAP shows R&D at $4.2M annual. NetSuite shows $4.84M (annualized from Q4 run-rate). SAP headcount = 137 vs ZoomInfo 148 — discrepancy flagged."
+  }
+}

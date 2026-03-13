@@ -1,0 +1,54 @@
+{
+  "pipeline_data": [
+    {"Id": "006A001", "Name": "TechCorp Enterprise Expansion", "Amount": 420000, "StageName": "Proposal/Price Quote", "CloseDate": "2026-04-30", "Probability": 65, "AccountName": "TechCorp Inc.", "OwnerId": "005A001"},
+    {"Id": "006A002", "Name": "FinServ Analytics Suite", "Amount": 380000, "StageName": "Negotiation/Review", "CloseDate": "2026-03-31", "Probability": 80, "AccountName": "FinServ Group", "OwnerId": "005A002"},
+    {"Id": "006A003", "Name": "HealthCo Data Platform", "Amount": 290000, "StageName": "Value Proposition", "CloseDate": "2026-05-15", "Probability": 40, "AccountName": "HealthCo Systems", "OwnerId": "005A001"},
+    {"Id": "006A004", "Name": "RetailMax BI Deployment", "Amount": 510000, "StageName": "Id. Decision Makers", "CloseDate": "2026-06-30", "Probability": 25, "AccountName": "RetailMax Corp", "OwnerId": "005A003"},
+    {"Id": "006A005", "Name": "LogisticsPro Upgrade", "Amount": 175000, "StageName": "Negotiation/Review", "CloseDate": "2026-03-28", "Probability": 90, "AccountName": "LogisticsPro LLC", "OwnerId": "005A002"},
+    {"Id": "006A006", "Name": "EduTech Analytics Package", "Amount": 95000, "StageName": "Proposal/Price Quote", "CloseDate": "2026-04-15", "Probability": 60, "AccountName": "EduTech Solutions", "OwnerId": "005A004"},
+    {"Id": "006A007", "Name": "ManufactureCo Full Suite", "Amount": 640000, "StageName": "Perception Analysis", "CloseDate": "2026-07-31", "Probability": 20, "AccountName": "ManufactureCo", "OwnerId": "005A003"},
+    {"Id": "006A008", "Name": "GovHealth Agency License", "Amount": 820000, "StageName": "Proposal/Price Quote", "CloseDate": "2026-05-30", "Probability": 35, "AccountName": "GovHealth Agency", "OwnerId": "005A001"},
+    {"Id": "006A009", "Name": "StartupXYZ Seed Deal", "Amount": 48000, "StageName": "Qualification", "CloseDate": "2026-04-01", "Probability": 70, "AccountName": "StartupXYZ Inc.", "OwnerId": "005A004"},
+    {"Id": "006A010", "Name": "InsureCo Platform Refresh", "Amount": 310000, "StageName": "Negotiation/Review", "CloseDate": "2026-03-25", "Probability": 85, "AccountName": "InsureCo Ltd", "OwnerId": "005A002"}
+  ],
+  "deal_history": [
+    {"Id": "006B001", "Name": "BankFirst CRM Integration", "Amount": 520000, "CloseDate": "2026-01-15", "StageName": "Closed Won", "AccountName": "BankFirst"},
+    {"Id": "006B002", "Name": "MediaGroup Analytics", "Amount": 185000, "CloseDate": "2026-01-28", "StageName": "Closed Won", "AccountName": "MediaGroup Co"},
+    {"Id": "006B003", "Name": "RetailNow Dashboard", "Amount": 270000, "CloseDate": "2025-12-10", "StageName": "Closed Won", "AccountName": "RetailNow"},
+    {"Id": "006B004", "Name": "PharmaData Suite", "Amount": 610000, "CloseDate": "2025-11-22", "StageName": "Closed Won", "AccountName": "PharmaData Inc."},
+    {"Id": "006B005", "Name": "TechStartup Lite Plan", "Amount": 36000, "CloseDate": "2025-11-05", "StageName": "Closed Won", "AccountName": "TechStartup"},
+    {"Id": "006B006", "Name": "EnergyCo BI Platform", "Amount": 490000, "CloseDate": "2025-10-18", "StageName": "Closed Won", "AccountName": "EnergyCo"},
+    {"Id": "006B007", "Name": "HospitalSys Reporting", "Amount": 340000, "CloseDate": "2025-09-30", "StageName": "Closed Won", "AccountName": "HospitalSys"},
+    {"Id": "006B008", "Name": "AgriTech Analytics", "Amount": 120000, "CloseDate": "2025-09-12", "StageName": "Closed Won", "AccountName": "AgriTech Corp"},
+    {"Id": "006B009", "Name": "ConsultCo Seat Expansion", "Amount": 95000, "CloseDate": "2025-08-20", "StageName": "Closed Won", "AccountName": "ConsultCo"},
+    {"Id": "006B010", "Name": "TelecomPlus Full License", "Amount": 730000, "CloseDate": "2025-07-14", "StageName": "Closed Won", "AccountName": "TelecomPlus"},
+    {"Id": "006B011", "Name": "FinTechSeed Plan", "Amount": 42000, "CloseDate": "2025-06-30", "StageName": "Closed Won", "AccountName": "FinTechSeed"},
+    {"Id": "006B012", "Name": "LogisCorp Platform", "Amount": 280000, "CloseDate": "2025-06-15", "StageName": "Closed Won", "AccountName": "LogisCorp"},
+    {"Id": "006B013", "Name": "EdTechNow Enterprise", "Amount": 155000, "CloseDate": "2025-05-22", "StageName": "Closed Won", "AccountName": "EdTechNow"},
+    {"Id": "006B014", "Name": "SmartRetail Upsell", "Amount": 210000, "CloseDate": "2025-04-18", "StageName": "Closed Won", "AccountName": "SmartRetail"},
+    {"Id": "006B015", "Name": "PropTech Dashboard", "Amount": 145000, "CloseDate": "2025-03-05", "StageName": "Closed Won", "AccountName": "PropTech Inc."}
+  ],
+  "contact_records": [
+    {"Id": "003A001", "Name": "Sarah Chen", "Email": "s.chen@techcorp.com", "Title": "VP Analytics", "AccountName": "TechCorp Inc."},
+    {"Id": "003A002", "Name": "James Okafor", "Email": "j.okafor@finservgroup.com", "Title": "Chief Data Officer", "AccountName": "FinServ Group"},
+    {"Id": "003A003", "Name": "Maria Rodriguez", "Email": "m.rodriguez@healthco.com", "Title": "Director of Operations", "AccountName": "HealthCo Systems"},
+    {"Id": "003A004", "Name": "David Kim", "Email": "d.kim@retailmax.com", "Title": "SVP Technology", "AccountName": "RetailMax Corp"},
+    {"Id": "003A005", "Name": "Emma Thompson", "Email": "e.thompson@logisticspro.com", "Title": "CTO", "AccountName": "LogisticsPro LLC"},
+    {"Id": "003A006", "Name": "Raj Patel", "Email": "r.patel@bankfirst.com", "Title": "Head of Data Engineering", "AccountName": "BankFirst"},
+    {"Id": "003A007", "Name": "Lisa Wang", "Email": "l.wang@pharmadata.com", "Title": "VP Data & Analytics", "AccountName": "PharmaData Inc."},
+    {"Id": "003A008", "Name": "Tom Brennan", "Email": "t.brennan@energyco.com", "Title": "Director IT", "AccountName": "EnergyCo"}
+  ],
+  "activity_logs": [
+    {"Id": "00TA001", "Subject": "Demo Call - TechCorp", "ActivityDate": "2026-03-10", "Status": "Completed", "WhoId": "003A001"},
+    {"Id": "00TA002", "Subject": "Contract Review - FinServ", "ActivityDate": "2026-03-08", "Status": "Completed", "WhoId": "003A002"},
+    {"Id": "00TA003", "Subject": "Follow-up Email - HealthCo", "ActivityDate": "2026-03-12", "Status": "Not Started", "WhoId": "003A003"},
+    {"Id": "00TA004", "Subject": "Pricing Discussion - LogisticsPro", "ActivityDate": "2026-03-11", "Status": "Completed", "WhoId": "003A005"},
+    {"Id": "00TA005", "Subject": "QBR - BankFirst", "ActivityDate": "2026-03-05", "Status": "Completed", "WhoId": "003A006"}
+  ],
+  "_meta": {
+    "source": "salesforce",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — closed-won total $4.229M (last 12mo). Note: NetSuite reports $6.9M revenue vs $8.2M Salesforce closed-won — gap is intentional discrepancy for analysis."
+  }
+}

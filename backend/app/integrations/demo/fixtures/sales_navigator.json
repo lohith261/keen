@@ -1,0 +1,43 @@
+{
+  "decision_makers": [
+    {"name": "Alex Morgan", "title": "CEO & Co-Founder", "linkedin_url": "linkedin.com/in/alex-morgan-acme", "connections": 3840, "activity_score": "High", "recent_posts": 8, "open_to_connect": false},
+    {"name": "Jordan Lee", "title": "CTO & Co-Founder", "linkedin_url": "linkedin.com/in/jordan-lee-cto", "connections": 2980, "activity_score": "Medium", "recent_posts": 3, "open_to_connect": false},
+    {"name": "Marcus Williams", "title": "VP Sales", "linkedin_url": "linkedin.com/in/marcus-williams-sales", "connections": 4210, "activity_score": "Very High", "recent_posts": 15, "open_to_connect": true},
+    {"name": "Priya Sharma", "title": "VP Marketing", "linkedin_url": "linkedin.com/in/priya-sharma-mkt", "connections": 5640, "activity_score": "Very High", "recent_posts": 22, "open_to_connect": true},
+    {"name": "Patricia Nguyen", "title": "CFO", "linkedin_url": "linkedin.com/in/patricia-nguyen-cfo", "connections": 1820, "activity_score": "Low", "recent_posts": 1, "open_to_connect": false}
+  ],
+  "company_updates": [
+    {"date": "2026-03-08", "type": "Product Launch", "content": "Acme Analytics launches AI-powered anomaly detection module", "engagement": 284},
+    {"date": "2026-02-14", "type": "Partnership", "content": "Acme Analytics announces integration partnership with dbt Labs", "engagement": 412},
+    {"date": "2026-01-22", "type": "Award", "content": "Named to Gartner Cool Vendor in Analytics 2026", "engagement": 861},
+    {"date": "2025-12-10", "type": "Hiring", "content": "Acme Analytics is hiring: 12 open roles across Engineering and Sales", "engagement": 198},
+    {"date": "2025-11-05", "type": "Thought Leadership", "content": "The Future of Embedded Analytics: Our 2026 Predictions", "engagement": 634},
+    {"date": "2025-09-18", "type": "Customer Story", "content": "How TelecomPlus reduced reporting time by 80% with Acme Analytics", "engagement": 523}
+  ],
+  "hiring_trends": {
+    "total_employees_linkedin": 162,
+    "headcount_growth_12mo_pct": 12.5,
+    "open_roles_current": 12,
+    "open_roles_by_dept": {
+      "Engineering": 6,
+      "Sales": 4,
+      "Marketing": 1,
+      "Customer Success": 1
+    },
+    "recent_hires_30d": [
+      {"title": "Senior Backend Engineer", "dept": "Engineering"},
+      {"title": "Enterprise Account Executive - West", "dept": "Sales"},
+      {"title": "Senior Data Engineer", "dept": "Engineering"},
+      {"title": "SDR", "dept": "Sales"}
+    ],
+    "recent_departures_30d": [
+      {"title": "VP Engineering", "dept": "Engineering", "note": "Departed Feb 2026 — role being backfilled"}
+    ]
+  },
+  "_meta": {
+    "source": "sales_navigator",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — LinkedIn shows 162 employees vs ZoomInfo 148 vs SAP 137. VP Engineering departed Feb 2026 — key person risk. 12 open roles suggests continued growth investment."
+  }
+}

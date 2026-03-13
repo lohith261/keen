@@ -1,0 +1,40 @@
+{
+  "sales_pipeline": [
+    {"opportunity_id": "OPP-D001", "name": "GovHealth Digital Transformation", "stage": "Solution Development", "amount": 820000, "probability": 35, "close_date": "2026-05-30", "owner": "Sarah O'Brien", "source": "Inbound"},
+    {"opportunity_id": "OPP-D002", "name": "ManufactureCo Analytics Overhaul", "stage": "Proposal", "amount": 640000, "probability": 20, "close_date": "2026-07-31", "owner": "Tom Hassan", "source": "Partner"},
+    {"opportunity_id": "OPP-D003", "name": "FinServ Compliance Dashboard", "stage": "Negotiation", "amount": 380000, "probability": 80, "close_date": "2026-03-31", "owner": "Sarah O'Brien", "source": "Existing Customer"},
+    {"opportunity_id": "OPP-D004", "name": "RetailMax BI Modernisation", "stage": "Qualification", "amount": 510000, "probability": 25, "close_date": "2026-06-30", "owner": "Marcus Williams", "source": "Outbound"},
+    {"opportunity_id": "OPP-D005", "name": "TechCorp Seat Expansion", "stage": "Proposal", "amount": 420000, "probability": 65, "close_date": "2026-04-30", "owner": "Tom Hassan", "source": "Existing Customer"}
+  ],
+  "customer_segments": [
+    {"segment": "Enterprise (>1000 employees)", "customer_count": 18, "arr_m": 11.2, "avg_arr_k": 622, "nrr_pct": 124, "churn_rate_pct": 4.2},
+    {"segment": "Mid-Market (100-999 employees)", "customer_count": 62, "arr_m": 9.8, "avg_arr_k": 158, "nrr_pct": 110, "churn_rate_pct": 7.8},
+    {"segment": "SMB (<100 employees)", "customer_count": 104, "arr_m": 3.2, "avg_arr_k": 31, "churn_rate_pct": 18.4, "nrr_pct": 96},
+    {"segment": "Government/Public Sector", "customer_count": 4, "arr_m": 1.1, "avg_arr_k": 275, "nrr_pct": 118, "churn_rate_pct": 0}
+  ],
+  "revenue_forecast": {
+    "method": "Bottom-up pipeline analysis",
+    "period": "FY2026",
+    "committed_arr_start": 24200000,
+    "expected_new_logo_arr": 5800000,
+    "expected_expansion_arr": 3200000,
+    "expected_churn_arr": -2100000,
+    "forecast_arr_end": 31100000,
+    "forecast_revenue": 28400000,
+    "confidence": "Medium",
+    "upside_scenario_arr": 33500000,
+    "downside_scenario_arr": 27800000,
+    "key_assumptions": [
+      "GovHealth deal closes ($820K)",
+      "ManufactureCo closes H2",
+      "SMB churn stabilises at 18%",
+      "2 new enterprise logos per quarter"
+    ]
+  },
+  "_meta": {
+    "source": "dynamics",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — SMB segment churn at 18.4% is a red flag. Enterprise NRR 124% is strong. FY2026 forecast $28.4M revenue (31% growth) if pipeline assumptions hold. Mid-market NRR 110% below benchmark."
+  }
+}
