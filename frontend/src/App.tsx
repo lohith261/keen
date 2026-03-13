@@ -11,6 +11,7 @@ import {
   Server,
   GitBranch,
   ChevronDown,
+  LayoutDashboard,
 } from 'lucide-react';
 import WebGLBackground from './components/WebGLBackground';
 import ScrollReveal from './components/ScrollReveal';
@@ -23,7 +24,9 @@ import MagneticElement from './components/MagneticElement';
 import ThemeToggle from './components/ThemeToggle';
 import DemoModeToggle from './components/DemoModeToggle';
 import Loader from './components/Loader';
+import Dashboard from './components/dashboard/Dashboard';
 import { useTheme } from './context/ThemeContext';
+import { useView } from './context/ViewContext';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
 
 const agents = [
@@ -120,6 +123,7 @@ function App() {
   const [navSolid, setNavSolid] = useState(false);
   const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
+  const { view, setView } = useView();
 
   const scrollProgress = useScrollProgress();
   const mouse = useMousePosition();
@@ -154,6 +158,10 @@ function App() {
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
+
+  if (view === 'dashboard') {
+    return <Dashboard />;
+  }
 
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text overflow-x-hidden transition-colors duration-400">
@@ -196,6 +204,17 @@ function App() {
                 {timestamp}
               </div>
               <DemoModeToggle />
+              <button
+                onClick={() => setView('dashboard')}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px]
+                           font-mono font-semibold backdrop-blur-sm transition-all duration-300 tracking-wider
+                           border-theme-border bg-theme-border/30 text-theme-text-muted
+                           hover:border-theme-text/40 hover:text-theme-text"
+                title="Open pipeline dashboard"
+              >
+                <LayoutDashboard className="w-3 h-3 flex-shrink-0" />
+                <span className="hidden sm:inline">DASHBOARD</span>
+              </button>
               <ThemeToggle />
             </div>
           </div>
