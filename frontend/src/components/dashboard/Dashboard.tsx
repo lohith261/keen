@@ -1,0 +1,326 @@
+import { useEffect, useState } from 'react';
+import {
+  Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
+  PauseCircle, FlaskConical, Radio, Search,
+} from 'lucide-react';
+import { engagementsApi, type Engagement } from '../../lib/apiClient';
+import { useDemoMode } from '../../context/DemoModeContext';
+import { useView } from '../../context/ViewContext';
+import NewEngagementModal from './NewEngagementModal';
+import PipelineView from './PipelineView';
+import ResultsPanel from './ResultsPanel';
+
+type DashView = 'list' | 'pipeline' | 'results';
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
+  draft:     { label: 'Draft',     color: 'text-theme-text-muted', Icon: Clock },
+  running:   { label: 'Running',   color: 'text-blue-400',          Icon: Loader2 },
+  paused:    { label: 'Paused',    color: 'text-amber-400',         Icon: PauseCircle },
+  completed: { label: 'Completed', color: 'text-green-400',         Icon: CheckCircle2 },
+  failed:    { label: 'Failed',    color: 'text-red-400',           Icon: XCircle },
+};
+
+export default function Dashboard() {
+  const { setView } = useView();
+  const { isDemoMode } = useDemoMode();
+  const [engagements, setEngagements] = useState<Engagement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected] = useState<Engagement | null>(null);
+  const [dashView, setDashView] = useState<DashView>('list');
+
+  useEffect(() => {
+    engagementsApi
+      .list()
+      .then(setEngagements)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Poll running engagement every 5s to pick up status changes
+  useEffect(() => {
+    if (!selected || !['running', 'paused'].includes(selected.status)) return;
+    const id = setInterval(async () => {
+      try {
+        const fresh = await engagementsApi.get(selected.id);
+        setSelected(fresh);
+        setEngagements((prev) => prev.map((e) => (e.id === fresh.id ? fresh : e)));
+        if (fresh.status === 'completed') setDashView('results');
+      } catch {}
+    }, 5000);
+    return () => clearInterval(id);
+  }, [selected?.id, selected?.status]);
+
+  const handleCreated = (engagement: Engagement) => {
+    setEngagements((prev) => [engagement, ...prev]);
+    setSelected(engagement);
+    setDashView('pipeline');
+    setShowModal(false);
+  };
+
+  const openEngagement = async (engagement: Engagement) => {
+    try {
+      const fresh = await engagementsApi.get(engagement.id);
+      setSelected(fresh);
+      setDashView(fresh.status === 'completed' ? 'results' : 'pipeline');
+    } catch {
+      setSelected(engagement);
+      setDashView(engagement.status === 'completed' ? 'results' : 'pipeline');
+    }
+  };
+
+  const handleEngagementUpdate = (updated: Engagement) => {
+    setSelected(updated);
+    setEngagements((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+    if (updated.status === 'completed') setDashView('results');
+  };
+
+  return (
+    <div className="min-h-screen bg-theme-bg text-theme-text">
+      {/* Dashboard Navbar */}
+      <nav className="fixed top-0 w-full z-50 backdrop-blur-md border-b border-theme-border"
+           style={{ backgroundColor: 'var(--color-nav-solid)' }}>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Back to landing */}
+              <button
+                onClick={() => setView('landing')}
+                className="flex items-center gap-1.5 text-[11px] font-mono text-theme-text-muted
+                           hover:text-theme-text transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                BACK
+              </button>
+              <div className="w-px h-4 bg-theme-border" />
+              <h1 className="text-sm font-bold tracking-tight">KEEN</h1>
+              <span className="text-[10px] font-mono text-theme-text-muted hidden sm:block">
+                DASHBOARD
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Breadcrumb */}
+              {dashView !== 'list' && selected && (
+                <div className="hidden md:flex items-center gap-1.5 text-[10px] font-mono text-theme-text-muted">
+                  <button onClick={() => setDashView('list')} className="hover:text-theme-text transition-colors">
+                    Engagements
+                  </button>
+                  <span>/</span>
+                  <span className="text-theme-text truncate max-w-32">{selected.company_name}</span>
+                  {dashView === 'results' && (
+                    <>
+                      <span>/</span>
+                      <span className="text-green-400">Results</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Demo/Live badge */}
+              <div
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]
+                             font-mono font-semibold border ${
+                  isDemoMode
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-400'
+                    : 'border-green-500/40 bg-green-500/10 text-green-400'
+                }`}
+              >
+                {isDemoMode ? (
+                  <FlaskConical className="w-3 h-3" />
+                ) : (
+                  <Radio className="w-3 h-3 animate-pulse" />
+                )}
+                {isDemoMode ? 'DEMO' : 'LIVE'}
+              </div>
+
+              {/* New engagement button */}
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-text text-theme-bg
+                           text-[10px] font-mono font-semibold rounded-lg hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                NEW
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-20 pb-12">
+
+        {/* List view */}
+        {dashView === 'list' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Engagements</h2>
+                <p className="text-xs text-theme-text-muted font-mono mt-0.5">
+                  {isDemoMode
+                    ? 'Demo mode — pipelines use Acme Analytics Corp fixture data'
+                    : 'Live mode — pipelines connect to real enterprise systems'}
+                </p>
+              </div>
+            </div>
+
+            {loading && (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-6 h-6 animate-spin text-theme-text-muted" />
+              </div>
+            )}
+
+            {!loading && engagements.length === 0 && (
+              <div className="border border-dashed border-theme-border rounded-xl p-12 text-center space-y-4">
+                <Search className="w-8 h-8 text-theme-text-muted mx-auto" />
+                <div>
+                  <p className="text-sm font-semibold">No engagements yet</p>
+                  <p className="text-xs text-theme-text-muted mt-1">
+                    Start your first due diligence pipeline
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-theme-text text-theme-bg
+                             text-xs font-mono font-semibold rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  NEW ENGAGEMENT
+                </button>
+              </div>
+            )}
+
+            {!loading && engagements.length > 0 && (
+              <div className="space-y-2">
+                {engagements.map((e) => {
+                  const cfg = STATUS_CONFIG[e.status] ?? STATUS_CONFIG.draft;
+                  const isDemo = e.config?.demo_mode as boolean | undefined;
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={() => openEngagement(e)}
+                      className="w-full flex items-center justify-between px-5 py-4 border border-theme-border
+                                 rounded-xl hover:border-theme-text/30 hover:bg-theme-border/20
+                                 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold">{e.company_name}</p>
+                            {isDemo !== undefined && (
+                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                                isDemo
+                                  ? 'border-amber-500/30 text-amber-400 bg-amber-500/10'
+                                  : 'border-green-500/30 text-green-400 bg-green-500/10'
+                              }`}>
+                                {isDemo ? 'DEMO' : 'LIVE'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] font-mono text-theme-text-muted mt-0.5">
+                            {String(e.config?.engagement_type ?? 'full_diligence').replace(/_/g, ' ')}
+                            {e.pe_firm && ` · ${e.pe_firm}`}
+                            {e.deal_size && ` · ${e.deal_size}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {/* Agent progress mini */}
+                        {e.agent_runs && e.agent_runs.length > 0 && (
+                          <div className="hidden md:flex items-center gap-1">
+                            {e.agent_runs.map((run) => (
+                              <div
+                                key={run.id}
+                                className="w-16 h-1 bg-theme-border rounded-full overflow-hidden"
+                              >
+                                <div
+                                  className={`h-full rounded-full ${
+                                    run.status === 'completed' ? 'bg-green-500' :
+                                    run.status === 'running' ? 'bg-blue-500' :
+                                    run.status === 'failed' ? 'bg-red-500' : 'bg-theme-border'
+                                  }`}
+                                  style={{ width: `${run.progress_pct ?? 0}%` }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className={`flex items-center gap-1.5 text-[11px] font-mono ${cfg.color}`}>
+                          <cfg.Icon className={`w-3.5 h-3.5 ${e.status === 'running' ? 'animate-spin' : ''}`} />
+                          {cfg.label}
+                        </div>
+                        <p className="text-[10px] font-mono text-theme-text-muted hidden lg:block">
+                          {new Date(e.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pipeline / Results view */}
+        {(dashView === 'pipeline' || dashView === 'results') && selected && (
+          <div className="space-y-4">
+            {/* Back + tab switcher */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setDashView('list')}
+                className="flex items-center gap-1.5 text-[11px] font-mono text-theme-text-muted
+                           hover:text-theme-text transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                ALL ENGAGEMENTS
+              </button>
+
+              {selected.status === 'completed' && (
+                <div className="flex items-center gap-1 border border-theme-border rounded-lg p-0.5">
+                  <button
+                    onClick={() => setDashView('pipeline')}
+                    className={`px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'pipeline'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    PIPELINE
+                  </button>
+                  <button
+                    onClick={() => setDashView('results')}
+                    className={`px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'results'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    RESULTS
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {dashView === 'pipeline' && (
+              <PipelineView
+                engagement={selected}
+                onEngagementUpdate={handleEngagementUpdate}
+              />
+            )}
+            {dashView === 'results' && (
+              <ResultsPanel engagement={selected} />
+            )}
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <NewEngagementModal
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
+    </div>
+  );
+}
