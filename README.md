@@ -47,80 +47,72 @@ Built as part of the **TinyFish Accelerator (2026)**.
 
 ---
 
-## 🧩 Architecture
+## 🧩 Project Structure
 
 ```
 keen/
-├── src/                              # React frontend
-│   ├── App.tsx                       # Main application — all sections & data
-│   ├── main.tsx                      # React entry point with ThemeProvider
-│   ├── index.css                     # Design tokens, animations, dark/light themes
-│   ├── lib/
-│   │   ├── apiClient.ts              # Typed REST + WebSocket client for backend
-│   │   └── supabaseClient.ts         # Supabase JS client
-│   ├── components/
-│   │   ├── WebGLBackground.tsx       # Three.js particle field (scroll + mouse reactive)
-│   │   ├── ScrollReveal.tsx          # Intersection Observer scroll animations
-│   │   ├── TextReveal.tsx            # Per-character / per-word text animation
-│   │   ├── ParallaxSection.tsx       # Scroll-driven parallax wrapper
-│   │   ├── CountUp.tsx               # Animated number counter
-│   │   ├── MagneticElement.tsx       # Cursor-follow magnetic hover effect
-│   │   ├── ScrollProgressBar.tsx     # Top-of-page scroll progress indicator
-│   │   ├── ScrollIndicator.tsx       # Scroll-down hint indicator
-│   │   ├── ThemeToggle.tsx           # Dark / light theme switch
-│   │   ├── Loader.tsx                # Animated loading screen
-│   │   ├── SmoothScroll.tsx          # Smooth scroll utility
-│   │   └── HorizontalScroll.tsx      # Horizontal scroll section
-│   ├── context/
-│   │   └── ThemeContext.tsx           # React context for theme state
-│   ├── hooks/
-│   │   └── useScrollProgress.ts      # Scroll progress & mouse position hooks
-│   └── shaders/
-│       └── background.ts             # GLSL vertex/fragment shaders for WebGL
+├── frontend/                         # React + Vite + Tailwind
+│   ├── index.html                    # HTML entry point
+│   ├── package.json                  # Node dependencies & scripts
+│   ├── vite.config.ts                # Vite config with backend proxy
+│   ├── tsconfig.json                 # TypeScript config
+│   ├── eslint.config.js              # ESLint config
+│   ├── tailwind.config.js            # Tailwind CSS config
+│   ├── postcss.config.js             # PostCSS config
+│   └── src/
+│       ├── App.tsx                   # Main application — all sections & data
+│       ├── main.tsx                  # React entry point with ThemeProvider
+│       ├── index.css                 # Design tokens, animations, themes
+│       ├── lib/
+│       │   ├── apiClient.ts          # Typed REST + WebSocket client
+│       │   └── supabaseClient.ts     # Supabase JS client
+│       ├── components/
+│       │   ├── WebGLBackground.tsx   # Three.js particle field
+│       │   ├── ScrollReveal.tsx      # Scroll animations
+│       │   ├── TextReveal.tsx        # Text animation
+│       │   ├── ParallaxSection.tsx   # Parallax wrapper
+│       │   ├── CountUp.tsx           # Animated counter
+│       │   ├── MagneticElement.tsx   # Magnetic hover effect
+│       │   ├── ScrollProgressBar.tsx # Scroll progress indicator
+│       │   ├── ScrollIndicator.tsx   # Scroll-down hint
+│       │   ├── ThemeToggle.tsx       # Dark/light theme switch
+│       │   ├── Loader.tsx            # Loading screen
+│       │   ├── SmoothScroll.tsx      # Smooth scroll utility
+│       │   └── HorizontalScroll.tsx  # Horizontal scroll section
+│       ├── context/
+│       │   └── ThemeContext.tsx       # Theme state context
+│       ├── hooks/
+│       │   └── useScrollProgress.ts  # Scroll & mouse hooks
+│       └── shaders/
+│           └── background.ts         # GLSL shaders for WebGL
 │
-├── backend/                          # Python/FastAPI backend
+├── backend/                          # Python + FastAPI
+│   ├── pyproject.toml                # Python dependencies & config
+│   ├── alembic.ini                   # Alembic migration config
+│   ├── .env.example                  # Environment variable template
 │   ├── app/
-│   │   ├── main.py                   # FastAPI entry point (CORS, lifespan, routers)
-│   │   ├── config.py                 # Pydantic settings (env vars)
-│   │   ├── database.py               # Async SQLAlchemy engine + session
-│   │   ├── dependencies.py           # FastAPI DI (DB session, Redis)
-│   │   ├── models/                   # SQLAlchemy ORM models
-│   │   │   ├── engagement.py         # Due diligence engagement
-│   │   │   ├── agent_run.py          # Individual agent execution
-│   │   │   ├── checkpoint.py         # State snapshots (90s intervals)
-│   │   │   ├── credential.py         # Encrypted enterprise credentials
-│   │   │   ├── finding.py            # Agent discoveries & discrepancies
-│   │   │   └── lead.py               # Landing page form submissions
-│   │   ├── schemas/                  # Pydantic request/response schemas
+│   │   ├── main.py                   # FastAPI entry point
+│   │   ├── config.py                 # Pydantic settings
+│   │   ├── database.py               # Async SQLAlchemy engine
+│   │   ├── dependencies.py           # FastAPI DI
+│   │   ├── models/                   # ORM models (6 tables)
+│   │   ├── schemas/                  # Pydantic schemas
 │   │   ├── api/                      # REST endpoints (/api/v1)
-│   │   │   ├── health.py             # Health & readiness checks
-│   │   │   ├── leads.py              # Lead capture CRUD
-│   │   │   ├── engagements.py        # Engagement lifecycle (CRUD + start/pause/resume)
-│   │   │   └── agents.py             # Agent run status & findings
-│   │   ├── websocket/
-│   │   │   └── agent_status.py       # Real-time agent event streaming
-│   │   ├── agents/                   # Multi-agent orchestration engine
-│   │   │   ├── base.py               # Abstract agent with checkpointing
-│   │   │   ├── orchestrator.py       # Research → Analysis → Delivery pipeline
+│   │   ├── websocket/                # Real-time agent events
+│   │   ├── agents/                   # Multi-agent orchestration
+│   │   │   ├── base.py               # Abstract agent + checkpointing
+│   │   │   ├── orchestrator.py       # Research → Analysis → Delivery
 │   │   │   ├── research.py           # Data extraction (15+ sources)
-│   │   │   ├── analysis.py           # Cross-referencing & variance detection
-│   │   │   └── delivery.py           # Report generation & distribution
-│   │   ├── auth/                     # Dynamic authentication layer
-│   │   │   ├── manager.py            # 7 auth flow types (OAuth, SSO, MFA, etc.)
-│   │   │   └── vault.py              # AES-256-GCM credential encryption
-│   │   ├── integrations/             # Enterprise system connectors
-│   │   │   ├── base.py               # Abstract connector interface
-│   │   │   ├── salesforce.py         # Salesforce CRM (SOQL)
-│   │   │   ├── netsuite.py           # NetSuite ERP (SuiteQL)
-│   │   │   └── sec_edgar.py          # SEC EDGAR (public filings)
-│   │   └── services/
-│   │       └── engagement_service.py # Business logic layer
+│   │   │   ├── analysis.py           # Cross-referencing & variance
+│   │   │   └── delivery.py           # Report generation
+│   │   ├── auth/                     # Auth manager + credential vault
+│   │   ├── integrations/             # Enterprise connectors
+│   │   └── services/                 # Business logic
 │   ├── alembic/                      # Database migrations
-│   │   └── versions/
-│   │       └── 001_initial_schema.py # Initial 6-table schema
-│   ├── tests/                        # pytest test suite (20 tests)
-│   ├── pyproject.toml                # Python project config & dependencies
-│   └── .env.example                  # Environment variable template
+│   └── tests/                        # pytest suite (20 tests)
+│
+├── README.md                         # This file
+└── .gitignore                        # Unified gitignore
 ```
 
 ---
@@ -148,8 +140,7 @@ keen/
 ### Frontend
 
 ```bash
-git clone https://github.com/your-org/keen.git
-cd keen
+cd frontend
 npm install
 npm run dev          # → http://localhost:5173
 ```
@@ -182,12 +173,12 @@ The Vite dev server automatically proxies `/api/*` and `/ws/*` to the backend at
 ### Other Commands
 
 ```bash
-# Frontend
+# Frontend (from frontend/)
 npm run build        # Production build
 npm run preview      # Preview production build
 npm run lint         # Run ESLint
 
-# Backend
+# Backend (from backend/)
 pytest tests/ -v     # Run test suite (20 tests)
 ruff check app/      # Lint Python code
 ```
@@ -245,7 +236,7 @@ pytest tests/ -v
 
 ## 🎨 Theming
 
-KEEN supports **dark** and **light** themes, toggled via the sun/moon button in the navigation bar. Themes are implemented with CSS custom properties in `src/index.css` and managed through React context (`src/context/ThemeContext.tsx`).
+KEEN supports **dark** and **light** themes, toggled via the sun/moon button in the navigation bar. Themes are implemented with CSS custom properties in `frontend/src/index.css` and managed through React context (`frontend/src/context/ThemeContext.tsx`).
 
 ---
 
@@ -259,10 +250,9 @@ KEEN connects to 15+ enterprise systems for live data extraction:
 
 ## 📦 Build & Deployment
 
-The production build uses **Vite** with manual chunk splitting for optimal loading:
-
 ```bash
-npm run build        # Frontend → dist/
+cd frontend
+npm run build        # → frontend/dist/
 ```
 
 Deploy the frontend to any static hosting (Vercel, Netlify, Cloudflare Pages). The backend runs as a standalone FastAPI service.
@@ -272,4 +262,3 @@ Deploy the frontend to any static hosting (Vercel, Netlify, Cloudflare Pages). T
 ## 📋 License
 
 © 2026 KEEN — Backed by TinyFish Accelerator
-

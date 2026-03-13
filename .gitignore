@@ -1,3 +1,4 @@
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -6,11 +7,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
 *.local
 
+# IDE
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -20,7 +23,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment
 .env
+frontend/.env
+backend/.env
 
 # Python / Backend
 __pycache__/
@@ -28,5 +35,5 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-backend/.env
 *.sqlite3
+.pytest_cache/
