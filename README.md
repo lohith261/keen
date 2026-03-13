@@ -102,6 +102,14 @@ Generates board-ready output from the Analysis Agent's validated findings. Produ
 
 ```
 keen/
+├── docs/
+│   └── screenshots/
+│       ├── screenshot-hero.png
+│       ├── screenshot-metrics.png
+│       ├── screenshot-agents.png
+│       ├── screenshot-capabilities.png
+│       ├── screenshot-integrations.png
+│       └── screenshot-moat.png
 ├── frontend/                         # React + Vite + Tailwind
 │   └── src/
 │       ├── App.tsx                   # Main application — all sections & data
