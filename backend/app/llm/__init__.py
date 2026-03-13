@@ -1,11 +1,28 @@
-"""LLM integration module for KEEN agents."""
+"""LLM integration module for KEEN agents.
 
-from app.llm.client import LLMClient, get_llm_client
+Provides a multi-provider client with automatic Claude → Gemini failover.
+"""
+
+from app.llm.client import (
+    BaseLLMProvider,
+    ClaudeProvider,
+    FallbackLLMClient,
+    GeminiProvider,
+    LLMClient,
+    get_llm_client,
+)
 from app.llm.exceptions import LLMError, LLMParseError, LLMUnavailableError
 
 __all__ = [
-    "LLMClient",
+    # Client
+    "FallbackLLMClient",
+    "LLMClient",           # backward-compatible alias
     "get_llm_client",
+    # Providers
+    "BaseLLMProvider",
+    "ClaudeProvider",
+    "GeminiProvider",
+    # Exceptions
     "LLMError",
     "LLMParseError",
     "LLMUnavailableError",
