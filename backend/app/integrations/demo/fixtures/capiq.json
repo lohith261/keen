@@ -1,0 +1,63 @@
+{
+  "credit_analysis": {
+    "as_of": "2025-12-31",
+    "liquidity": {
+      "cash_and_equivalents": 8420000,
+      "short_term_investments": 0,
+      "undrawn_revolver": 5000000,
+      "total_liquidity": 13420000,
+      "monthly_cash_burn_avg": 820000,
+      "runway_months": 16.4,
+      "current_ratio": 1.74,
+      "quick_ratio": 1.48
+    },
+    "leverage": {
+      "total_debt": 0,
+      "net_debt": -8420000,
+      "debt_to_equity": 0.0,
+      "net_leverage": "Net Cash",
+      "interest_coverage": "N/A (no debt)"
+    },
+    "credit_score_implied": "B+ (speculative grade, pre-profitability SaaS)",
+    "key_covenants_if_leveraged": [
+      "Min ARR growth: 20% YoY",
+      "Min Gross Margin: 70%",
+      "Max Net Leverage: 4.0x EBITDA at exit",
+      "Min Liquidity: $3M at all times"
+    ]
+  },
+  "peer_comparison": [
+    {"metric": "Revenue Growth YoY", "acme": "35.0%", "peer_median": "28.4%", "percentile": 68, "signal": "Above average"},
+    {"metric": "Gross Margin", "acme": "79.0%", "peer_median": "74.6%", "percentile": 72, "signal": "Above average"},
+    {"metric": "NRR", "acme": "112.0%", "peer_median": "118.0%", "percentile": 38, "signal": "Below median — churn risk"},
+    {"metric": "CAC Payback (months)", "acme": "21.4", "peer_median": "18.4", "percentile": 36, "signal": "Below median — sales efficiency gap"},
+    {"metric": "Magic Number", "acme": "0.68", "peer_median": "0.82", "percentile": 33, "signal": "Below median — GTM efficiency"},
+    {"metric": "Rule of 40", "acme": "36.1", "peer_median": "24.8", "percentile": 74, "signal": "Strong"},
+    {"metric": "ARR per Employee", "acme": "163500", "peer_median": "145000", "percentile": 61, "signal": "Slightly above median"}
+  ],
+  "ownership_structure": {
+    "total_shares_fully_diluted": 49200000,
+    "common_shares_outstanding": 42800000,
+    "options_and_warrants": 6400000,
+    "cap_table": [
+      {"shareholder": "Accel Partners", "shares": 10614000, "pct_basic": 24.8, "pct_diluted": 21.6, "investment_total_m": 10.0, "series": "A, B"},
+      {"shareholder": "Sequoia Capital", "shares": 7790000, "pct_basic": 18.2, "pct_diluted": 15.8, "investment_total_m": 8.0, "series": "B"},
+      {"shareholder": "Alex Morgan (CEO)", "shares": 3467000, "pct_basic": 8.1, "pct_diluted": 7.0, "investment_total_m": 0, "series": "Founder"},
+      {"shareholder": "Jordan Lee (CTO)", "shares": 3082000, "pct_basic": 7.2, "pct_diluted": 6.3, "investment_total_m": 0, "series": "Founder"},
+      {"shareholder": "Employee Options Pool", "shares": 6400000, "pct_basic": 0, "pct_diluted": 13.0, "investment_total_m": 0, "series": "Options"},
+      {"shareholder": "Other Employees/Angels", "shares": 11447000, "pct_basic": 26.7, "pct_diluted": 23.3, "investment_total_m": 2.5, "series": "Seed, A"}
+    ],
+    "liquidation_preferences": [
+      {"series": "Series B", "amount_m": 8.0, "preference": "1x non-participating"},
+      {"series": "Series A", "amount_m": 7.0, "preference": "1x non-participating"},
+      {"series": "Series Seed", "amount_m": 2.5, "preference": "1x non-participating"}
+    ],
+    "total_liquidation_stack_m": 17.5
+  },
+  "_meta": {
+    "source": "capiq",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — NRR at 112% is below peer median of 118%. Magic Number 0.68 signals GTM inefficiency. No debt — clean balance sheet. Full liquidation stack $17.5M easily cleared at any reasonable acquisition price."
+  }
+}

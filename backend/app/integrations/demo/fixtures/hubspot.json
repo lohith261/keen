@@ -1,0 +1,40 @@
+{
+  "marketing_metrics": {
+    "period": "last_12_months",
+    "website_visitors": 284000,
+    "organic_traffic_pct": 58.2,
+    "paid_traffic_pct": 31.4,
+    "direct_traffic_pct": 10.4,
+    "avg_session_duration_sec": 182,
+    "bounce_rate_pct": 48.3,
+    "monthly_avg_mqls": 340,
+    "annual_mqls": 4080,
+    "mql_to_sql_conversion_pct": 24.8,
+    "annual_sqls": 1012,
+    "cost_per_mql": 627,
+    "cost_per_sql": 2528,
+    "total_marketing_spend": 2560000
+  },
+  "lead_funnel": [
+    {"stage": "Visitor", "count_monthly_avg": 23667, "conversion_to_next_pct": 1.44},
+    {"stage": "Lead", "count_monthly_avg": 340, "conversion_to_next_pct": 24.8},
+    {"stage": "MQL", "count_monthly_avg": 340, "conversion_to_next_pct": 24.8},
+    {"stage": "SQL", "count_monthly_avg": 84, "conversion_to_next_pct": 28.6},
+    {"stage": "Opportunity", "count_monthly_avg": 24, "conversion_to_next_pct": 35.4},
+    {"stage": "Customer", "count_monthly_avg": 8.5, "conversion_to_next_pct": null}
+  ],
+  "campaign_roi": [
+    {"campaign": "Enterprise SaaS Summit 2025", "type": "event", "spend": 185000, "mqls": 142, "pipeline_influenced": 1840000, "closed_revenue": 510000, "roi_pct": 175.7},
+    {"campaign": "Q4 Google Ads - Analytics Keywords", "type": "paid_search", "spend": 312000, "mqls": 498, "pipeline_influenced": 2960000, "closed_revenue": 820000, "roi_pct": 162.8},
+    {"campaign": "Content Marketing - Annual Report", "type": "content", "spend": 48000, "mqls": 210, "pipeline_influenced": 980000, "closed_revenue": 245000, "roi_pct": 410.4},
+    {"campaign": "LinkedIn Sponsored Content Q3", "type": "paid_social", "spend": 224000, "mqls": 186, "pipeline_influenced": 1420000, "closed_revenue": 380000, "roi_pct": 69.6},
+    {"campaign": "Partner Webinar Series", "type": "webinar", "spend": 36000, "mqls": 94, "pipeline_influenced": 620000, "closed_revenue": 185000, "roi_pct": 413.9},
+    {"campaign": "Email Nurture - Trial Users", "type": "email", "spend": 18000, "mqls": 312, "pipeline_influenced": 1860000, "closed_revenue": 490000, "roi_pct": 2622.2}
+  ],
+  "_meta": {
+    "source": "hubspot",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — HubSpot shows 340 MQLs/month but Salesforce pipeline shows only ~24 new opps/month created. MQL-to-opportunity conversion is 7.1% vs typical SaaS benchmark of 15-20%. Significant funnel leakage flagged."
+  }
+}

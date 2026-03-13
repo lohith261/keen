@@ -1,0 +1,40 @@
+{
+  "deal_comps": [
+    {"target": "Sigma Computing", "acquirer": "PE Consortium", "deal_date": "2025-06-15", "deal_value_m": 1500, "revenue_at_deal_m": 110, "ev_revenue": 13.6, "arr_at_deal_m": 118, "growth_pct": 48, "deal_type": "Buyout"},
+    {"target": "Klipfolio", "acquirer": "Grafana Labs", "deal_date": "2025-02-20", "deal_value_m": 75, "revenue_at_deal_m": 18, "ev_revenue": 4.2, "arr_at_deal_m": 19, "growth_pct": 22, "deal_type": "Strategic Acquisition"},
+    {"target": "Yellowfin BI", "acquirer": "IronSource", "deal_date": "2024-11-08", "deal_value_m": 185, "revenue_at_deal_m": 35, "ev_revenue": 5.3, "arr_at_deal_m": 37, "growth_pct": 28, "deal_type": "Strategic Acquisition"},
+    {"target": "GoodData", "acquirer": "Triton Pacific", "deal_date": "2024-09-14", "deal_value_m": 280, "revenue_at_deal_m": 48, "ev_revenue": 5.8, "arr_at_deal_m": 52, "growth_pct": 19, "deal_type": "Buyout"},
+    {"target": "Logi Analytics", "acquirer": "insightsoftware", "deal_date": "2024-05-22", "deal_value_m": 320, "revenue_at_deal_m": 58, "ev_revenue": 5.5, "arr_at_deal_m": 61, "growth_pct": 15, "deal_type": "Platform Roll-up"},
+    {"target": "Tableau (reference)", "acquirer": "Salesforce", "deal_date": "2019-06-10", "deal_value_m": 15700, "revenue_at_deal_m": 1160, "ev_revenue": 13.5, "arr_at_deal_m": 1160, "growth_pct": 28, "deal_type": "Strategic Acquisition"}
+  ],
+  "valuation_multiples": {
+    "segment": "B2B Analytics SaaS — PE Buyout Comps (2023-2026)",
+    "sample_size": 28,
+    "arr_range": "$15M-$60M",
+    "ev_arr_median": 6.8,
+    "ev_arr_mean": 7.9,
+    "ev_arr_25th_percentile": 4.8,
+    "ev_arr_75th_percentile": 9.4,
+    "ev_arr_top_decile": 13.2,
+    "growth_premium_per_10pct": 0.8,
+    "gross_margin_premium_per_5pct": 0.4,
+    "nrr_premium_above_120pct": 1.2,
+    "implied_range_for_target": {
+      "low": 98000000,
+      "mid": 165000000,
+      "high": 228000000,
+      "basis": "24.2M ARR x 4.0x-9.4x range; 35% growth supports premium"
+    }
+  },
+  "fund_performance": [
+    {"fund": "Accel Partners VII", "vintage": 2019, "irr_pct": 28.4, "moic": 3.2, "dpi": 1.1, "fund_size_m": 650, "notable_exits": ["Crowdstrike", "UiPath", "Acme Analytics (partial)"]},
+    {"fund": "Sequoia Capital Growth III", "vintage": 2020, "irr_pct": 24.8, "moic": 2.8, "dpi": 0.8, "fund_size_m": 1200, "notable_exits": ["Snowflake", "Figma"]},
+    {"fund": "Index Ventures X", "vintage": 2021, "irr_pct": 19.2, "moic": 1.9, "dpi": 0.3, "fund_size_m": 900, "notable_exits": []}
+  ],
+  "_meta": {
+    "source": "pitchbook",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — Implied valuation range $98M-$228M at 4x-9.4x ARR. Mid-point $165M. Existing investors (Accel, Sequoia) have secondary market interest given fund lifecycle."
+  }
+}

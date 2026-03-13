@@ -21,6 +21,7 @@ import TextReveal from './components/TextReveal';
 import CountUp from './components/CountUp';
 import MagneticElement from './components/MagneticElement';
 import ThemeToggle from './components/ThemeToggle';
+import DemoModeToggle from './components/DemoModeToggle';
 import Loader from './components/Loader';
 import { useTheme } from './context/ThemeContext';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
@@ -194,6 +195,7 @@ function App() {
               <div className="text-[10px] md:text-xs font-mono text-theme-text-muted">
                 {timestamp}
               </div>
+              <DemoModeToggle />
               <ThemeToggle />
             </div>
           </div>

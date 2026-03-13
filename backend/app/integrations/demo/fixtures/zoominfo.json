@@ -1,0 +1,83 @@
+{
+  "org_chart": {
+    "company": "Acme Analytics Corp",
+    "total_employees": 148,
+    "departments": [
+      {
+        "name": "Engineering & Product",
+        "headcount": 66,
+        "head": "Jordan Lee (CTO)",
+        "sub_departments": [
+          {"name": "Backend Engineering", "headcount": 24},
+          {"name": "Frontend Engineering", "headcount": 16},
+          {"name": "Data Infrastructure", "headcount": 12},
+          {"name": "Product Management", "headcount": 8},
+          {"name": "Design & UX", "headcount": 6}
+        ]
+      },
+      {
+        "name": "Sales",
+        "headcount": 34,
+        "head": "Marcus Williams (VP Sales)",
+        "sub_departments": [
+          {"name": "Enterprise AE", "headcount": 12},
+          {"name": "Mid-Market AE", "headcount": 8},
+          {"name": "SDR / BDR", "headcount": 10},
+          {"name": "Sales Ops", "headcount": 4}
+        ]
+      },
+      {
+        "name": "Marketing",
+        "headcount": 18,
+        "head": "Priya Sharma (VP Marketing)"
+      },
+      {
+        "name": "Customer Success",
+        "headcount": 18,
+        "head": "Nina Osei (VP Customer Success)"
+      },
+      {
+        "name": "Finance & G&A",
+        "headcount": 12,
+        "head": "Patricia Nguyen (CFO)"
+      }
+    ],
+    "leadership_team": [
+      {"name": "Alex Morgan", "title": "CEO & Co-Founder", "tenure_years": 7.2, "linkedin_connections": 3840},
+      {"name": "Jordan Lee", "title": "CTO & Co-Founder", "tenure_years": 7.2, "linkedin_connections": 2980},
+      {"name": "Patricia Nguyen", "title": "CFO", "tenure_years": 0.9, "linkedin_connections": 1820},
+      {"name": "Marcus Williams", "title": "VP Sales", "tenure_years": 2.1, "linkedin_connections": 4210},
+      {"name": "Priya Sharma", "title": "VP Marketing", "tenure_years": 3.4, "linkedin_connections": 5640},
+      {"name": "Nina Osei", "title": "VP Customer Success", "tenure_years": 1.8, "linkedin_connections": 2140}
+    ]
+  },
+  "employee_count_trends": [
+    {"period": "2022-Q1", "headcount": 64, "net_change": 8},
+    {"period": "2022-Q3", "headcount": 78, "net_change": 14},
+    {"period": "2023-Q1", "headcount": 92, "net_change": 14},
+    {"period": "2023-Q3", "headcount": 108, "net_change": 16},
+    {"period": "2024-Q1", "headcount": 118, "net_change": 10},
+    {"period": "2024-Q3", "headcount": 132, "net_change": 14},
+    {"period": "2025-Q1", "headcount": 138, "net_change": 6},
+    {"period": "2025-Q3", "headcount": 144, "net_change": 6},
+    {"period": "2026-Q1", "headcount": 148, "net_change": 4}
+  ],
+  "tech_stack": {
+    "cloud_infrastructure": ["AWS (primary)", "GCP (secondary/ML workloads)"],
+    "data_warehouse": ["Snowflake"],
+    "languages": ["Python", "TypeScript", "Go", "SQL"],
+    "frameworks": ["React", "FastAPI", "dbt", "Apache Airflow"],
+    "databases": ["PostgreSQL", "Redis", "Elasticsearch"],
+    "devops": ["Kubernetes", "Terraform", "GitHub Actions", "Datadog"],
+    "security": ["Okta (SSO)", "Wiz (cloud security)", "Snyk (code scanning)"],
+    "crm_marketing": ["Salesforce", "HubSpot", "Marketo"],
+    "finance": ["NetSuite", "Stripe"],
+    "communication": ["Slack", "Zoom", "Google Workspace"]
+  },
+  "_meta": {
+    "source": "zoominfo",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — ZoomInfo shows 148 employees. SAP headcount = 137. LinkedIn Sales Navigator shows 162. Three-way headcount discrepancy ($11-25 person gap). New CFO only 0.9 years tenure."
+  }
+}

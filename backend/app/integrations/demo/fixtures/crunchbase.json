@@ -1,0 +1,67 @@
+{
+  "funding_history": [
+    {
+      "round": "Seed",
+      "date": "2018-09-15",
+      "amount": 2500000,
+      "lead_investor": "First Round Capital",
+      "other_investors": ["Angel investors"],
+      "valuation_pre_m": 8.0,
+      "valuation_post_m": 10.5
+    },
+    {
+      "round": "Series A",
+      "date": "2020-11-04",
+      "amount": 7000000,
+      "lead_investor": "Accel Partners",
+      "other_investors": ["First Round Capital", "SV Angel"],
+      "valuation_pre_m": 28.0,
+      "valuation_post_m": 35.0
+    },
+    {
+      "round": "Series B",
+      "date": "2022-06-22",
+      "amount": 6000000,
+      "lead_investor": "Sequoia Capital",
+      "other_investors": ["Accel Partners"],
+      "valuation_pre_m": 72.0,
+      "valuation_post_m": 78.0
+    },
+    {
+      "round": "Series B Extension",
+      "date": "2025-06-01",
+      "amount": 2500000,
+      "lead_investor": "Sequoia Capital",
+      "other_investors": [],
+      "valuation_pre_m": 95.0,
+      "valuation_post_m": 97.5,
+      "note": "Bridge to profitability / M&A prep"
+    }
+  ],
+  "total_funding_crunchbase": 18000000,
+  "acquisitions": [
+    {
+      "target": "DataPulse Inc.",
+      "date": "2023-08-10",
+      "amount_disclosed": null,
+      "amount_estimated_m": 4.2,
+      "rationale": "Acquired NLP-based data connector technology and 3-person team",
+      "integration_status": "Fully integrated into core platform"
+    }
+  ],
+  "key_people": [
+    {"name": "Alex Morgan", "role": "CEO & Co-Founder", "previously": "Palantir (Senior PM)", "joined": "2018"},
+    {"name": "Jordan Lee", "role": "CTO & Co-Founder", "previously": "Google (Staff Engineer, BigQuery)", "joined": "2018"},
+    {"name": "Patricia Nguyen", "role": "CFO", "previously": "Elastic (VP Finance)", "joined": "2025-04"},
+    {"name": "Marcus Williams", "role": "VP Sales", "previously": "Looker (Enterprise AE → Regional Director)", "joined": "2024-01"},
+    {"name": "Priya Sharma", "role": "VP Marketing", "previously": "Amplitude (Head of Demand Gen)", "joined": "2023-06"},
+    {"name": "Nina Osei", "role": "VP Customer Success", "previously": "Mixpanel (Director CS)", "joined": "2024-05"},
+    {"name": "Dr. Kenji Tanaka", "role": "Chief Scientist", "previously": "MIT CSAIL (Research Scientist)", "joined": "2021-03"}
+  ],
+  "_meta": {
+    "source": "crunchbase",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — Crunchbase total $18M. SEC proxy shows $17.5M. $500K discrepancy — likely the Series B extension not yet reflected in SEC filings, or reporting lag. One acquisition (DataPulse) not listed in SEC filings — may be immaterial."
+  }
+}

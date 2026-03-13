@@ -1,0 +1,39 @@
+{
+  "gl_entries": [
+    {"account_code": "4000", "account_name": "Software License Revenue", "period": "2025-Q4", "debit": 0, "credit": 5682000, "net": 5682000},
+    {"account_code": "4100", "account_name": "Professional Services Revenue", "period": "2025-Q4", "debit": 0, "credit": 368000, "net": 368000},
+    {"account_code": "5000", "account_name": "Cost of Revenue - Hosting", "period": "2025-Q4", "debit": 392000, "credit": 0, "net": -392000},
+    {"account_code": "5100", "account_name": "Cost of Revenue - Support", "period": "2025-Q4", "debit": 284000, "credit": 0, "net": -284000},
+    {"account_code": "5200", "account_name": "Cost of Revenue - Implementation", "period": "2025-Q4", "debit": 196000, "credit": 0, "net": -196000},
+    {"account_code": "6000", "account_name": "Salaries - Engineering", "period": "2025-Q4", "debit": 2140000, "credit": 0, "net": -2140000},
+    {"account_code": "6100", "account_name": "Salaries - Sales", "period": "2025-Q4", "debit": 980000, "credit": 0, "net": -980000},
+    {"account_code": "6200", "account_name": "Salaries - Marketing", "period": "2025-Q4", "debit": 430000, "credit": 0, "net": -430000},
+    {"account_code": "6300", "account_name": "Salaries - G&A", "period": "2025-Q4", "debit": 380000, "credit": 0, "net": -380000},
+    {"account_code": "6500", "account_name": "Research & Development Expense", "period": "2025-Q4", "debit": 950000, "credit": 0, "net": -950000},
+    {"account_code": "7000", "account_name": "Sales Commissions", "period": "2025-Q4", "debit": 245000, "credit": 0, "net": -245000},
+    {"account_code": "7100", "account_name": "Marketing Programs", "period": "2025-Q4", "debit": 640000, "credit": 0, "net": -640000},
+    {"account_code": "8000", "account_name": "Rent & Facilities", "period": "2025-Q4", "debit": 182000, "credit": 0, "net": -182000},
+    {"account_code": "8100", "account_name": "Software Subscriptions", "period": "2025-Q4", "debit": 124000, "credit": 0, "net": -124000}
+  ],
+  "ar_aging": [
+    {"customer": "TelecomPlus", "invoice_id": "INV-2026-0142", "invoice_date": "2026-02-01", "due_date": "2026-03-03", "amount": 182500, "days_outstanding": 11, "bucket": "current"},
+    {"customer": "BankFirst", "invoice_id": "INV-2026-0138", "invoice_date": "2026-01-15", "due_date": "2026-02-14", "amount": 130000, "days_outstanding": 28, "bucket": "1-30"},
+    {"customer": "PharmaData Inc.", "invoice_id": "INV-2025-1204", "invoice_date": "2025-12-01", "due_date": "2025-12-31", "amount": 152500, "days_outstanding": 74, "bucket": "61-90"},
+    {"customer": "EnergyCo", "invoice_id": "INV-2025-1105", "invoice_date": "2025-11-01", "due_date": "2025-12-01", "amount": 122500, "days_outstanding": 103, "bucket": "91-120"},
+    {"customer": "RetailNow", "invoice_id": "INV-2025-0924", "invoice_date": "2025-09-24", "due_date": "2025-10-24", "amount": 67500, "days_outstanding": 141, "bucket": "120+", "collection_status": "In dispute"},
+    {"customer": "LogisCorp", "invoice_id": "INV-2025-0808", "invoice_date": "2025-08-08", "due_date": "2025-09-07", "amount": 70000, "days_outstanding": 188, "bucket": "120+", "collection_status": "Escalated to collections"}
+  ],
+  "ap_aging": [
+    {"vendor": "Amazon Web Services", "invoice_id": "AWS-2026-0302", "due_date": "2026-03-25", "amount": 142000, "days_outstanding": 0, "bucket": "current"},
+    {"vendor": "Snowflake Inc.", "invoice_id": "SNOW-2026-0201", "due_date": "2026-03-15", "amount": 78000, "days_outstanding": 0, "bucket": "current"},
+    {"vendor": "ZoomInfo Technologies", "invoice_id": "ZI-2025-1201", "due_date": "2025-12-31", "amount": 24000, "days_outstanding": 73, "bucket": "61-90"},
+    {"vendor": "HubSpot Inc.", "invoice_id": "HS-2025-1115", "due_date": "2025-12-15", "amount": 21000, "days_outstanding": 89, "bucket": "61-90"},
+    {"vendor": "Okta Inc.", "invoice_id": "OKTA-2025-1001", "due_date": "2025-11-01", "amount": 15500, "days_outstanding": 133, "bucket": "120+"}
+  ],
+  "_meta": {
+    "source": "oracle",
+    "company": "Acme Analytics Corp",
+    "extracted_at": "2026-03-14T00:00:00Z",
+    "note": "DEMO DATA — R&D GL account 6500 shows $950K in Q4 alone (annualized ~$3.8M). SAP shows $4.2M annual R&D. $400K discrepancy between systems. Two AR items 120+ days past due — collection risk."
+  }
+}
