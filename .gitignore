@@ -21,3 +21,12 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+backend/.env
+*.sqlite3

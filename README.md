@@ -2,7 +2,7 @@
 
 **Sharper Judgment. Faster Execution.**
 
-KEEN is the landing page for a multi-agent operational intelligence platform that replicates McKinsey-grade private equity due diligence — compressing **4 weeks of work into 4 hours** through autonomous execution across live enterprise systems.
+KEEN is a multi-agent operational intelligence platform that replicates McKinsey-grade private equity due diligence — compressing **4 weeks of work into 4 hours** through autonomous execution across live enterprise systems.
 
 Built as part of the **TinyFish Accelerator (2026)**.
 
@@ -21,6 +21,8 @@ Built as part of the **TinyFish Accelerator (2026)**.
 
 ## 🏗️ Tech Stack
 
+### Frontend
+
 | Layer | Technology |
 |---|---|
 | **Framework** | [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
@@ -29,36 +31,96 @@ Built as part of the **TinyFish Accelerator (2026)**.
 | **3D / WebGL** | [Three.js](https://threejs.org/) — interactive particle background with custom GLSL shaders |
 | **Animations** | [GSAP](https://gsap.com/) — scroll reveals, text reveals, parallax, count-up counters |
 | **Icons** | [Lucide React](https://lucide.dev/) |
-| **Backend** | [Supabase](https://supabase.com/) |
+
+### Backend
+
+| Layer | Technology |
+|---|---|
+| **Framework** | [FastAPI](https://fastapi.tiangolo.com/) (Python 3.11+) |
+| **Database** | [Supabase](https://supabase.com/) (managed PostgreSQL) via [SQLAlchemy 2.0](https://www.sqlalchemy.org/) async |
+| **Migrations** | [Alembic](https://alembic.sqlalchemy.org/) |
+| **Task queue** | [Celery](https://docs.celeryq.dev/) + [Redis](https://redis.io/) |
+| **Real-time** | WebSocket (FastAPI native) — live agent status & progress |
+| **Auth** | Dynamic auth manager (OAuth, SSO, MFA, API key, browser/TinyFish) |
+| **Encryption** | AES-256-GCM credential vault via [cryptography](https://cryptography.io/) |
+| **Testing** | [pytest](https://pytest.org/) + pytest-asyncio |
 
 ---
 
 ## 🧩 Architecture
 
 ```
-src/
-├── App.tsx                   # Main application — all sections & data
-├── main.tsx                  # React entry point with ThemeProvider
-├── index.css                 # Design tokens, animations, dark/light themes
-├── components/
-│   ├── WebGLBackground.tsx   # Three.js particle field (scroll + mouse reactive)
-│   ├── ScrollReveal.tsx      # Intersection Observer scroll animations
-│   ├── TextReveal.tsx        # Per-character / per-word text animation
-│   ├── ParallaxSection.tsx   # Scroll-driven parallax wrapper
-│   ├── CountUp.tsx           # Animated number counter
-│   ├── MagneticElement.tsx   # Cursor-follow magnetic hover effect
-│   ├── ScrollProgressBar.tsx # Top-of-page scroll progress indicator
-│   ├── ScrollIndicator.tsx   # Scroll-down hint indicator
-│   ├── ThemeToggle.tsx       # Dark / light theme switch
-│   ├── Loader.tsx            # Animated loading screen
-│   ├── SmoothScroll.tsx      # Smooth scroll utility
-│   └── HorizontalScroll.tsx  # Horizontal scroll section
-├── context/
-│   └── ThemeContext.tsx       # React context for theme state
-├── hooks/
-│   └── useScrollProgress.ts  # Scroll progress & mouse position hooks
-└── shaders/
-    └── background.ts         # GLSL vertex/fragment shaders for WebGL
+keen/
+├── src/                              # React frontend
+│   ├── App.tsx                       # Main application — all sections & data
+│   ├── main.tsx                      # React entry point with ThemeProvider
+│   ├── index.css                     # Design tokens, animations, dark/light themes
+│   ├── lib/
+│   │   ├── apiClient.ts              # Typed REST + WebSocket client for backend
+│   │   └── supabaseClient.ts         # Supabase JS client
+│   ├── components/
+│   │   ├── WebGLBackground.tsx       # Three.js particle field (scroll + mouse reactive)
+│   │   ├── ScrollReveal.tsx          # Intersection Observer scroll animations
+│   │   ├── TextReveal.tsx            # Per-character / per-word text animation
+│   │   ├── ParallaxSection.tsx       # Scroll-driven parallax wrapper
+│   │   ├── CountUp.tsx               # Animated number counter
+│   │   ├── MagneticElement.tsx       # Cursor-follow magnetic hover effect
+│   │   ├── ScrollProgressBar.tsx     # Top-of-page scroll progress indicator
+│   │   ├── ScrollIndicator.tsx       # Scroll-down hint indicator
+│   │   ├── ThemeToggle.tsx           # Dark / light theme switch
+│   │   ├── Loader.tsx                # Animated loading screen
+│   │   ├── SmoothScroll.tsx          # Smooth scroll utility
+│   │   └── HorizontalScroll.tsx      # Horizontal scroll section
+│   ├── context/
+│   │   └── ThemeContext.tsx           # React context for theme state
+│   ├── hooks/
+│   │   └── useScrollProgress.ts      # Scroll progress & mouse position hooks
+│   └── shaders/
+│       └── background.ts             # GLSL vertex/fragment shaders for WebGL
+│
+├── backend/                          # Python/FastAPI backend
+│   ├── app/
+│   │   ├── main.py                   # FastAPI entry point (CORS, lifespan, routers)
+│   │   ├── config.py                 # Pydantic settings (env vars)
+│   │   ├── database.py               # Async SQLAlchemy engine + session
+│   │   ├── dependencies.py           # FastAPI DI (DB session, Redis)
+│   │   ├── models/                   # SQLAlchemy ORM models
+│   │   │   ├── engagement.py         # Due diligence engagement
+│   │   │   ├── agent_run.py          # Individual agent execution
+│   │   │   ├── checkpoint.py         # State snapshots (90s intervals)
+│   │   │   ├── credential.py         # Encrypted enterprise credentials
+│   │   │   ├── finding.py            # Agent discoveries & discrepancies
+│   │   │   └── lead.py               # Landing page form submissions
+│   │   ├── schemas/                  # Pydantic request/response schemas
+│   │   ├── api/                      # REST endpoints (/api/v1)
+│   │   │   ├── health.py             # Health & readiness checks
+│   │   │   ├── leads.py              # Lead capture CRUD
+│   │   │   ├── engagements.py        # Engagement lifecycle (CRUD + start/pause/resume)
+│   │   │   └── agents.py             # Agent run status & findings
+│   │   ├── websocket/
+│   │   │   └── agent_status.py       # Real-time agent event streaming
+│   │   ├── agents/                   # Multi-agent orchestration engine
+│   │   │   ├── base.py               # Abstract agent with checkpointing
+│   │   │   ├── orchestrator.py       # Research → Analysis → Delivery pipeline
+│   │   │   ├── research.py           # Data extraction (15+ sources)
+│   │   │   ├── analysis.py           # Cross-referencing & variance detection
+│   │   │   └── delivery.py           # Report generation & distribution
+│   │   ├── auth/                     # Dynamic authentication layer
+│   │   │   ├── manager.py            # 7 auth flow types (OAuth, SSO, MFA, etc.)
+│   │   │   └── vault.py              # AES-256-GCM credential encryption
+│   │   ├── integrations/             # Enterprise system connectors
+│   │   │   ├── base.py               # Abstract connector interface
+│   │   │   ├── salesforce.py         # Salesforce CRM (SOQL)
+│   │   │   ├── netsuite.py           # NetSuite ERP (SuiteQL)
+│   │   │   └── sec_edgar.py          # SEC EDGAR (public filings)
+│   │   └── services/
+│   │       └── engagement_service.py # Business logic layer
+│   ├── alembic/                      # Database migrations
+│   │   └── versions/
+│   │       └── 001_initial_schema.py # Initial 6-table schema
+│   ├── tests/                        # pytest test suite (20 tests)
+│   ├── pyproject.toml                # Python project config & dependencies
+│   └── .env.example                  # Environment variable template
 ```
 
 ---
@@ -78,48 +140,112 @@ src/
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
-- **npm** ≥ 9
+- **Node.js** ≥ 18, **npm** ≥ 9
+- **Python** ≥ 3.11
+- **Redis** (for agent checkpointing)
+- **Supabase** project (managed PostgreSQL)
 
-### Install & Run
+### Frontend
 
 ```bash
-# Clone the repository
 git clone https://github.com/your-org/keen.git
 cd keen
-
-# Install dependencies
 npm install
-
-# Start the dev server
-npm run dev
+npm run dev          # → http://localhost:5173
 ```
 
-The app will be available at **http://localhost:5173**.
+### Backend
+
+```bash
+cd backend
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -e ".[dev]"
+
+# Configure environment
+cp .env.example .env
+# → Fill in Supabase URL, keys, Redis URL, encryption key, etc.
+
+# Run database migration
+alembic upgrade head
+
+# Start the API server
+uvicorn app.main:app --reload --port 8000
+```
+
+The Vite dev server automatically proxies `/api/*` and `/ws/*` to the backend at `localhost:8000`.
 
 ### Other Commands
 
 ```bash
-npm run build      # Production build
-npm run preview    # Preview production build locally
-npm run lint       # Run ESLint
-npm run typecheck  # TypeScript type checking
+# Frontend
+npm run build        # Production build
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+
+# Backend
+pytest tests/ -v     # Run test suite (20 tests)
+ruff check app/      # Lint Python code
 ```
+
+---
+
+## 🔌 API Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/health` | Service health check |
+| `GET` | `/api/v1/health/ready` | Readiness check (DB + Redis) |
+| `POST` | `/api/v1/leads` | Submit "Request Access" form |
+| `GET` | `/api/v1/leads` | List all leads |
+| `POST` | `/api/v1/engagements` | Create new engagement |
+| `GET` | `/api/v1/engagements` | List engagements |
+| `GET` | `/api/v1/engagements/{id}` | Get engagement with agent runs |
+| `PATCH` | `/api/v1/engagements/{id}` | Update draft engagement |
+| `POST` | `/api/v1/engagements/{id}/start` | Start agent orchestration |
+| `POST` | `/api/v1/engagements/{id}/pause` | Pause & checkpoint agents |
+| `POST` | `/api/v1/engagements/{id}/resume` | Resume from checkpoint |
+| `GET` | `/api/v1/engagements/{id}/findings` | Get all findings |
+| `GET` | `/api/v1/agents/{run_id}` | Get agent run status |
+| `WS` | `/ws/agent-status` | Real-time agent events |
+
+---
+
+## ⚙️ Environment Variables
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `DATABASE_URL` | PostgreSQL connection string (`postgresql+asyncpg://...`) |
+| `REDIS_URL` | Redis connection string |
+| `SECRET_KEY` | JWT signing key |
+| `CREDENTIAL_ENCRYPTION_KEY` | 32-byte base64 key for AES-256-GCM |
+| `OPENAI_API_KEY` | OpenAI API key (for LLM analysis) |
+| `TINYFISH_API_KEY` | TinyFish browser automation key |
+
+---
+
+## 🧪 Testing
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest tests/ -v
+```
+
+**20 tests** covering health checks, lead capture, engagement lifecycle, and agent orchestration — all passing in ~0.5s using in-memory SQLite.
 
 ---
 
 ## 🎨 Theming
 
-KEEN supports **dark** and **light** themes, toggled via the sun/moon button in the navigation bar. Themes are implemented with CSS custom properties defined in `src/index.css` and managed through React context (`src/context/ThemeContext.tsx`).
-
-| Token | Purpose |
-|---|---|
-| `--color-bg` | Page background |
-| `--color-surface` | Card / section surfaces |
-| `--color-text` | Primary text |
-| `--color-text-secondary` | Secondary text |
-| `--color-border` | Default borders |
-| `--color-nav-solid` | Solid nav background on scroll |
+KEEN supports **dark** and **light** themes, toggled via the sun/moon button in the navigation bar. Themes are implemented with CSS custom properties in `src/index.css` and managed through React context (`src/context/ThemeContext.tsx`).
 
 ---
 
@@ -135,17 +261,15 @@ KEEN connects to 15+ enterprise systems for live data extraction:
 
 The production build uses **Vite** with manual chunk splitting for optimal loading:
 
-- `three` → separate chunk
-- `gsap` → separate chunk
-
 ```bash
-npm run build
+npm run build        # Frontend → dist/
 ```
 
-Output is written to `dist/`. Deploy to any static hosting (Vercel, Netlify, Cloudflare Pages, etc.).
+Deploy the frontend to any static hosting (Vercel, Netlify, Cloudflare Pages). The backend runs as a standalone FastAPI service.
 
 ---
 
 ## 📋 License
 
 © 2026 KEEN — Backed by TinyFish Accelerator
+
