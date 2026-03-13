@@ -50,7 +50,7 @@ Research Agent → Analysis Agent → Delivery Agent
 ### 1. Research Agent
 Authenticates to and extracts data from 15+ enterprise systems. Each source goes through two steps: `authenticate_{source}` then `extract_{source}`. Supported auth modes include OAuth (Salesforce, Dynamics, QuickBooks), API key (HubSpot, ZoomInfo, Crunchbase), SSO/MFA (SAP), browser automation via TinyFish (Bloomberg, PitchBook, Capital IQ), and public access (SEC EDGAR).
 
-Sources are defined in a registry (`DATA_SOURCES`) and the step list is dynamically generated at runtime from the engagement config — so engagements can target any subset of the 15+ systems.
+Uses LLM to intelligently plan which sources to prioritise based on engagement type, company profile, and industry. Falls back to all sources if LLM is unavailable.
 
 ### 2. Analysis Agent
 Receives the Research Agent's compiled output and performs multi-source cross-referencing, variance detection, and confidence scoring. Key analytical operations include:
@@ -59,14 +59,12 @@ Receives the Research Agent's compiled output and performs multi-source cross-re
 - **Cost variance analysis** — cross-references expense data across accounting systems
 - **Customer metrics** — derives churn, LTV, CAC, and NRR from CRM and billing data
 - **Market positioning** — benchmarks against Bloomberg/CapIQ/PitchBook comps
+- **LLM cross-referencing** — intelligently matches entities and identifies discrepancies across sources
+- **LLM confidence scoring** — assigns reliability and impact scores to every finding
 - **Exception routing** — `critical` severity findings are automatically flagged for human review; others are auto-processed
 
-> **Note:** LLM-powered cross-referencing and confidence scoring are marked `TODO` in the current codebase. The step scaffolding and data pipeline are complete; LLM integration is the next major milestone.
-
 ### 3. Delivery Agent
-Generates board-ready output from the Analysis Agent's validated findings. Produces an executive summary, a full due diligence report (9 sections), and a data appendix with supporting tables and chart data. Distributes via configurable channels (internal storage, SharePoint, Slack, email) and generates a full audit trail for compliance.
-
-> **Note:** Executive summary and report narrative generation are LLM-powered (`TODO`). Report structure and distribution scaffolding are complete.
+Generates board-ready output from the Analysis Agent's validated findings. Uses LLM to produce an executive summary and a full due diligence report (9 sections). Distributes via configurable channels (internal storage, SharePoint, Slack, email) and generates a full audit trail for compliance.
 
 ---
 
@@ -94,6 +92,7 @@ Generates board-ready output from the Analysis Agent's validated findings. Produ
 | **Real-time** | WebSocket (FastAPI native) — live agent status & progress |
 | **Auth** | Dynamic auth manager (OAuth, SSO, MFA, API key, browser/TinyFish) |
 | **Encryption** | AES-256-GCM credential vault via `cryptography` |
+| **LLM** | Claude (Anthropic) primary + Gemini (Google) automatic fallback |
 | **Testing** | pytest + pytest-asyncio |
 
 ---
@@ -104,12 +103,6 @@ Generates board-ready output from the Analysis Agent's validated findings. Produ
 keen/
 ├── docs/
 │   └── screenshots/
-│       ├── screenshot-hero.png
-│       ├── screenshot-metrics.png
-│       ├── screenshot-agents.png
-│       ├── screenshot-capabilities.png
-│       ├── screenshot-integrations.png
-│       └── screenshot-moat.png
 ├── frontend/                         # React + Vite + Tailwind
 │   └── src/
 │       ├── App.tsx                   # Main application — all sections & data
@@ -134,8 +127,14 @@ keen/
 │       │   ├── research.py           # Data extraction (15+ sources)
 │       │   ├── analysis.py           # Cross-referencing & variance detection
 │       │   └── delivery.py           # Report generation & distribution
+│       ├── llm/
+│       │   ├── client.py             # Multi-provider client (Claude → Gemini fallback)
+│       │   ├── prompts.py            # All LLM system + user prompt templates
+│       │   └── exceptions.py         # LLMError, LLMUnavailableError, LLMParseError
+│       ├── integrations/
+│       │   ├── demo/                 # Fixture connectors for all 15 sources (demo mode)
+│       │   └── live/                 # Live enterprise connectors (in development)
 │       ├── auth/                     # Auth manager + AES-256-GCM credential vault
-│       ├── integrations/             # Enterprise source connectors
 │       └── services/                 # Business logic
 │
 └── README.md
@@ -155,19 +154,61 @@ All three agents extend `BaseAgent`, which provides:
 
 ---
 
-## 🔌 LLM Integration
+## 🤖 LLM Integration
 
-KEEN uses OpenAI (configured via `OPENAI_API_KEY`) for the intelligence layer. The following steps are designed for LLM integration and are currently scaffolded with `TODO` markers:
+KEEN uses a **multi-provider LLM client** with automatic failover. Claude (Anthropic) is the primary model; Gemini (Google) activates automatically if Claude is unavailable for any reason — rate limits, quota exhaustion, API key expiry, or service outage.
+
+```
+Request → Claude (primary) → Gemini (fallback) → hardcoded stub
+```
+
+Configure whichever keys you have — both is recommended, one is sufficient:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...   # Claude (primary)
+GEMINI_API_KEY=AIza...          # Gemini (fallback)
+```
+
+### LLM-powered steps
 
 | Agent | Step | LLM Role |
 |---|---|---|
-| Research | `plan_extraction` | Generate an intelligent extraction plan from engagement context |
-| Analysis | `cross_reference_sources` | Intelligently match entities across CRM, ERP, and market data |
+| Research | `plan_extraction` | Prioritise and sequence data sources based on engagement context |
+| Analysis | `cross_reference_sources` | Match entities and surface discrepancies across CRM, ERP, and market data |
 | Analysis | `score_findings` | Assign reliability and impact scores to each finding |
-| Delivery | `generate_executive_summary` | Synthesize findings into a one-page board narrative |
-| Delivery | `generate_detailed_report` | Produce the full 9-section due diligence report |
+| Delivery | `generate_executive_summary` | Synthesise findings into a one-page board narrative |
+| Delivery | `generate_detailed_report` | Produce the full 9-section due diligence report (batched, checkpoint-safe) |
 
-The data pipeline (extraction, normalization, routing, distribution) is complete. LLM integration is the primary remaining milestone before production use.
+All LLM steps include **idempotency checks** (safe to retry/resume) and **graceful fallbacks** — the pipeline never breaks if LLM is unavailable; it returns placeholder output and flags for human review.
+
+---
+
+## 🧪 Demo Mode vs Live Mode
+
+The navbar includes a **DEMO / LIVE toggle** so you can test the full pipeline end-to-end without real client credentials.
+
+| | Demo Mode | Live Mode |
+|---|---|---|
+| **Toggle appearance** | Amber flask pill | Green pulsing radio pill |
+| **Data source** | JSON fixture files (`integrations/demo/`) | Live enterprise connectors |
+| **Credentials required** | None | OAuth / API keys per source |
+| **Persistence** | `localStorage` | `localStorage` |
+| **Pipeline behaviour** | `config.demo_mode: true` injected into engagement | `config.demo_mode: false` |
+
+### Demo dataset — Acme Analytics Corp
+
+The demo fixtures represent a fictional **$24.2M ARR B2B SaaS platform**. Intentional discrepancies are baked in to exercise the full analysis pipeline:
+
+| Discrepancy | Sources | Gap |
+|---|---|---|
+| Revenue gap | Salesforce vs NetSuite | ~$1.3M |
+| Funnel leakage | HubSpot MQLs vs Salesforce opps | 7% vs 15–20% benchmark |
+| R&D cost mismatch | SAP vs Oracle GL | ~$400K |
+| Funding discrepancy | Crunchbase vs SEC proxy | $500K |
+| Headcount mismatch | ZoomInfo / SAP / LinkedIn | 11–25 person gap |
+| SMB churn | Dynamics | 18.4% |
+| Overdue AR | Oracle | 2 accounts 120+ days |
+| Key person risk | Sales Navigator | VP Engineering departed Feb 2026 |
 
 ---
 
@@ -225,7 +266,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 cp .env.example .env
-# Fill in Supabase URL, keys, Redis URL, encryption key, etc.
+# Fill in Supabase URL, keys, Redis URL, encryption key, and at least one LLM key
 
 alembic upgrade head
 
@@ -277,7 +318,8 @@ ruff check app/      # Lint Python code
 | `REDIS_URL` | Redis connection string |
 | `SECRET_KEY` | JWT signing key |
 | `CREDENTIAL_ENCRYPTION_KEY` | 32-byte base64 key for AES-256-GCM vault |
-| `OPENAI_API_KEY` | OpenAI API key (used for LLM analysis & report generation) |
+| `ANTHROPIC_API_KEY` | Claude API key — primary LLM provider |
+| `GEMINI_API_KEY` | Gemini API key — automatic fallback LLM provider |
 | `TINYFISH_API_KEY` | TinyFish browser automation key (for UI-only sources) |
 
 ---
