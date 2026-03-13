@@ -4,6 +4,11 @@
 
 const API_BASE = '/api/v1';
 
+/** Read the current data mode from localStorage without needing React context. */
+function isDemoMode(): boolean {
+  return localStorage.getItem('keen-data-mode') !== 'live';
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: Record<string, unknown>;
@@ -116,7 +121,15 @@ export interface EngagementInput {
 
 export const engagementsApi = {
   create: (data: EngagementInput) =>
-    request<Engagement>('/engagements', { method: 'POST', body: data as unknown as Record<string, unknown> }),
+    request<Engagement>('/engagements', {
+      method: 'POST',
+      body: {
+        ...data,
+        // Inject the current data mode into the engagement config so the
+        // backend Research Agent knows whether to use DemoConnector or live connectors.
+        config: { demo_mode: isDemoMode(), ...(data.config ?? {}) },
+      } as Record<string, unknown>,
+    }),
 
   list: (skip = 0, limit = 50) =>
     request<Engagement[]>(`/engagements?skip=${skip}&limit=${limit}`),
