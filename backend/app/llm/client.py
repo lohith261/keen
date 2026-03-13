@@ -1,27 +1,90 @@
-"""Reusable async LLM client wrapping the Anthropic SDK."""
+"""Multi-provider async LLM client with automatic Claude → Gemini failover.
+
+Priority order: Claude (Anthropic) → Gemini (Google).
+On LLMUnavailableError (auth failure, rate-limit, quota exhausted, service
+down), the next configured provider is tried automatically.  At least one
+API key must be present in settings.
+"""
 
 from __future__ import annotations
 
+import abc
 import json
 import logging
 import re
 import time
-
-import anthropic
+from typing import Sequence
 
 from app.config import get_settings
 from app.llm.exceptions import LLMError, LLMParseError, LLMUnavailableError
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
+CLAUDE_DEFAULT_MODEL = "claude-sonnet-4-20250514"
+GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"
 
 
-class LLMClient:
-    """Thin wrapper around AsyncAnthropic with JSON parsing and retry logic."""
+# ── Shared JSON parser ─────────────────────────────────────────────────────────
 
-    def __init__(self, api_key: str, model: str = DEFAULT_MODEL):
-        self._client = anthropic.AsyncAnthropic(api_key=api_key)
+def _parse_json(text: str) -> dict:
+    """Extract and parse JSON from LLM response text, stripping markdown fences."""
+    cleaned = re.sub(r"^```(?:json)?\s*\n?", "", text.strip())
+    cleaned = re.sub(r"\n?```\s*$", "", cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        match = re.search(r"\{[\s\S]*\}", cleaned)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+        raise LLMParseError(f"Could not parse JSON from response: {exc}") from exc
+
+
+# ── Abstract provider interface ────────────────────────────────────────────────
+
+class BaseLLMProvider(abc.ABC):
+    """Common interface that every LLM provider must implement."""
+
+    name: str = "base"
+
+    @abc.abstractmethod
+    async def complete_json(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+    ) -> dict:
+        """Send a prompt and return a parsed JSON dict."""
+        ...
+
+    @abc.abstractmethod
+    async def complete_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> str:
+        """Send a prompt and return the plain-text response."""
+        ...
+
+
+# ── Claude (Anthropic) provider ────────────────────────────────────────────────
+
+class ClaudeProvider(BaseLLMProvider):
+    """Anthropic Claude via the anthropic async SDK."""
+
+    name = "claude"
+
+    def __init__(self, api_key: str, model: str = CLAUDE_DEFAULT_MODEL) -> None:
+        import anthropic as _anthropic  # lazy import — only needed if key is set
+        self._anthropic = _anthropic
+        self._client = _anthropic.AsyncAnthropic(api_key=api_key)
         self.model = model
 
     async def complete_json(
@@ -31,24 +94,12 @@ class LLMClient:
         *,
         max_tokens: int = 4096,
         temperature: float = 0.2,
-        model: str | None = None,
     ) -> dict:
-        """Send a message and parse the response as JSON.
-
-        Strips markdown fences if present. Retries once on parse failure.
-        """
-        raw = await self._send(
-            system_prompt,
-            user_prompt,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            model=model,
-        )
+        raw = await self._send(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
         try:
-            return self._parse_json(raw)
+            return _parse_json(raw)
         except LLMParseError:
-            # Retry with explicit JSON instruction
-            logger.warning("JSON parse failed, retrying with explicit instruction")
+            logger.warning("[Claude] JSON parse failed — retrying with explicit instruction")
             raw = await self._send(
                 system_prompt,
                 (
@@ -58,9 +109,8 @@ class LLMClient:
                 ),
                 max_tokens=max_tokens,
                 temperature=0.1,
-                model=model,
             )
-            return self._parse_json(raw)
+            return _parse_json(raw)
 
     async def complete_text(
         self,
@@ -69,18 +119,8 @@ class LLMClient:
         *,
         max_tokens: int = 4096,
         temperature: float = 0.3,
-        model: str | None = None,
     ) -> str:
-        """Send a message and return the plain-text response."""
-        return await self._send(
-            system_prompt,
-            user_prompt,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            model=model,
-        )
-
-    # ── Internal helpers ──────────────────────────────────
+        return await self._send(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
 
     async def _send(
         self,
@@ -89,83 +129,270 @@ class LLMClient:
         *,
         max_tokens: int,
         temperature: float,
-        model: str | None = None,
     ) -> str:
-        """Call the Anthropic messages API."""
-        use_model = model or self.model
+        import asyncio
+
         start = time.monotonic()
         try:
             response = await self._client.messages.create(
-                model=use_model,
+                model=self.model,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
             )
             text = response.content[0].text
-            elapsed = time.monotonic() - start
             logger.info(
-                "LLM call: model=%s prompt_len=%d response_len=%d latency=%.1fs",
-                use_model,
-                len(user_prompt),
-                len(text),
-                elapsed,
+                "[Claude] model=%s prompt_len=%d response_len=%d latency=%.1fs",
+                self.model, len(user_prompt), len(text), time.monotonic() - start,
             )
             return text
-        except anthropic.AuthenticationError as exc:
-            raise LLMUnavailableError(f"Invalid API key: {exc}") from exc
-        except anthropic.RateLimitError:
-            # Retry once after a short pause
-            logger.warning("Rate limited, retrying in 2s")
-            import asyncio
 
-            await asyncio.sleep(2)
-            try:
-                response = await self._client.messages.create(
-                    model=use_model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system_prompt,
-                    messages=[{"role": "user", "content": user_prompt}],
-                )
-                return response.content[0].text
-            except anthropic.APIError as exc:
-                raise LLMUnavailableError(f"API error after retry: {exc}") from exc
-        except anthropic.APIError as exc:
-            raise LLMError(f"Anthropic API error: {exc}") from exc
+        except self._anthropic.AuthenticationError as exc:
+            raise LLMUnavailableError(f"[Claude] Invalid API key: {exc}") from exc
 
-    @staticmethod
-    def _parse_json(text: str) -> dict:
-        """Extract and parse JSON from LLM response text."""
-        # Strip markdown code fences if present
-        cleaned = re.sub(r"^```(?:json)?\s*\n?", "", text.strip())
-        cleaned = re.sub(r"\n?```\s*$", "", cleaned)
+        except self._anthropic.RateLimitError as exc:
+            # Surface as unavailable so the fallback chain tries Gemini
+            raise LLMUnavailableError(f"[Claude] Rate limit / quota exceeded: {exc}") from exc
+
+        except self._anthropic.APIStatusError as exc:
+            if exc.status_code in (429, 529):
+                raise LLMUnavailableError(f"[Claude] Overloaded ({exc.status_code}): {exc}") from exc
+            raise LLMError(f"[Claude] API error {exc.status_code}: {exc}") from exc
+
+        except self._anthropic.APIError as exc:
+            raise LLMError(f"[Claude] API error: {exc}") from exc
+
+
+# ── Gemini (Google) provider ───────────────────────────────────────────────────
+
+class GeminiProvider(BaseLLMProvider):
+    """Google Gemini via the google-generativeai SDK (sync SDK run in thread pool)."""
+
+    name = "gemini"
+
+    def __init__(self, api_key: str, model: str = GEMINI_DEFAULT_MODEL) -> None:
+        import google.generativeai as genai  # lazy import
+        genai.configure(api_key=api_key)
+        self._genai = genai
+        self.model = model
+
+    async def complete_json(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+    ) -> dict:
+        raw = await self._send(
+            system_prompt,
+            user_prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            json_mode=True,
+        )
         try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            # Last resort: try to find a JSON object in the text
-            match = re.search(r"\{[\s\S]*\}", cleaned)
-            if match:
-                try:
-                    return json.loads(match.group())
-                except json.JSONDecodeError:
-                    pass
-            raise LLMParseError(f"Could not parse JSON: {exc}") from exc
+            return _parse_json(raw)
+        except LLMParseError:
+            logger.warning("[Gemini] JSON parse failed — retrying with explicit instruction")
+            raw = await self._send(
+                system_prompt,
+                (
+                    "Your previous response was not valid JSON. "
+                    "Respond ONLY with valid JSON — no markdown, no commentary.\n\n"
+                    + user_prompt
+                ),
+                max_tokens=max_tokens,
+                temperature=0.1,
+                json_mode=True,
+            )
+            return _parse_json(raw)
+
+    async def complete_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> str:
+        return await self._send(
+            system_prompt,
+            user_prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            json_mode=False,
+        )
+
+    async def _send(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> str:
+        import asyncio
+
+        gen_config: dict = {"max_output_tokens": max_tokens, "temperature": temperature}
+        if json_mode:
+            gen_config["response_mime_type"] = "application/json"
+
+        model = self._genai.GenerativeModel(
+            model_name=self.model,
+            system_instruction=system_prompt,
+            generation_config=gen_config,
+        )
+
+        start = time.monotonic()
+        try:
+            # google-generativeai SDK is synchronous — run in thread pool
+            response = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: model.generate_content(user_prompt)
+            )
+            text = response.text
+            logger.info(
+                "[Gemini] model=%s prompt_len=%d response_len=%d latency=%.1fs",
+                self.model, len(user_prompt), len(text), time.monotonic() - start,
+            )
+            return text
+
+        except Exception as exc:
+            self._handle_error(exc)
+
+    def _handle_error(self, exc: Exception) -> None:
+        """Translate google-api-core exceptions into LLMError hierarchy."""
+        try:
+            import google.api_core.exceptions as gexc
+
+            if isinstance(exc, (gexc.Unauthenticated, gexc.PermissionDenied)):
+                raise LLMUnavailableError(f"[Gemini] Auth error: {exc}") from exc
+            if isinstance(exc, gexc.ResourceExhausted):
+                raise LLMUnavailableError(f"[Gemini] Quota exceeded: {exc}") from exc
+            if isinstance(exc, gexc.ServiceUnavailable):
+                raise LLMUnavailableError(f"[Gemini] Service unavailable: {exc}") from exc
+            if isinstance(exc, gexc.DeadlineExceeded):
+                raise LLMUnavailableError(f"[Gemini] Deadline exceeded: {exc}") from exc
+        except ImportError:
+            pass  # google.api_core not installed, fall through to generic
+
+        # Catch quota / auth signals that surface as plain exceptions in some SDK versions
+        err_lower = str(exc).lower()
+        if any(kw in err_lower for kw in ("quota", "rate limit", "resource exhausted")):
+            raise LLMUnavailableError(f"[Gemini] Quota/rate limit: {exc}") from exc
+        if any(kw in err_lower for kw in ("api key", "authentication", "permission denied", "unauthenticated")):
+            raise LLMUnavailableError(f"[Gemini] Auth error: {exc}") from exc
+
+        raise LLMError(f"[Gemini] API error: {exc}") from exc
 
 
-# ── Module-level singleton ────────────────────────────────
+# ── Fallback client ────────────────────────────────────────────────────────────
 
-_client: LLMClient | None = None
+class FallbackLLMClient:
+    """Tries providers in order; automatically falls back on LLMUnavailableError.
+
+    Usage::
+
+        client = FallbackLLMClient([ClaudeProvider(...), GeminiProvider(...)])
+        result = await client.complete_json(system, user)
+    """
+
+    def __init__(self, providers: Sequence[BaseLLMProvider]) -> None:
+        if not providers:
+            raise ValueError("FallbackLLMClient requires at least one provider")
+        self._providers = list(providers)
+        logger.info(
+            "[LLM] Fallback chain: %s",
+            " → ".join(p.name for p in self._providers),
+        )
+
+    async def complete_json(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+    ) -> dict:
+        return await self._with_fallback(
+            "complete_json", system_prompt, user_prompt,
+            max_tokens=max_tokens, temperature=temperature,
+        )
+
+    async def complete_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> str:
+        return await self._with_fallback(
+            "complete_text", system_prompt, user_prompt,
+            max_tokens=max_tokens, temperature=temperature,
+        )
+
+    async def _with_fallback(self, method: str, system_prompt: str, user_prompt: str, **kwargs):
+        last_error: Exception | None = None
+        for provider in self._providers:
+            try:
+                return await getattr(provider, method)(system_prompt, user_prompt, **kwargs)
+            except LLMUnavailableError as exc:
+                logger.warning(
+                    "[LLM] Provider '%s' unavailable (%s) — trying next provider...",
+                    provider.name, exc,
+                )
+                last_error = exc
+            except LLMError as exc:
+                logger.warning(
+                    "[LLM] Provider '%s' returned an error (%s) — trying next provider...",
+                    provider.name, exc,
+                )
+                last_error = exc
+
+        raise LLMUnavailableError(
+            f"All LLM providers exhausted. Last error: {last_error}"
+        ) from last_error
 
 
-def get_llm_client() -> LLMClient:
-    """Return a lazily-initialized LLMClient singleton."""
+# Backward-compatible alias
+LLMClient = FallbackLLMClient
+
+
+# ── Module-level singleton ─────────────────────────────────────────────────────
+
+_client: FallbackLLMClient | None = None
+
+
+def get_llm_client() -> FallbackLLMClient:
+    """Return a lazily-initialized FallbackLLMClient singleton.
+
+    Registers whichever providers have API keys configured:
+      1. Claude  (ANTHROPIC_API_KEY)
+      2. Gemini  (GEMINI_API_KEY)
+
+    At least one key must be set; both is recommended for resilience.
+    """
     global _client
     if _client is None:
         settings = get_settings()
-        if not settings.anthropic_api_key:
+        providers: list[BaseLLMProvider] = []
+
+        if settings.anthropic_api_key:
+            providers.append(ClaudeProvider(api_key=settings.anthropic_api_key))
+            logger.info("[LLM] Claude provider registered (primary)")
+
+        if settings.gemini_api_key:
+            providers.append(GeminiProvider(api_key=settings.gemini_api_key))
+            logger.info("[LLM] Gemini provider registered (%s)", "fallback" if providers else "primary")
+
+        if not providers:
             raise LLMUnavailableError(
-                "ANTHROPIC_API_KEY is not set. Configure it in .env to enable LLM features."
+                "No LLM API keys configured. "
+                "Set ANTHROPIC_API_KEY and/or GEMINI_API_KEY in your .env file."
             )
-        _client = LLMClient(api_key=settings.anthropic_api_key)
+
+        _client = FallbackLLMClient(providers)
     return _client
