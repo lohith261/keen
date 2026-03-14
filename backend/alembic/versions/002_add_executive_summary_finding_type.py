@@ -7,8 +7,8 @@ Create Date: 2026-03-14
 """
 from alembic import op
 
-revision = "002"
-down_revision = "001"
+revision = "002_add_exec_summary"
+down_revision = "001_initial"
 branch_labels = None
 depends_on = None
 
