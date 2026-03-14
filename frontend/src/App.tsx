@@ -28,6 +28,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import { useTheme } from './context/ThemeContext';
 import { useView } from './context/ViewContext';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
+import { useSystemHealth } from './hooks/useSystemHealth';
 
 const agents = [
   {
@@ -117,10 +118,11 @@ const integrations = [
 
 function App() {
   const [activeAgent, setActiveAgent] = useState(0);
-  const [systemStatus] = useState('OPERATIONAL');
   const [timestamp, setTimestamp] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [navSolid, setNavSolid] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const { status: systemStatus, checks, loading: healthLoading, lastChecked, recheck } = useSystemHealth();
   const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
   const { view, setView } = useView();
@@ -197,8 +199,76 @@ function App() {
               </div>
             </MagneticElement>
             <div className="flex items-center gap-3 md:gap-6">
-              <div className="text-[10px] md:text-xs font-mono text-theme-text-muted hidden sm:block">
-                STATUS: <span className="text-green-500">{systemStatus}</span>
+              <div className="relative hidden sm:block">
+                <button
+                  onClick={() => setStatusOpen(o => !o)}
+                  className="text-[10px] md:text-xs font-mono text-theme-text-muted hover:text-theme-text transition-colors flex items-center gap-1.5"
+                >
+                  STATUS:{' '}
+                  <span className={
+                    systemStatus === 'OPERATIONAL' ? 'text-green-500' :
+                    systemStatus === 'DEGRADED' ? 'text-yellow-500' :
+                    'text-red-500'
+                  }>
+                    {healthLoading ? '...' : systemStatus}
+                  </span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    systemStatus === 'OPERATIONAL' ? 'bg-green-500 animate-pulse' :
+                    systemStatus === 'DEGRADED' ? 'bg-yellow-500 animate-pulse' :
+                    'bg-red-500'
+                  }`} />
+                </button>
+
+                {statusOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
+                    <div className="absolute right-0 top-6 z-50 w-64 rounded-lg border border-theme-border bg-theme-bg shadow-xl p-3 font-mono text-[10px]">
+                      <div className="flex items-center justify-between mb-2.5">
+                        <span className="font-semibold text-theme-text text-[11px]">System Health</span>
+                        <button
+                          onClick={() => { recheck(); }}
+                          className="text-theme-text-muted hover:text-theme-text transition-colors"
+                        >
+                          ↻
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {checks.map(check => (
+                          <div key={check.name} className="flex items-start gap-2">
+                            <span className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                              check.status === 'pass' ? 'bg-green-500' :
+                              check.status === 'fail' ? 'bg-red-500' :
+                              'bg-theme-text-muted animate-pulse'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-theme-text font-semibold">{check.name}</span>
+                                <span className={
+                                  check.status === 'pass' ? 'text-green-500' :
+                                  check.status === 'fail' ? 'text-red-500' :
+                                  'text-theme-text-muted'
+                                }>
+                                  {check.status === 'pending' ? 'checking' : check.status}
+                                </span>
+                              </div>
+                              <p className="text-theme-text-muted">{check.description}</p>
+                              {check.detail && (
+                                <p className="text-red-400 mt-0.5 truncate" title={check.detail}>{check.detail}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {lastChecked && (
+                        <p className="text-theme-text-muted mt-2.5 pt-2 border-t border-theme-border">
+                          Last checked {lastChecked.toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
               <div className="text-[10px] md:text-xs font-mono text-theme-text-muted">
                 {timestamp}
