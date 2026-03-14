@@ -361,9 +361,10 @@ class DeliveryAgent(BaseAgent):
         )
 
     async def _finalize_delivery(self) -> StepResult:
-        """Final step — compile all deliverables."""
+        """Final step — compile all deliverables and surface executive summary as a finding."""
+        exec_summary = self.state.get("executive_summary", {})
         deliverables = {
-            "executive_summary": self.state.get("executive_summary", {}),
+            "executive_summary": exec_summary,
             "detailed_report": self.state.get("detailed_report", {}),
             "data_appendix": self.state.get("data_appendix", {}),
             "distributions": self.state.get("distributions", []),
@@ -371,8 +372,36 @@ class DeliveryAgent(BaseAgent):
             "compliance": self.state.get("compliance", {}),
         }
 
+        # Surface the LLM-generated executive summary as a findable finding
+        findings = []
+        rec = exec_summary.get("recommendation", "")
+        if rec and rec not in ("pending", "insufficient_data"):
+            rationale = exec_summary.get("recommendation_rationale", "")
+            risk = exec_summary.get("risk_assessment", "")
+            key_findings_list = exec_summary.get("key_findings", [])
+            description = f"Recommendation: {rec.upper().replace('_', ' ')}. {rationale}"
+            sev = "critical" if rec in ("do_not_proceed", "reject") else (
+                "warning" if rec in ("proceed_with_caution", "caution") else "info"
+            )
+            findings.append({
+                "type": "executive_summary",
+                "source_system": "gpt4o_analysis",
+                "title": f"Executive Summary — {rec.replace('_', ' ').title()}",
+                "description": description,
+                "severity": sev,
+                "requires_human_review": True,
+                "data": {
+                    "recommendation": rec,
+                    "risk_assessment": risk,
+                    "key_findings": key_findings_list,
+                    "rationale": rationale,
+                    "report_sections": len(self.state.get("detailed_report", {}).get("sections", [])),
+                },
+            })
+
         return StepResult(
             success=True,
             data={"deliverables": deliverables, "status": "finalized"},
+            findings=findings,
             message="All deliverables finalized",
         )
