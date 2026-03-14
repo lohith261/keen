@@ -1,13 +1,18 @@
 """Engagement CRUD and control endpoints."""
 
+import asyncio
+import logging
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import flag_modified
 
+from app.database import async_session_factory
 from app.dependencies import get_session
 from app.models.engagement import Engagement, EngagementStatus
 from app.models.agent_run import AgentRun, AgentRunStatus, AgentType
@@ -20,7 +25,45 @@ from app.schemas.engagement import (
 )
 from app.schemas.agent import FindingResponse
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+async def _run_orchestrator(engagement_id: UUID, redis: Any | None) -> None:
+    """Background task: run the full orchestration pipeline in its own DB session."""
+    from app.agents.orchestrator import AgentOrchestrator
+    from app.websocket.agent_status import emit_agent_event
+
+    async def on_event(event_type: str, data: dict) -> None:
+        try:
+            await emit_agent_event(str(engagement_id), event_type, data)
+        except Exception:
+            pass
+
+    async with async_session_factory() as session:
+        try:
+            orch = AgentOrchestrator(
+                engagement_id=engagement_id,
+                db=session,
+                redis=redis,
+                on_event=on_event,
+            )
+            result = await orch.run()
+
+            # Persist pipeline_data into engagement.config so the UI can read it
+            engagement = await session.get(Engagement, engagement_id)
+            if engagement and result.get("pipeline_data"):
+                engagement.config = {
+                    **engagement.config,
+                    "pipeline_data": result["pipeline_data"],
+                }
+                flag_modified(engagement, "config")
+
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            logger.exception("Orchestrator background task failed for %s", engagement_id)
 
 
 @router.post("", response_model=EngagementResponse, status_code=status.HTTP_201_CREATED)
@@ -105,6 +148,8 @@ async def update_engagement(
 @router.post("/{engagement_id}/start", response_model=EngagementWithRuns)
 async def start_engagement(
     engagement_id: UUID,
+    background_tasks: BackgroundTasks,
+    request: Request,
     db: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Start agent orchestration for an engagement."""
@@ -155,9 +200,9 @@ async def start_engagement(
     )
     engagement = result.scalar_one_or_none()
 
-    # TODO: Dispatch to Celery orchestrator task
-    # from app.agents.orchestrator import run_orchestrator
-    # run_orchestrator.delay(str(engagement.id))
+    # Dispatch orchestrator as a background task
+    redis = getattr(request.app.state, "redis", None)
+    background_tasks.add_task(_run_orchestrator, engagement.id, redis)
 
     return engagement
 
@@ -197,6 +242,8 @@ async def pause_engagement(
 @router.post("/{engagement_id}/resume", response_model=EngagementWithRuns)
 async def resume_engagement(
     engagement_id: UUID,
+    background_tasks: BackgroundTasks,
+    request: Request,
     db: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Resume a paused engagement from the last checkpoint."""
@@ -231,9 +278,8 @@ async def resume_engagement(
     )
     engagement = result.scalar_one_or_none()
 
-    # TODO: Dispatch resume to Celery orchestrator
-    # from app.agents.orchestrator import resume_orchestrator
-    # resume_orchestrator.delay(str(engagement.id))
+    redis = getattr(request.app.state, "redis", None)
+    background_tasks.add_task(_run_orchestrator, engagement.id, redis)
 
     return engagement
 
@@ -244,7 +290,6 @@ async def get_engagement_findings(
     db: AsyncSession = Depends(get_session),
 ) -> list[Finding]:
     """Get all findings across all agents for an engagement."""
-    # Verify engagement exists
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
