@@ -123,7 +123,7 @@ class DeliveryAgent(BaseAgent):
             llm = get_llm_client()
 
             user_prompt = USER_EXECUTIVE_SUMMARY.format(
-                company_name=config.get("company_name", "Target Company"),
+                company_name=config.get("target_company") or config.get("company_name", "Target Company"),
                 source_count=analysis.get("source_count", 0),
                 revenue_variances=json.dumps(analysis.get("revenue_variances", []), default=str)[:5000],
                 cost_variances=json.dumps(analysis.get("cost_variances", []), default=str)[:5000],
@@ -183,7 +183,7 @@ class DeliveryAgent(BaseAgent):
         analysis = self.state.get("analysis_input", {})
         config = self.state.get("pipeline_config", {})
         exec_summary = self.state.get("executive_summary", {})
-        company_name = config.get("company_name", "Target Company")
+        company_name = config.get("target_company") or config.get("company_name", "Target Company")
 
         # Define 3 batches of sections
         batches = [
@@ -326,7 +326,8 @@ class DeliveryAgent(BaseAgent):
 
     def _rule_based_executive_summary(self, analysis: dict, config: dict) -> dict:
         """Generate a structured executive summary from analysis data without LLM."""
-        company = config.get("company_name", "Target Company")
+        # Use target_company (the company being diligenced), not company_name (the PE firm)
+        company = config.get("target_company") or config.get("company_name", "Target Company")
         rev_variances = analysis.get("revenue_variances", [])
         cost_variances = analysis.get("cost_variances", [])
         customer = analysis.get("customer_analysis", {})
@@ -338,11 +339,14 @@ class DeliveryAgent(BaseAgent):
         warning_count = 0
         key_findings = []
 
-        # Revenue variances
+        # Revenue variances — variance fields live under finding["data"]
         for v in rev_variances:
-            pct = v.get("variance_pct", 0)
-            amt = abs(v.get("variance", 0))
+            data = v.get("data", v)  # fall back to v itself for flat structures
+            pct = data.get("variance_pct", 0)
+            amt = abs(data.get("variance", 0))
             sev = v.get("severity", "warning")
+            if amt == 0:
+                continue  # skip churn/non-variance data points
             if sev == "critical":
                 critical_count += 1
             else:
@@ -352,16 +356,18 @@ class DeliveryAgent(BaseAgent):
                 f"and NetSuite ARR — deferred revenue treatment and multi-year contract timing must be reconciled before close"
             )
 
-        # Cost variances
+        # Cost variances — variance fields live under finding["data"]
         for v in cost_variances:
-            pct = v.get("variance_pct", 0)
+            data = v.get("data", v)
+            pct = data.get("variance_pct", 0)
+            amt = abs(data.get("variance", 0))
             sev = v.get("severity", "warning")
             if sev == "critical":
                 critical_count += 1
             else:
                 warning_count += 1
             key_findings.append(
-                f"R&D cost discrepancy of {pct:.1f}% between SAP income statement and Oracle GL "
+                f"R&D cost discrepancy of ${amt/1e3:.0f}K ({pct:.1f}%) between SAP income statement and Oracle GL "
                 f"annualised run rate — investigate capitalised software and cross-department allocations"
             )
 
