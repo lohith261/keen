@@ -25,6 +25,7 @@ class FindingType(str, enum.Enum):
     DISCREPANCY = "discrepancy"
     EXCEPTION = "exception"
     INSIGHT = "insight"
+    EXECUTIVE_SUMMARY = "executive_summary"
 
 
 class Severity(str, enum.Enum):
