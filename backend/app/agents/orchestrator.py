@@ -126,8 +126,15 @@ class AgentOrchestrator:
                 on_progress=self.on_event,
             )
 
-            # Inject data from previous agents into config
-            step_config = {**config, "pipeline_data": pipeline_data}
+            # Inject data from previous agents into config, and surface
+            # top-level engagement fields (company_name, target_company) so
+            # agents can use them in prompts without reading the DB.
+            step_config = {
+                **config,
+                "pipeline_data": pipeline_data,
+                "company_name": engagement.company_name,
+                "target_company": engagement.target_company or engagement.company_name,
+            }
 
             # Execute the agent
             try:

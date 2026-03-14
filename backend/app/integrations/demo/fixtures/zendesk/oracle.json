@@ -1,0 +1,41 @@
+{
+  "_meta": {
+    "source": "Oracle Fusion ERP",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk 10-K. Oracle GL R&D Q4 = $97.5M (annualized $390M) vs SAP full-year $356.2M — $33.8M discrepancy (9.5%) flagged. Two AR items 120+ days outstanding."
+  },
+  "gl_entries": [
+    {"account_code": "4000", "account_name": "Subscription Revenue", "period": "FY2022-Q4", "debit": 0, "credit": 338200000, "net": 338200000},
+    {"account_code": "4100", "account_name": "Professional Services Revenue", "period": "FY2022-Q4", "debit": 0, "credit": 28300000, "net": 28300000},
+    {"account_code": "5000", "account_name": "Cost of Revenue - Hosting & Infrastructure", "period": "FY2022-Q4", "debit": 37000000, "credit": 0, "net": -37000000},
+    {"account_code": "5100", "account_name": "Cost of Revenue - Support Operations", "period": "FY2022-Q4", "debit": 28400000, "credit": 0, "net": -28400000},
+    {"account_code": "5200", "account_name": "Cost of Revenue - Professional Services", "period": "FY2022-Q4", "debit": 24800000, "credit": 0, "net": -24800000},
+    {"account_code": "6000", "account_name": "Salaries - Engineering", "period": "FY2022-Q4", "debit": 58200000, "credit": 0, "net": -58200000},
+    {"account_code": "6100", "account_name": "Salaries - Sales", "period": "FY2022-Q4", "debit": 41200000, "credit": 0, "net": -41200000},
+    {"account_code": "6200", "account_name": "Salaries - Marketing", "period": "FY2022-Q4", "debit": 16800000, "credit": 0, "net": -16800000},
+    {"account_code": "6300", "account_name": "Salaries - G&A", "period": "FY2022-Q4", "debit": 18400000, "credit": 0, "net": -18400000},
+    {"account_code": "6500", "account_name": "Research & Development Expense", "period": "FY2022-Q4", "debit": 97500000, "credit": 0, "net": -97500000},
+    {"account_code": "7000", "account_name": "Sales Commissions", "period": "FY2022-Q4", "debit": 24800000, "credit": 0, "net": -24800000},
+    {"account_code": "7100", "account_name": "Marketing Programs & Events", "period": "FY2022-Q4", "debit": 38400000, "credit": 0, "net": -38400000},
+    {"account_code": "8000", "account_name": "Rent & Facilities", "period": "FY2022-Q4", "debit": 18200000, "credit": 0, "net": -18200000},
+    {"account_code": "8100", "account_name": "Software Subscriptions", "period": "FY2022-Q4", "debit": 9800000, "credit": 0, "net": -9800000},
+    {"account_code": "8200", "account_name": "Depreciation & Amortization", "period": "FY2022-Q4", "debit": 14200000, "credit": 0, "net": -14200000}
+  ],
+  "ar_aging": [
+    {"customer": "Shopify Inc.", "invoice_id": "INV-2022-0841", "invoice_date": "2022-01-10", "due_date": "2022-02-09", "amount": 4200000, "days_outstanding": 8, "bucket": "current"},
+    {"customer": "Uber Technologies", "invoice_id": "INV-2022-0838", "invoice_date": "2021-12-20", "due_date": "2022-01-19", "amount": 3800000, "days_outstanding": 22, "bucket": "1-30"},
+    {"customer": "Slack Technologies", "invoice_id": "INV-2021-1102", "invoice_date": "2021-11-02", "due_date": "2021-12-02", "amount": 2400000, "days_outstanding": 60, "bucket": "61-90"},
+    {"customer": "Lyft Inc.", "invoice_id": "INV-2021-1004", "invoice_date": "2021-10-04", "due_date": "2021-11-03", "amount": 1640000, "days_outstanding": 89, "bucket": "61-90"},
+    {"customer": "GlobalBancorp", "invoice_id": "INV-2021-0812", "invoice_date": "2021-08-12", "due_date": "2021-09-11", "amount": 2100000, "days_outstanding": 143, "bucket": "120+", "collection_status": "In dispute — contract amendment pending"},
+    {"customer": "TechCore Systems", "invoice_id": "INV-2021-0728", "invoice_date": "2021-07-28", "due_date": "2021-08-27", "amount": 890000, "days_outstanding": 157, "bucket": "120+", "collection_status": "Escalated to legal"}
+  ],
+  "ap_aging": [
+    {"vendor": "Amazon Web Services", "invoice_id": "AWS-2022-0201", "due_date": "2022-02-28", "amount": 37000000, "days_outstanding": 0, "bucket": "current"},
+    {"vendor": "Snowflake Inc.", "invoice_id": "SNOW-2022-0115", "due_date": "2022-02-15", "amount": 5500000, "days_outstanding": 0, "bucket": "current"},
+    {"vendor": "Twilio Inc.", "invoice_id": "TWLO-2022-0110", "due_date": "2022-02-10", "amount": 3200000, "days_outstanding": 0, "bucket": "current"},
+    {"vendor": "Datadog Inc.", "invoice_id": "DDOG-2022-0101", "due_date": "2022-01-31", "amount": 2100000, "days_outstanding": 1, "bucket": "current"},
+    {"vendor": "Okta Inc.", "invoice_id": "OKTA-2021-1215", "due_date": "2022-01-15", "amount": 1400000, "days_outstanding": 17, "bucket": "1-30"}
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "_meta": {
+    "source": "NetSuite ERP",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk 10-K filed March 2022. ARR at Q4-FY2022 end: $1.265B. GAAP revenue $1.339B. $74M gap reflects deferred revenue, multi-year contracts, and timing differences."
+  },
+  "revenue_data": [
+    {
+      "period": "FY2022-Q1",
+      "label": "Feb–Apr 2021",
+      "revenue": 305500000,
+      "arr_contribution": 1100000000,
+      "recurring_pct": 91.2,
+      "new_logo": 38000000,
+      "expansion": 22000000,
+      "churn": -8500000
+    },
+    {
+      "period": "FY2022-Q2",
+      "label": "May–Jul 2021",
+      "revenue": 324800000,
+      "arr_contribution": 1148000000,
+      "recurring_pct": 91.8,
+      "new_logo": 42000000,
+      "expansion": 24000000,
+      "churn": -9200000
+    },
+    {
+      "period": "FY2022-Q3",
+      "label": "Aug–Oct 2021",
+      "revenue": 342200000,
+      "arr_contribution": 1198000000,
+      "recurring_pct": 92.1,
+      "new_logo": 45000000,
+      "expansion": 26000000,
+      "churn": -10500000
+    },
+    {
+      "period": "FY2022-Q4",
+      "label": "Nov 2021–Jan 2022",
+      "revenue": 366500000,
+      "arr_contribution": 1265000000,
+      "recurring_pct": 92.4,
+      "new_logo": 52000000,
+      "expansion": 29000000,
+      "churn": -11800000
+    },
+    {
+      "period": "FY2023-Q1 (partial)",
+      "label": "Feb 2022 (partial)",
+      "revenue": 98200000,
+      "arr_contribution": 1278000000,
+      "recurring_pct": 92.5,
+      "new_logo": 14000000,
+      "expansion": 7500000,
+      "churn": -3200000
+    }
+  ],
+  "expense_records": [
+    {"period": "FY2022-Q4", "category": "Cost of Revenue", "amount": 93150000, "pct_of_revenue": 25.4},
+    {"period": "FY2022-Q4", "category": "Sales & Marketing", "amount": 138480000, "pct_of_revenue": 37.8},
+    {"period": "FY2022-Q4", "category": "Research & Development", "amount": 88750000, "pct_of_revenue": 24.2},
+    {"period": "FY2022-Q4", "category": "General & Administrative", "amount": 43400000, "pct_of_revenue": 11.8},
+    {"period": "FY2022-Q4", "category": "Depreciation & Amortization", "amount": 5120000, "pct_of_revenue": 1.4},
+    {"period": "FY2022-Q3", "category": "Cost of Revenue", "amount": 87400000, "pct_of_revenue": 25.5},
+    {"period": "FY2022-Q3", "category": "Sales & Marketing", "amount": 128900000, "pct_of_revenue": 37.7},
+    {"period": "FY2022-Q3", "category": "Research & Development", "amount": 83200000, "pct_of_revenue": 24.3},
+    {"period": "FY2022-Q3", "category": "General & Administrative", "amount": 40100000, "pct_of_revenue": 11.7}
+  ],
+  "journal_entries": [
+    {"JE_id": "JE-2022-4821", "date": "2022-01-31", "description": "Q4 FY2022 Revenue Recognition", "debit_account": "Accounts Receivable", "credit_account": "Revenue", "amount": 366500000},
+    {"JE_id": "JE-2022-4820", "date": "2022-01-31", "description": "Deferred Revenue Release Q4", "debit_account": "Deferred Revenue", "credit_account": "Revenue", "amount": 18200000},
+    {"JE_id": "JE-2022-4815", "date": "2022-01-15", "description": "AWS Infrastructure Invoice Q4", "debit_account": "COGS - Hosting", "credit_account": "Accounts Payable", "amount": 37000000},
+    {"JE_id": "JE-2022-4810", "date": "2022-01-15", "description": "Payroll - January 2022", "debit_account": "Salaries Expense", "credit_account": "Cash", "amount": 112000000},
+    {"JE_id": "JE-2022-4805", "date": "2021-12-31", "description": "Q4 Sales Commission Accrual", "debit_account": "Sales Commission Expense", "credit_account": "Accrued Liabilities", "amount": 24800000},
+    {"JE_id": "JE-2022-4800", "date": "2021-11-01", "description": "Prepaid Annual Software Licenses", "debit_account": "Prepaid Expenses", "credit_account": "Cash", "amount": 12400000}
+  ],
+  "balance_sheet": {
+    "as_of": "2022-01-31",
+    "assets": {
+      "cash_and_equivalents": 474000000,
+      "accounts_receivable": 218000000,
+      "deferred_contract_costs": 68000000,
+      "prepaid_expenses": 42000000,
+      "total_current_assets": 802000000,
+      "property_equipment_net": 184000000,
+      "intangible_assets_net": 312000000,
+      "goodwill": 824000000,
+      "total_assets": 2478000000
+    },
+    "liabilities": {
+      "accounts_payable": 48000000,
+      "accrued_liabilities": 162000000,
+      "deferred_revenue_current": 512000000,
+      "deferred_revenue_longterm": 184000000,
+      "long_term_debt": 1438000000,
+      "total_liabilities": 2344000000
+    },
+    "equity": {
+      "common_stock": 1284000000,
+      "accumulated_deficit": -1150000000,
+      "total_equity": 134000000
+    }
+  }
+}

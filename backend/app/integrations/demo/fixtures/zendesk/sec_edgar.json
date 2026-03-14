@@ -1,0 +1,114 @@
+{
+  "_meta": {
+    "source": "SEC EDGAR",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk 10-K filed March 28, 2022 (CIK: 0001463172). Public company NYSE: ZEN. Proxy discloses $474M total funding pre-IPO. Crunchbase: $484.1M. $10.1M discrepancy."
+  },
+  "10k_filings": [
+    {
+      "form_type": "10-K",
+      "filing_date": "2022-03-28",
+      "period_of_report": "2022-01-31",
+      "company": "Zendesk Inc.",
+      "cik": "0001463172",
+      "accession_number": "0001463172-22-000012",
+      "revenue": 1339000000,
+      "cost_of_revenue": 360300000,
+      "gross_profit": 978700000,
+      "gross_margin_pct": 73.1,
+      "operating_loss": -95400000,
+      "net_loss": -115000000,
+      "total_assets": 2478000000,
+      "cash": 474000000,
+      "deferred_revenue": 696000000,
+      "employees": 6100,
+      "auditor": "Ernst & Young LLP",
+      "going_concern_flag": false,
+      "key_risk_factors": [
+        "Intense competition from Salesforce Service Cloud, Freshworks, ServiceNow, and Microsoft",
+        "Customer concentration: no single customer >10% revenue but top 20 represent 18% of ARR",
+        "Dependence on AWS for infrastructure; any outage could harm reputation",
+        "Key personnel risk: CRO vacancy, new CFO with <12 months tenure",
+        "Activist investor pressure from Jana Partners and Elliott Management regarding M&A",
+        "SMB segment churn elevated at 22%; risk of continued deterioration",
+        "Convertible notes due 2023 and 2025 totaling $1.4B require refinancing"
+      ]
+    }
+  ],
+  "10q_filings": [
+    {
+      "form_type": "10-Q",
+      "filing_date": "2021-12-09",
+      "period_of_report": "2021-10-31",
+      "revenue_ytd": 972500000,
+      "net_loss_ytd": -86200000,
+      "cash": 512000000,
+      "deferred_revenue": 672000000,
+      "key_disclosures": [
+        "Acquired Cleverly AI for AI ticket routing in Q3",
+        "Expanded partnership with Shopify for commerce CX integration",
+        "Board evaluating strategic alternatives following shareholder pressure"
+      ]
+    },
+    {
+      "form_type": "10-Q",
+      "filing_date": "2021-09-09",
+      "period_of_report": "2021-07-31",
+      "revenue_ytd": 630300000,
+      "net_loss_ytd": -54800000,
+      "cash": 548000000,
+      "deferred_revenue": 648000000,
+      "key_disclosures": [
+        "Hired Elena Gomez as CFO replacing Marc Stoiber",
+        "Expanded data center footprint in EMEA (Dublin, Frankfurt)",
+        "No material changes to litigation matters"
+      ]
+    },
+    {
+      "form_type": "10-Q",
+      "filing_date": "2021-06-10",
+      "period_of_report": "2021-04-30",
+      "revenue_ytd": 305500000,
+      "net_loss_ytd": -28400000,
+      "cash": 584000000,
+      "deferred_revenue": 614000000,
+      "key_disclosures": [
+        "Strong Q1 FY2022 with 29% YoY growth",
+        "Completed €75M term loan refinancing in EU",
+        "Expanded APAC presence with Singapore regional HQ"
+      ]
+    }
+  ],
+  "insider_transactions": [
+    {"form_type": "Form 4", "date": "2022-01-20", "insider": "Mikkel Svane (CEO)", "transaction": "Sale (10b5-1 plan)", "shares": 180000, "price_per_share": 114.20, "total_value": 20556000, "shares_remaining": 4840000},
+    {"form_type": "Form 4", "date": "2021-11-15", "insider": "Adrian McDermott (President, Products)", "transaction": "Option Exercise + Sell", "shares": 120000, "price_per_share": 128.40, "total_value": 15408000, "shares_remaining": 1820000},
+    {"form_type": "Form 4", "date": "2021-08-10", "insider": "Elena Gomez (CFO)", "transaction": "Purchase (new hire RSU vest)", "shares": 48000, "price_per_share": 138.60, "total_value": 6652800, "shares_remaining": 96000},
+    {"form_type": "Form 4", "date": "2021-06-22", "insider": "Mikkel Svane (CEO)", "transaction": "Sale (10b5-1 plan)", "shares": 220000, "price_per_share": 142.80, "total_value": 31416000, "shares_remaining": 5020000}
+  ],
+  "proxy_statements": [
+    {
+      "form_type": "DEF 14A",
+      "filing_date": "2021-04-20",
+      "meeting_date": "2021-05-25",
+      "ceo_total_comp": 14200000,
+      "cfo_total_comp": 8400000,
+      "president_products_total_comp": 12800000,
+      "board_size": 9,
+      "independent_directors": 7,
+      "total_shares_outstanding": 122400000,
+      "options_outstanding": 8200000,
+      "total_funding_raised_disclosed": 474000000,
+      "largest_shareholders": [
+        {"name": "The Vanguard Group", "pct": 9.8},
+        {"name": "BlackRock Inc.", "pct": 8.4},
+        {"name": "Fidelity Management (FMR)", "pct": 7.2},
+        {"name": "Jana Partners (activist)", "pct": 5.6},
+        {"name": "Mikkel Svane (CEO)", "pct": 4.1},
+        {"name": "Elliott Management (activist)", "pct": 3.8}
+      ],
+      "shareholder_activism_note": "Jana Partners and Elliott Management collectively hold 9.4% and are publicly advocating for a sale process or strategic alternatives. Merger offer from Salesforce declined in 2021 at $17B."
+    }
+  ]
+}

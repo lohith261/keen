@@ -40,21 +40,32 @@ class DemoConnector(BaseConnector):
     system_name = "demo"
     category = "demo"
 
-    def __init__(self, source_id: str, **kwargs: Any):
+    def __init__(self, source_id: str, company_id: str = "", **kwargs: Any):
         super().__init__(**kwargs)
         self.source_id = source_id
+        self._company_id = company_id
         self._fixture: dict = {}
 
     # ── BaseConnector interface ───────────────────────────
 
     async def authenticate(self, credentials: dict) -> AuthSession:  # noqa: ARG002
-        """Load fixture file and return a synthetic auth session."""
-        fixture_path = _FIXTURES_DIR / f"{self.source_id}.json"
+        """Load fixture file and return a synthetic auth session.
+
+        Looks for company-specific fixtures first:
+          fixtures/{company_id}/{source_id}.json
+        Falls back to generic fixtures:
+          fixtures/{source_id}.json
+        """
+        company_id = (self._company_id or "").lower().replace(" ", "_")
+        company_path = _FIXTURES_DIR / company_id / f"{self.source_id}.json"
+        generic_path  = _FIXTURES_DIR / f"{self.source_id}.json"
+
+        fixture_path = company_path if (company_id and company_path.exists()) else generic_path
 
         if fixture_path.exists():
             with fixture_path.open() as fh:
                 self._fixture = json.load(fh)
-            logger.info("DemoConnector[%s]: loaded fixture (%d keys)", self.source_id, len(self._fixture))
+            logger.info("DemoConnector[%s]: loaded fixture from %s (%d keys)", self.source_id, fixture_path, len(self._fixture))
         else:
             logger.warning("DemoConnector[%s]: no fixture found at %s — returning empty data", self.source_id, fixture_path)
             self._fixture = {}

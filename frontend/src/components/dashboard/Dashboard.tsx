@@ -175,8 +175,8 @@ export default function Dashboard() {
                 <h2 className="text-lg font-semibold">Engagements</h2>
                 <p className="text-xs text-theme-text-muted font-mono mt-0.5">
                   {isDemoMode
-                    ? 'Demo mode — pipelines use Acme Analytics Corp fixture data'
-                    : 'Live mode — pipelines connect to real enterprise systems'}
+                    ? 'Simulation mode — pipelines use fixture data'
+                    : 'Live mode — pipelines connect to enterprise data sources'}
                 </p>
               </div>
             </div>

@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "source": "Adobe Marketo Engage",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk marketing automation data. Enterprise pipeline influence strong ($142M from Relate 2021). ABM programs targeting top 500 enterprise accounts."
+  },
+  "lead_scoring": {
+    "model_version": "v4.2",
+    "updated": "2022-01-15",
+    "scoring_dimensions": ["Firmographic fit", "Behavioral engagement", "Intent signals", "Technology stack fit"],
+    "total_leads_database": 284000,
+    "mql_threshold_score": 80,
+    "active_mqls": 2840,
+    "hot_leads_score_100_plus": 186
+  },
+  "programs": [
+    {
+      "program_id": "MKT-ZD-ENT-Q4",
+      "name": "Enterprise ABM Q4 FY2022",
+      "type": "Account-Based Marketing",
+      "target_accounts": 500,
+      "engaged_accounts": 312,
+      "mql_contribution": 620,
+      "pipeline_influenced_m": 84.0,
+      "status": "Completed"
+    },
+    {
+      "program_id": "MKT-ZD-RELATE-2021",
+      "name": "Zendesk Relate Virtual 2021",
+      "type": "Event Demand Gen",
+      "registrants": 24800,
+      "attendees": 18600,
+      "mql_contribution": 980,
+      "pipeline_influenced_m": 142.0,
+      "status": "Completed"
+    },
+    {
+      "program_id": "MKT-ZD-SMB-Q4",
+      "name": "SMB Digital Acquisition Q4",
+      "type": "Paid Digital",
+      "impressions": 8400000,
+      "mql_contribution": 840,
+      "pipeline_influenced_m": 14.2,
+      "status": "Completed",
+      "note": "CAC-to-LTV ratio unfavorable given SMB churn levels"
+    }
+  ],
+  "attribution_report": {
+    "period": "FY2022-Q4",
+    "total_new_arr_sourced": 52000000,
+    "marketing_sourced_pct": 38.4,
+    "marketing_influenced_pct": 71.2,
+    "top_channels": [
+      {"channel": "Events (Relate 2021)", "arr_influenced": 28600000, "pct_of_total": 55.0},
+      {"channel": "Content / SEO", "arr_influenced": 12400000, "pct_of_total": 23.8},
+      {"channel": "Paid Search (Google)", "arr_influenced": 6200000, "pct_of_total": 11.9},
+      {"channel": "Outbound BDR", "arr_influenced": 4800000, "pct_of_total": 9.2}
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "_meta": {
+    "source": "QuickBooks Enterprise (Subsidiary Ledger)",
+    "company": "Zendesk Inc. — APAC Subsidiary",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Subsidiary-level accounting for Zendesk APAC Pty Ltd (Australia HQ). Used alongside SAP S/4HANA for consolidated reporting. APAC revenue: $142M (10.6% of total)."
+  },
+  "profit_loss": {
+    "period": "FY2022",
+    "revenue": {
+      "subscription": 128400000,
+      "professional_services": 13600000,
+      "total": 142000000
+    },
+    "cost_of_revenue": {
+      "hosting_infrastructure": 16800000,
+      "support_operations": 12400000,
+      "professional_services_delivery": 11200000,
+      "total": 40400000
+    },
+    "gross_profit": 101600000,
+    "gross_margin_pct": 71.5,
+    "operating_expenses": {
+      "salaries_engineering": 24200000,
+      "salaries_sales": 18400000,
+      "salaries_marketing": 6800000,
+      "salaries_g_and_a": 7200000,
+      "sales_marketing_programs": 12600000,
+      "rent_facilities": 4800000,
+      "total_opex": 74000000
+    },
+    "operating_income": 27600000,
+    "intercompany_charges": -24800000,
+    "net_income_before_tax": 2800000
+  },
+  "cash_flow": {
+    "period": "FY2022-Q4",
+    "operating_activities": {
+      "net_income": 2800000,
+      "depreciation_amortization": 2400000,
+      "changes_in_working_capital": -1800000,
+      "net_cash_from_operations": 3400000
+    },
+    "investing_activities": {
+      "capex": -1200000,
+      "net_cash_from_investing": -1200000
+    },
+    "financing_activities": {
+      "intercompany_loans_repaid": -1400000,
+      "net_cash_from_financing": -1400000
+    },
+    "net_change_in_cash": 800000,
+    "ending_cash": 12400000
+  },
+  "tax_summary": {
+    "jurisdiction": "Australia",
+    "effective_tax_rate_pct": 30.0,
+    "r_and_d_tax_credit": 4200000,
+    "transfer_pricing_policy": "Cost-plus 8% on intercompany services",
+    "audit_status": "No open audits"
+  }
+}

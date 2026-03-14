@@ -16,7 +16,7 @@ const DemoModeContext = createContext<DemoModeContextValue | null>(null);
 export function DemoModeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<DataMode>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'live' ? 'live' : 'demo'; // default: demo
+    return stored === 'demo' ? 'demo' : 'live'; // default: live
   });
 
   useEffect(() => {

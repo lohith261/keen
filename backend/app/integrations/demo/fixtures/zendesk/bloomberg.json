@@ -1,0 +1,70 @@
+{
+  "_meta": {
+    "source": "Bloomberg Terminal",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Market data and financial intelligence for Zendesk Inc. (NYSE: ZEN). Data as of March 2022 prior to PE acquisition announcement. Stock declined from $180 high (Oct 2021) to $~80 range by March 2022."
+  },
+  "market_data": {
+    "ticker": "ZEN",
+    "exchange": "NYSE",
+    "price_as_of": "2022-03-15",
+    "price": 81.40,
+    "52_week_high": 189.62,
+    "52_week_low": 74.80,
+    "market_cap": 9950000000,
+    "enterprise_value": 11190000000,
+    "shares_outstanding": 122200000,
+    "avg_daily_volume_3m": 2840000,
+    "short_interest_pct": 4.2,
+    "analyst_consensus": "Hold",
+    "analyst_target_price": 92.40,
+    "pe_ratio": null,
+    "ev_ebitda": null,
+    "ev_revenue_ltm": 8.35
+  },
+  "analyst_ratings": [
+    {"firm": "Goldman Sachs", "rating": "Buy", "target": 130.0, "date": "2022-02-04"},
+    {"firm": "Morgan Stanley", "rating": "Equal Weight", "target": 85.0, "date": "2022-01-28"},
+    {"firm": "JPMorgan", "rating": "Overweight", "target": 110.0, "date": "2022-02-10"},
+    {"firm": "Deutsche Bank", "rating": "Hold", "target": 80.0, "date": "2022-02-18", "note": "Concerns about SMB churn and CRO vacancy"},
+    {"firm": "Barclays", "rating": "Overweight", "target": 105.0, "date": "2022-01-20"},
+    {"firm": "Piper Sandler", "rating": "Neutral", "target": 75.0, "date": "2022-02-25", "note": "Activist pressure creating overhang; valuation premium unsustainable at current growth + margins"}
+  ],
+  "bond_data": [
+    {
+      "cusip": "98936RAB1",
+      "description": "0.625% Senior Notes due 2025",
+      "face_value": 862500000,
+      "coupon_pct": 0.625,
+      "maturity": "2025-06-01",
+      "ytm_pct": 4.82,
+      "credit_rating": "BB+",
+      "outstanding_balance": 862500000
+    },
+    {
+      "cusip": "98936RAA3",
+      "description": "0.25% Convertible Notes due 2023",
+      "face_value": 575000000,
+      "coupon_pct": 0.25,
+      "maturity": "2023-03-01",
+      "conversion_price": 181.55,
+      "ytm_pct": 5.14,
+      "credit_rating": "BB+",
+      "outstanding_balance": 575000000,
+      "note": "Convertible notes significantly out-of-the-money at $81 vs $181.55 conversion price"
+    }
+  ],
+  "sector_benchmarks": {
+    "saas_median_ev_revenue": 8.4,
+    "saas_median_gross_margin_pct": 73.0,
+    "saas_median_revenue_growth_pct": 26.0,
+    "saas_median_rule_of_40": 28,
+    "zendesk_ev_revenue": 8.35,
+    "zendesk_gross_margin_pct": 73.1,
+    "zendesk_revenue_growth_pct": 29.2,
+    "zendesk_rule_of_40": 26,
+    "zendesk_vs_median": "Slightly below median Rule of 40; trading at sector median EV/Revenue"
+  }
+}

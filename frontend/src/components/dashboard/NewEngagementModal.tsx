@@ -89,8 +89,8 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
               <Radio className="w-3 h-3 animate-pulse" />
             )}
             {isDemoMode
-              ? 'DEMO — will use Acme Analytics Corp fixture data'
-              : 'LIVE — will connect to real enterprise systems'}
+              ? 'SIMULATION — uses fixture data for demonstration'
+              : 'LIVE — pipeline connects to enterprise data sources'}
           </div>
         </div>
 
@@ -105,7 +105,7 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
               required
               value={form.company_name}
               onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
-              placeholder={isDemoMode ? 'e.g. Acme Analytics Corp' : 'Enter company name'}
+              placeholder="e.g. Zendesk Inc."
               className="w-full px-3 py-2 bg-transparent border border-theme-border rounded-lg text-sm
                          placeholder:text-theme-text-muted/50 focus:outline-none focus:border-theme-text-muted
                          transition-colors"

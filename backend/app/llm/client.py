@@ -1,6 +1,6 @@
-"""Multi-provider async LLM client with automatic Claude → Gemini failover.
+"""Multi-provider async LLM client with automatic OpenAI → Claude → Gemini failover.
 
-Priority order: Claude (Anthropic) → Gemini (Google).
+Priority order: OpenAI (GPT-4o) → Claude (Anthropic) → Gemini (Google).
 On LLMUnavailableError (auth failure, rate-limit, quota exhausted, service
 down), the next configured provider is tried automatically.  At least one
 API key must be present in settings.
@@ -20,8 +20,9 @@ from app.llm.exceptions import LLMError, LLMParseError, LLMUnavailableError
 
 logger = logging.getLogger(__name__)
 
-CLAUDE_DEFAULT_MODEL = "claude-sonnet-4-20250514"
-GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"
+OPENAI_DEFAULT_MODEL  = "gpt-4o"
+CLAUDE_DEFAULT_MODEL  = "claude-sonnet-4-20250514"
+GEMINI_DEFAULT_MODEL  = "gemini-2.0-flash"
 
 
 # ── Shared JSON parser ─────────────────────────────────────────────────────────
@@ -72,6 +73,92 @@ class BaseLLMProvider(abc.ABC):
     ) -> str:
         """Send a prompt and return the plain-text response."""
         ...
+
+
+# ── OpenAI provider ───────────────────────────────────────────────────────────
+
+class OpenAIProvider(BaseLLMProvider):
+    """OpenAI GPT-4o via the openai async SDK."""
+
+    name = "openai"
+
+    def __init__(self, api_key: str, model: str = OPENAI_DEFAULT_MODEL) -> None:
+        import openai as _openai  # lazy import
+        self._openai = _openai
+        self._client = _openai.AsyncOpenAI(api_key=api_key)
+        self.model = model
+
+    async def complete_json(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+    ) -> dict:
+        raw = await self._send(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+        try:
+            return _parse_json(raw)
+        except LLMParseError:
+            logger.warning("[OpenAI] JSON parse failed — retrying with explicit instruction")
+            raw = await self._send(
+                system_prompt,
+                (
+                    "Your previous response was not valid JSON. "
+                    "Respond ONLY with valid JSON — no markdown, no commentary.\n\n"
+                    + user_prompt
+                ),
+                max_tokens=max_tokens,
+                temperature=0.1,
+            )
+            return _parse_json(raw)
+
+    async def complete_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> str:
+        return await self._send(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+
+    async def _send(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int,
+        temperature: float,
+    ) -> str:
+        start = time.monotonic()
+        try:
+            response = await self._client.chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_prompt},
+                ],
+            )
+            text = response.choices[0].message.content or ""
+            logger.info(
+                "[OpenAI] model=%s prompt_len=%d response_len=%d latency=%.1fs",
+                self.model, len(user_prompt), len(text), time.monotonic() - start,
+            )
+            return text
+
+        except self._openai.AuthenticationError as exc:
+            raise LLMUnavailableError(f"[OpenAI] Invalid API key: {exc}") from exc
+        except self._openai.RateLimitError as exc:
+            raise LLMUnavailableError(f"[OpenAI] Rate limit / quota exceeded: {exc}") from exc
+        except self._openai.APIStatusError as exc:
+            if exc.status_code in (429, 529):
+                raise LLMUnavailableError(f"[OpenAI] Overloaded ({exc.status_code}): {exc}") from exc
+            raise LLMError(f"[OpenAI] API error {exc.status_code}: {exc}") from exc
+        except self._openai.APIError as exc:
+            raise LLMError(f"[OpenAI] API error: {exc}") from exc
 
 
 # ── Claude (Anthropic) provider ────────────────────────────────────────────────
@@ -380,9 +467,13 @@ def get_llm_client() -> FallbackLLMClient:
         settings = get_settings()
         providers: list[BaseLLMProvider] = []
 
+        if settings.openai_api_key:
+            providers.append(OpenAIProvider(api_key=settings.openai_api_key))
+            logger.info("[LLM] OpenAI provider registered (primary)")
+
         if settings.anthropic_api_key:
             providers.append(ClaudeProvider(api_key=settings.anthropic_api_key))
-            logger.info("[LLM] Claude provider registered (primary)")
+            logger.info("[LLM] Claude provider registered (%s)", "fallback" if providers else "primary")
 
         if settings.gemini_api_key:
             providers.append(GeminiProvider(api_key=settings.gemini_api_key))
@@ -391,7 +482,7 @@ def get_llm_client() -> FallbackLLMClient:
         if not providers:
             raise LLMUnavailableError(
                 "No LLM API keys configured. "
-                "Set ANTHROPIC_API_KEY and/or GEMINI_API_KEY in your .env file."
+                "Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY in your .env file."
             )
 
         _client = FallbackLLMClient(providers)

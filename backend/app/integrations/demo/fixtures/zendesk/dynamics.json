@@ -1,0 +1,65 @@
+{
+  "_meta": {
+    "source": "Microsoft Dynamics 365",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk 10-K and public investor materials. SMB churn 22% is a significant red flag. Enterprise NRR 118% is strong. Mid-Market churn 7.8% above 6% benchmark."
+  },
+  "sales_pipeline": [
+    {"opportunity_id": "OPP-ZD001", "name": "Shopify Enterprise Expansion", "stage": "Negotiation", "amount": 8400000, "probability": 85, "close_date": "2022-03-31", "owner": "Jennifer Walsh", "source": "Existing Customer"},
+    {"opportunity_id": "OPP-ZD002", "name": "Airbnb Support Platform", "stage": "Proposal", "amount": 6200000, "probability": 60, "close_date": "2022-04-30", "owner": "Marcus Chen", "source": "Inbound"},
+    {"opportunity_id": "OPP-ZD003", "name": "DoorDash CX Modernization", "stage": "Solution Development", "amount": 4800000, "probability": 40, "close_date": "2022-06-30", "owner": "Amanda Torres", "source": "Outbound"},
+    {"opportunity_id": "OPP-ZD004", "name": "Instacart Self-Service Upgrade", "stage": "Qualification", "amount": 3100000, "probability": 25, "close_date": "2022-07-31", "owner": "Marcus Chen", "source": "Partner"},
+    {"opportunity_id": "OPP-ZD005", "name": "Stripe Payments Support Suite", "stage": "Proposal", "amount": 7600000, "probability": 70, "close_date": "2022-04-15", "owner": "Jennifer Walsh", "source": "Existing Customer"}
+  ],
+  "customer_segments": [
+    {
+      "segment": "Enterprise (>5,000 employees)",
+      "customer_count": 480,
+      "arr_m": 698.4,
+      "avg_arr_k": 1455,
+      "nrr_pct": 118,
+      "churn_rate_pct": 3.2,
+      "logo_retention_pct": 94.8
+    },
+    {
+      "segment": "Mid-Market (1,000–4,999 employees)",
+      "customer_count": 980,
+      "arr_m": 412.2,
+      "avg_arr_k": 421,
+      "nrr_pct": 108,
+      "churn_rate_pct": 7.8,
+      "logo_retention_pct": 91.2
+    },
+    {
+      "segment": "SMB (<1,000 employees)",
+      "customer_count": 3800,
+      "arr_m": 154.4,
+      "avg_arr_k": 41,
+      "nrr_pct": 86,
+      "churn_rate_pct": 22.0,
+      "logo_retention_pct": 78.0,
+      "note": "High churn driven by price sensitivity and competition from Freshdesk, Intercom"
+    }
+  ],
+  "revenue_forecast": {
+    "method": "Bottom-up pipeline + renewal analysis",
+    "period": "FY2023",
+    "committed_arr_start": 1265000000,
+    "expected_new_logo_arr": 162000000,
+    "expected_expansion_arr": 98000000,
+    "expected_churn_arr": -52000000,
+    "forecast_arr_end": 1473000000,
+    "forecast_revenue": 1598000000,
+    "confidence": "Medium",
+    "upside_scenario_arr": 1560000000,
+    "downside_scenario_arr": 1380000000,
+    "key_assumptions": [
+      "Enterprise NRR holds at 118%",
+      "SMB churn stabilizes below 20%",
+      "5 new enterprise logos per quarter",
+      "Shopify and Stripe expansions close Q1 FY2023"
+    ]
+  }
+}

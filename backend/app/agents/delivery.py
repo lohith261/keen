@@ -91,10 +91,9 @@ class DeliveryAgent(BaseAgent):
     async def _ingest_analysis(self) -> StepResult:
         """Ingest results from the Analysis agent."""
         pipeline_data = self.state.get("pipeline_config", {}).get("pipeline_data", {})
+        # Orchestrator unwraps results before storing, so path is direct
         analysis_data = pipeline_data.get("analysis", {})
-        analysis_summary = analysis_data.get("results", {}).get("compile_analysis", {}).get(
-            "analysis_summary", {}
-        )
+        analysis_summary = analysis_data.get("compile_analysis", {}).get("analysis_summary", {})
 
         self.state["analysis_input"] = analysis_summary
 

@@ -1,0 +1,134 @@
+{
+  "_meta": {
+    "source": "LinkedIn Sales Navigator",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "note": "Key person risk flagged: CRO position vacant since Jan 2022. Jeff Titterton departed. Norman Gennaro acting interim. No permanent appointment announced. Risk to enterprise sales momentum."
+  },
+  "decision_makers": [
+    {
+      "name": "Mikkel Svane",
+      "title": "Chief Executive Officer & Co-Founder",
+      "company": "Zendesk Inc.",
+      "location": "San Francisco, CA",
+      "linkedin_connections": 12840,
+      "years_at_company": 13,
+      "seniority": "C-Suite",
+      "function": "Corporate"
+    },
+    {
+      "name": "Adrian McDermott",
+      "title": "President, Products",
+      "company": "Zendesk Inc.",
+      "location": "Dublin, Ireland",
+      "linkedin_connections": 6980,
+      "years_at_company": 8,
+      "seniority": "C-Suite",
+      "function": "Product"
+    },
+    {
+      "name": "Elena Gomez",
+      "title": "Chief Financial Officer",
+      "company": "Zendesk Inc.",
+      "location": "San Francisco, CA",
+      "linkedin_connections": 4120,
+      "years_at_company": 1,
+      "seniority": "C-Suite",
+      "function": "Finance"
+    },
+    {
+      "name": "Colleen Berube",
+      "title": "Chief Marketing Officer",
+      "company": "Zendesk Inc.",
+      "location": "San Francisco, CA",
+      "linkedin_connections": 8240,
+      "years_at_company": 4,
+      "seniority": "C-Suite",
+      "function": "Marketing"
+    },
+    {
+      "name": "Elisabeth Zornes",
+      "title": "Chief Customer Officer",
+      "company": "Zendesk Inc.",
+      "location": "Copenhagen, Denmark",
+      "linkedin_connections": 5640,
+      "years_at_company": 3,
+      "seniority": "C-Suite",
+      "function": "Customer Success"
+    },
+    {
+      "name": "Norman Gennaro",
+      "title": "President, Sales (EMEA & Americas) — Interim",
+      "company": "Zendesk Inc.",
+      "location": "New York, NY",
+      "linkedin_connections": 3180,
+      "years_at_company": 2,
+      "seniority": "VP",
+      "function": "Sales",
+      "note": "Serving as interim head of global sales following CRO departure. Not confirmed as permanent CRO."
+    }
+  ],
+  "org_gaps": [
+    {
+      "role": "Chief Revenue Officer (CRO)",
+      "status": "VACANT",
+      "last_holder": "Jeff Titterton",
+      "departure_date": "2022-01-14",
+      "interim": "Norman Gennaro (President, Sales)",
+      "open_since_days": 45,
+      "risk_level": "HIGH",
+      "note": "CRO role vacant during critical FY2023 planning period. Enterprise pipeline momentum at risk. No LinkedIn job posting detected for permanent replacement as of analysis date."
+    }
+  ],
+  "recent_leadership_changes": [
+    {
+      "person": "Jeff Titterton",
+      "role": "Chief Revenue Officer",
+      "change_type": "Departure",
+      "date": "2022-01-14",
+      "reason": "Not disclosed",
+      "successor": "Norman Gennaro (interim)"
+    },
+    {
+      "person": "Elena Gomez",
+      "role": "Chief Financial Officer",
+      "change_type": "Join",
+      "date": "2021-04-01",
+      "previous_company": "Salesforce",
+      "note": "Replaced Marc Stoiber after 9 years as CFO"
+    },
+    {
+      "person": "Marc Stoiber",
+      "role": "Chief Financial Officer",
+      "change_type": "Departure",
+      "date": "2021-04-01",
+      "tenure_years": 9
+    }
+  ],
+  "account_insights": [
+    {
+      "account": "Shopify Inc.",
+      "decision_maker": "Harley Finkelstein (President)",
+      "relationship_score": 92,
+      "last_contact": "2022-01-15",
+      "intent_signals": ["Expansion intent", "Headcount growth in CX team"],
+      "growth_flag": true
+    },
+    {
+      "account": "Uber Technologies",
+      "decision_maker": "Thuan Pham (CTO)",
+      "relationship_score": 78,
+      "last_contact": "2022-01-20",
+      "intent_signals": ["Renewal upcoming", "Competitive evaluation (Salesforce Service Cloud)"],
+      "at_risk": false
+    },
+    {
+      "account": "Airbnb Inc.",
+      "decision_maker": "Sam Steadman (Head of Support Engineering)",
+      "relationship_score": 64,
+      "last_contact": "2022-01-28",
+      "intent_signals": ["New procurement cycle", "RFP in progress"],
+      "growth_flag": true
+    }
+  ]
+}

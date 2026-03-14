@@ -1,0 +1,123 @@
+{
+  "_meta": {
+    "source": "Crunchbase Pro",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Zendesk IPO'd in May 2014 (NYSE: ZEN). Pre-IPO total VC funding: $484.1M per Crunchbase. SEC proxy discloses $474M. $10.1M discrepancy — likely reporting timing lag on final pre-IPO round. Permira/H&F PE acquisition announced June 2022 for $10.2B."
+  },
+  "funding_history": [
+    {
+      "round": "Seed",
+      "date": "2009-09-01",
+      "amount": 500000,
+      "lead_investor": "Christoph Janz (Point Nine Capital)",
+      "other_investors": ["Charles River Ventures"],
+      "valuation_pre_m": null,
+      "valuation_post_m": 2.0
+    },
+    {
+      "round": "Series A",
+      "date": "2009-11-01",
+      "amount": 6000000,
+      "lead_investor": "Charles River Ventures",
+      "other_investors": ["Benchmark Capital"],
+      "valuation_pre_m": 14.0,
+      "valuation_post_m": 20.0
+    },
+    {
+      "round": "Series B",
+      "date": "2010-10-01",
+      "amount": 19000000,
+      "lead_investor": "Benchmark Capital",
+      "other_investors": ["Charles River Ventures", "Redpoint Ventures"],
+      "valuation_pre_m": 56.0,
+      "valuation_post_m": 75.0
+    },
+    {
+      "round": "Series C",
+      "date": "2012-02-01",
+      "amount": 60000000,
+      "lead_investor": "Matrix Partners",
+      "other_investors": ["Benchmark", "CRV", "Redpoint", "Index Ventures"],
+      "valuation_pre_m": 290.0,
+      "valuation_post_m": 350.0
+    },
+    {
+      "round": "Series D",
+      "date": "2013-07-01",
+      "amount": 100000000,
+      "lead_investor": "GGV Capital",
+      "other_investors": ["Goldman Sachs", "Matrix Partners", "Benchmark"],
+      "valuation_pre_m": 1100.0,
+      "valuation_post_m": 1200.0
+    },
+    {
+      "round": "Series E",
+      "date": "2013-12-01",
+      "amount": 148600000,
+      "lead_investor": "Andreessen Horowitz",
+      "other_investors": ["GGV Capital", "Goldman Sachs"],
+      "valuation_pre_m": 1600.0,
+      "valuation_post_m": 1750.0
+    },
+    {
+      "round": "IPO (NYSE: ZEN)",
+      "date": "2014-05-15",
+      "amount": 150000000,
+      "lead_investor": "Public Markets",
+      "other_investors": [],
+      "ipo_price_per_share": 9.0,
+      "shares_offered": 11500000,
+      "market_cap_at_ipo_m": 1700.0,
+      "note": "IPO raised $100M net proceeds. Crunchbase records total at $484.1M pre/post IPO round."
+    }
+  ],
+  "total_funding_crunchbase": 484100000,
+  "acquisitions": [
+    {
+      "target": "Base CRM",
+      "date": "2018-08-30",
+      "amount_disclosed": 127000000,
+      "rationale": "Salesforce CRM automation capabilities for Zendesk Sell",
+      "integration_status": "Fully integrated as Zendesk Sell"
+    },
+    {
+      "target": "Smooch Technologies",
+      "date": "2019-03-01",
+      "amount_disclosed": null,
+      "amount_estimated_m": 60,
+      "rationale": "Omnichannel messaging platform (WhatsApp, Messenger, WeChat)",
+      "integration_status": "Integrated as Zendesk Sunshine Conversations"
+    },
+    {
+      "target": "Cleverly",
+      "date": "2021-10-01",
+      "amount_disclosed": null,
+      "amount_estimated_m": 45,
+      "rationale": "AI-powered ticket routing and intent detection",
+      "integration_status": "Integrated into Zendesk AI / Answer Bot"
+    }
+  ],
+  "key_people": [
+    {"name": "Mikkel Svane", "role": "CEO & Co-Founder", "previously": "Navision (Product Manager)", "joined": "2007"},
+    {"name": "Morten Primdahl", "role": "CTO & Co-Founder", "previously": "IT-Minds", "joined": "2007"},
+    {"name": "Alexander Aghassipour", "role": "Co-Founder", "previously": "Navision", "joined": "2007"},
+    {"name": "Elena Gomez", "role": "CFO", "previously": "Salesforce (SVP Finance)", "joined": "2021-04"},
+    {"name": "Adrian McDermott", "role": "President, Products", "previously": "Google (Engineering Director)", "joined": "2013-09"},
+    {"name": "Colleen Berube", "role": "CMO", "previously": "Informatica (CMO)", "joined": "2017-11"},
+    {"name": "Elisabeth Zornes", "role": "Chief Customer Officer", "previously": "Microsoft (Director Customer Success)", "joined": "2018-06"}
+  ],
+  "market_position": {
+    "category": "Customer Experience / Help Desk SaaS",
+    "market_share_pct": 8.4,
+    "g2_category_rank": 2,
+    "gartner_magic_quadrant": "Leader",
+    "primary_competitors": [
+      {"name": "Salesforce Service Cloud", "market_share_pct": 14.2},
+      {"name": "Freshdesk (Freshworks)", "market_share_pct": 6.1},
+      {"name": "ServiceNow", "market_share_pct": 5.8},
+      {"name": "Intercom", "market_share_pct": 3.2}
+    ]
+  }
+}

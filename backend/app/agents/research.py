@@ -240,7 +240,7 @@ class ResearchAgent(BaseAgent):
         demo_mode = self.state.get("pipeline_config", {}).get("demo_mode", True)
 
         if demo_mode:
-            connector = DemoConnector(source_id=source)
+            connector = DemoConnector(source_id=source, company_id=self.state.get("pipeline_config", {}).get("target_company", ""))
             session = await connector.authenticate({})
             # Store connector so _extract_source can reuse it without re-loading fixture
             self.state[f"_connector_{source}"] = connector
@@ -279,7 +279,7 @@ class ResearchAgent(BaseAgent):
 
         if demo_mode:
             # Reuse the connector created during authenticate, or create fresh
-            connector: DemoConnector = self.state.get(f"_connector_{source}") or DemoConnector(source_id=source)
+            connector: DemoConnector = self.state.get(f"_connector_{source}") or DemoConnector(source_id=source, company_id=self.state.get("pipeline_config", {}).get("target_company", ""))
 
             if not connector._fixture:
                 await connector.authenticate({})

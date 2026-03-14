@@ -1,0 +1,87 @@
+{
+  "_meta": {
+    "source": "HubSpot Marketing Hub",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk marketing operations data. Enterprise-focused ABM campaigns, heavy on content and events. SMB demand gen showing weakness consistent with elevated churn signals."
+  },
+  "campaigns": [
+    {
+      "campaign_id": "CAMP-ZD-ENT-001",
+      "name": "Enterprise CX Benchmark Report 2022",
+      "type": "Content / ABM",
+      "segment": "Enterprise",
+      "start_date": "2021-10-01",
+      "end_date": "2022-01-31",
+      "budget": 2800000,
+      "spend": 2640000,
+      "impressions": 4200000,
+      "clicks": 186000,
+      "leads_generated": 1840,
+      "mqls": 620,
+      "sqls": 248,
+      "pipeline_influenced": 84000000,
+      "won_revenue": 18400000
+    },
+    {
+      "campaign_id": "CAMP-ZD-ENT-002",
+      "name": "Zendesk Relate 2021 (Virtual Conference)",
+      "type": "Event",
+      "segment": "Enterprise + Mid-Market",
+      "start_date": "2021-11-08",
+      "end_date": "2021-11-10",
+      "budget": 4200000,
+      "spend": 4180000,
+      "registrations": 24800,
+      "attendees": 18600,
+      "leads_generated": 3200,
+      "mqls": 980,
+      "sqls": 312,
+      "pipeline_influenced": 142000000,
+      "won_revenue": 28600000
+    },
+    {
+      "campaign_id": "CAMP-ZD-SMB-001",
+      "name": "SMB Upgrade / Self-Service Push Q4",
+      "type": "Digital / PPC",
+      "segment": "SMB",
+      "start_date": "2021-11-01",
+      "end_date": "2022-01-31",
+      "budget": 1800000,
+      "spend": 1760000,
+      "impressions": 8400000,
+      "clicks": 312000,
+      "leads_generated": 4200,
+      "mqls": 840,
+      "sqls": 168,
+      "pipeline_influenced": 14200000,
+      "won_revenue": 2800000,
+      "note": "SMB CAC: $10,476. LTV:CAC ratio deteriorating due to 22% churn. Campaign ROI negative at current churn rates."
+    }
+  ],
+  "funnel_metrics": {
+    "period": "FY2022-Q4",
+    "website_visitors": 2840000,
+    "trial_signups": 48000,
+    "trial_to_paid_pct": 12.4,
+    "mqls": 2840,
+    "mql_to_sql_pct": 31.2,
+    "sqls": 886,
+    "sql_to_opportunity_pct": 62.4,
+    "opportunities": 553,
+    "close_rate_pct": 24.6,
+    "new_customers": 136,
+    "avg_deal_size_enterprise": 142000,
+    "avg_deal_size_mid_market": 48000,
+    "avg_deal_size_smb": 4200,
+    "avg_sales_cycle_days_enterprise": 124,
+    "avg_sales_cycle_days_mid_market": 62,
+    "avg_sales_cycle_days_smb": 18
+  },
+  "email_performance": [
+    {"campaign": "Enterprise Nurture — State of CX", "sends": 12400, "open_rate_pct": 34.2, "click_rate_pct": 8.4, "unsubscribe_pct": 0.4},
+    {"campaign": "Renewal Reminder — Mid-Market", "sends": 8200, "open_rate_pct": 42.1, "click_rate_pct": 12.6, "unsubscribe_pct": 0.3},
+    {"campaign": "SMB Upsell — Plan Upgrade", "sends": 18600, "open_rate_pct": 21.4, "click_rate_pct": 4.2, "unsubscribe_pct": 1.1}
+  ]
+}

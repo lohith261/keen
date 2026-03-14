@@ -1,0 +1,105 @@
+{
+  "_meta": {
+    "source": "SAP S/4HANA ERP",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk 10-K filed March 2022"
+  },
+  "financial_statements": {
+    "period": "FY2022",
+    "income_statement": {
+      "revenue": 1339000000,
+      "revenue_breakdown": {
+        "subscription": 1221000000,
+        "professional_services": 118000000
+      },
+      "cost_of_revenue": 360300000,
+      "gross_profit": 978700000,
+      "gross_margin_pct": 73.1,
+      "operating_expenses": {
+        "research_development": 356200000,
+        "sales_marketing": 546500000,
+        "general_administrative": 171400000,
+        "total_opex": 1074100000
+      },
+      "operating_loss": -95400000,
+      "operating_margin_pct": -7.1,
+      "interest_other": -19600000,
+      "net_loss": -115000000,
+      "ebitda_adjusted": -42000000,
+      "ebitda_margin_pct": -3.1
+    },
+    "headcount_by_department": {
+      "engineering": 2210,
+      "sales": 1580,
+      "marketing": 620,
+      "customer_success": 890,
+      "general_administrative": 800,
+      "total": 6100
+    },
+    "prior_year_revenue": 1036000000,
+    "revenue_growth_pct": 29.2
+  },
+  "cost_centers": [
+    {
+      "cost_center": "CC-ENG-001",
+      "name": "Product Engineering",
+      "q4_spend": 58200000,
+      "category": "R&D"
+    },
+    {
+      "cost_center": "CC-ENG-002",
+      "name": "Infrastructure & SRE",
+      "q4_spend": 14300000,
+      "category": "COGS"
+    },
+    {
+      "cost_center": "CC-S&M-001",
+      "name": "Field Sales — Americas",
+      "q4_spend": 76100000,
+      "category": "S&M"
+    },
+    {
+      "cost_center": "CC-S&M-002",
+      "name": "Field Sales — EMEA/APAC",
+      "q4_spend": 59400000,
+      "category": "S&M"
+    },
+    {
+      "cost_center": "CC-MKT-001",
+      "name": "Demand Generation",
+      "q4_spend": 32200000,
+      "category": "S&M"
+    },
+    {
+      "cost_center": "CC-G&A-001",
+      "name": "Legal & Compliance",
+      "q4_spend": 18700000,
+      "category": "G&A"
+    }
+  ],
+  "purchase_orders": [
+    {
+      "po_number": "PO-2022-0891",
+      "vendor": "Amazon Web Services",
+      "description": "Cloud infrastructure — annual commitment",
+      "amount": 148000000,
+      "period": "FY2022"
+    },
+    {
+      "po_number": "PO-2022-0892",
+      "vendor": "Snowflake",
+      "description": "Data warehouse — 2-year contract",
+      "amount": 22000000,
+      "period": "FY2022"
+    },
+    {
+      "po_number": "PO-2022-0893",
+      "vendor": "Datadog",
+      "description": "Observability platform",
+      "amount": 8400000,
+      "period": "FY2022"
+    }
+  ]
+}

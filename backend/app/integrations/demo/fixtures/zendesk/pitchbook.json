@@ -1,0 +1,94 @@
+{
+  "_meta": {
+    "source": "PitchBook Data Platform",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Comparable transactions and market benchmarks for CX/Help Desk SaaS sector. Permira + H&F acquisition of Zendesk closed October 2022 at $10.2B ($77.50/share). This analysis reflects pre-close due diligence period."
+  },
+  "company_profile": {
+    "name": "Zendesk Inc.",
+    "ticker": "ZEN",
+    "exchange": "NYSE",
+    "sector": "SaaS / Customer Experience",
+    "founding_year": 2007,
+    "ipo_year": 2014,
+    "ipo_price": 9.0,
+    "pe_acquisition_announced": "2022-06-24",
+    "pe_acquirers": ["Permira", "Hellman & Friedman"],
+    "acquisition_price_per_share": 77.50,
+    "enterprise_value": 10200000000,
+    "ev_revenue_multiple": 7.6,
+    "ev_arr_multiple": 8.1
+  },
+  "comparable_transactions": [
+    {
+      "target": "Salesforce Service Cloud (Division)",
+      "acquirer": "N/A (public)",
+      "date": "2021",
+      "ev_m": null,
+      "revenue_m": 1620,
+      "ev_revenue_multiple": null,
+      "note": "Benchmark — market leader"
+    },
+    {
+      "target": "Freshworks",
+      "acquirer": "N/A (IPO 2021)",
+      "date": "2021-09-22",
+      "ev_m": 12800,
+      "revenue_m": 371,
+      "ev_revenue_multiple": 34.5,
+      "gross_margin_pct": 81.0
+    },
+    {
+      "target": "Medallia Inc.",
+      "acquirer": "Thoma Bravo",
+      "date": "2021-10-29",
+      "ev_m": 6400,
+      "revenue_m": 478,
+      "ev_revenue_multiple": 13.4,
+      "gross_margin_pct": 69.0,
+      "note": "PE take-private — directly comparable structure to Zendesk transaction"
+    },
+    {
+      "target": "Qualtrics",
+      "acquirer": "Silver Lake + CPPIB",
+      "date": "2023-03-14",
+      "ev_m": 12500,
+      "revenue_m": 1790,
+      "ev_revenue_multiple": 6.9,
+      "gross_margin_pct": 74.0,
+      "note": "Post-SAP spin-off PE take-private"
+    },
+    {
+      "target": "Zendesk Inc.",
+      "acquirer": "Permira + Hellman & Friedman",
+      "date": "2022-06-24",
+      "ev_m": 10200,
+      "revenue_m": 1339,
+      "ev_revenue_multiple": 7.6,
+      "gross_margin_pct": 73.1,
+      "arr_m": 1265,
+      "ev_arr_multiple": 8.1,
+      "note": "Target company — current analysis"
+    }
+  ],
+  "public_comps": [
+    {"company": "Salesforce", "ticker": "CRM", "ev_revenue_ltm": 8.4, "gross_margin_pct": 73.4, "revenue_growth_pct": 24.0, "rule_of_40_score": 20},
+    {"company": "ServiceNow", "ticker": "NOW", "ev_revenue_ltm": 14.2, "gross_margin_pct": 78.1, "revenue_growth_pct": 28.0, "rule_of_40_score": 41},
+    {"company": "Freshworks", "ticker": "FRSH", "ev_revenue_ltm": 8.6, "gross_margin_pct": 81.2, "revenue_growth_pct": 44.0, "rule_of_40_score": 22},
+    {"company": "Zendesk", "ticker": "ZEN", "ev_revenue_ltm": 7.6, "gross_margin_pct": 73.1, "revenue_growth_pct": 29.2, "rule_of_40_score": 26}
+  ],
+  "valuation_waterfall": {
+    "acquisition_price": 10200000000,
+    "less_debt": -1438000000,
+    "plus_cash": 474000000,
+    "equity_value": 9236000000,
+    "ltm_revenue": 1339000000,
+    "ev_revenue_multiple": 7.6,
+    "ltm_arr": 1265000000,
+    "ev_arr_multiple": 8.1,
+    "gross_profit": 978700000,
+    "ev_gross_profit_multiple": 10.4
+  }
+}

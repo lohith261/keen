@@ -1,0 +1,93 @@
+{
+  "_meta": {
+    "source": "S&P Capital IQ",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Financial intelligence and comparable analysis. CapIQ enterprise value: $11.19B. Revenue multiple 8.35x LTM. Gross margin in line with SaaS peer group median."
+  },
+  "financial_summary": {
+    "company": "Zendesk Inc.",
+    "period": "LTM January 31, 2022",
+    "revenue": 1339000000,
+    "revenue_growth_yoy_pct": 29.2,
+    "gross_profit": 978700000,
+    "gross_margin_pct": 73.1,
+    "ebitda_adjusted": -42000000,
+    "ebitda_margin_pct": -3.1,
+    "operating_loss": -95400000,
+    "net_loss": -115000000,
+    "free_cash_flow": -48000000,
+    "total_debt": 1438000000,
+    "cash": 474000000,
+    "net_debt": 964000000,
+    "enterprise_value": 11190000000,
+    "ev_revenue": 8.35,
+    "ev_ebitda": null
+  },
+  "segment_analysis": {
+    "subscription_revenue": 1221000000,
+    "subscription_pct": 91.2,
+    "professional_services_revenue": 118000000,
+    "professional_services_pct": 8.8,
+    "geographic_breakdown": {
+      "americas": {"revenue": 722000000, "pct": 53.9},
+      "emea": {"revenue": 441000000, "pct": 32.9},
+      "apac": {"revenue": 176000000, "pct": 13.2}
+    }
+  },
+  "credit_metrics": {
+    "net_debt_ebitda": null,
+    "interest_coverage_ratio": -2.4,
+    "current_ratio": 1.15,
+    "quick_ratio": 0.98,
+    "debt_equity_ratio": 10.73,
+    "note": "Negative EBITDA makes traditional leverage ratios inapplicable. Funded by recurring deferred revenue ($696M) and balance sheet cash. Refinancing risk on $575M convertible due March 2023."
+  },
+  "peer_comparison": [
+    {
+      "company": "Salesforce",
+      "revenue_m": 26490,
+      "gross_margin_pct": 73.4,
+      "ev_revenue": 8.4,
+      "revenue_growth_pct": 24.0,
+      "adjusted_ebitda_margin_pct": 18.2
+    },
+    {
+      "company": "ServiceNow",
+      "revenue_m": 5890,
+      "gross_margin_pct": 78.1,
+      "ev_revenue": 14.2,
+      "revenue_growth_pct": 28.0,
+      "adjusted_ebitda_margin_pct": 13.1
+    },
+    {
+      "company": "Freshworks",
+      "revenue_m": 371,
+      "gross_margin_pct": 81.2,
+      "ev_revenue": 8.6,
+      "revenue_growth_pct": 44.0,
+      "adjusted_ebitda_margin_pct": -18.6
+    },
+    {
+      "company": "Zendesk",
+      "revenue_m": 1339,
+      "gross_margin_pct": 73.1,
+      "ev_revenue": 8.35,
+      "revenue_growth_pct": 29.2,
+      "adjusted_ebitda_margin_pct": -3.1
+    }
+  ],
+  "ownership_summary": {
+    "institutional_ownership_pct": 82.4,
+    "insider_ownership_pct": 6.8,
+    "public_float_pct": 93.2,
+    "top_institutional_holders": [
+      {"name": "The Vanguard Group", "shares_m": 12.0, "pct": 9.8},
+      {"name": "BlackRock Inc.", "shares_m": 10.3, "pct": 8.4},
+      {"name": "Fidelity Management (FMR)", "shares_m": 8.8, "pct": 7.2},
+      {"name": "Jana Partners", "shares_m": 6.9, "pct": 5.6},
+      {"name": "Elliott Management", "shares_m": 4.7, "pct": 3.8}
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "_meta": {
+    "source": "Salesforce CRM",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "Modelled from Zendesk public investor materials. Zendesk sells to enterprise and mid-market customer experience teams globally."
+  },
+  "pipeline_data": [
+    {"Id": "006ZD001", "Name": "Shopify Enterprise Suite Expansion", "Amount": 8400000, "StageName": "Negotiation/Review", "CloseDate": "2022-03-31", "Probability": 85, "AccountName": "Shopify Inc.", "OwnerId": "005ZD001"},
+    {"Id": "006ZD002", "Name": "Airbnb Support Cloud Migration", "Amount": 6200000, "StageName": "Proposal/Price Quote", "CloseDate": "2022-04-30", "Probability": 60, "AccountName": "Airbnb Inc.", "OwnerId": "005ZD002"},
+    {"Id": "006ZD003", "Name": "DoorDash CX Platform", "Amount": 4800000, "StageName": "Value Proposition", "CloseDate": "2022-06-30", "Probability": 40, "AccountName": "DoorDash Inc.", "OwnerId": "005ZD003"},
+    {"Id": "006ZD004", "Name": "Stripe Support Suite", "Amount": 7600000, "StageName": "Negotiation/Review", "CloseDate": "2022-04-15", "Probability": 70, "AccountName": "Stripe Inc.", "OwnerId": "005ZD001"},
+    {"Id": "006ZD005", "Name": "Instacart SMB to Enterprise Upgrade", "Amount": 3100000, "StageName": "Id. Decision Makers", "CloseDate": "2022-07-31", "Probability": 25, "AccountName": "Instacart", "OwnerId": "005ZD002"},
+    {"Id": "006ZD006", "Name": "Peloton Support Consolidation", "Amount": 2400000, "StageName": "Proposal/Price Quote", "CloseDate": "2022-04-30", "Probability": 55, "AccountName": "Peloton Interactive", "OwnerId": "005ZD003"},
+    {"Id": "006ZD007", "Name": "Robinhood Customer Support Platform", "Amount": 5800000, "StageName": "Value Proposition", "CloseDate": "2022-05-31", "Probability": 35, "AccountName": "Robinhood Markets", "OwnerId": "005ZD004"},
+    {"Id": "006ZD008", "Name": "Lyft Driver Support Renewal + Expand", "Amount": 9200000, "StageName": "Negotiation/Review", "CloseDate": "2022-03-15", "Probability": 92, "AccountName": "Lyft Inc.", "OwnerId": "005ZD001"}
+  ],
+  "deal_history": [
+    {"Id": "006ZH001", "Name": "Uber Enterprise Renewal", "Amount": 18400000, "CloseDate": "2022-01-15", "StageName": "Closed Won", "AccountName": "Uber Technologies"},
+    {"Id": "006ZH002", "Name": "Slack Support Automation Suite", "Amount": 6800000, "CloseDate": "2022-01-08", "StageName": "Closed Won", "AccountName": "Slack Technologies"},
+    {"Id": "006ZH003", "Name": "Zoom Support Platform", "Amount": 12400000, "CloseDate": "2021-12-20", "StageName": "Closed Won", "AccountName": "Zoom Video Communications"},
+    {"Id": "006ZH004", "Name": "Square Commerce Support", "Amount": 5200000, "CloseDate": "2021-12-05", "StageName": "Closed Won", "AccountName": "Square Inc."},
+    {"Id": "006ZH005", "Name": "Dropbox IT Help Desk", "Amount": 3800000, "CloseDate": "2021-11-28", "StageName": "Closed Won", "AccountName": "Dropbox Inc."},
+    {"Id": "006ZH006", "Name": "Pinterest Brand Safety Suite", "Amount": 4100000, "CloseDate": "2021-11-10", "StageName": "Closed Won", "AccountName": "Pinterest Inc."},
+    {"Id": "006ZH007", "Name": "Etsy Seller Support Platform", "Amount": 7600000, "CloseDate": "2021-10-22", "StageName": "Closed Won", "AccountName": "Etsy Inc."},
+    {"Id": "006ZH008", "Name": "Duolingo Customer Support", "Amount": 1800000, "CloseDate": "2021-10-08", "StageName": "Closed Won", "AccountName": "Duolingo Inc."},
+    {"Id": "006ZH009", "Name": "Peloton Renewal + Support Scale", "Amount": 8900000, "CloseDate": "2021-09-15", "StageName": "Closed Won", "AccountName": "Peloton Interactive"},
+    {"Id": "006ZH010", "Name": "Shopify Merchant Support Expansion", "Amount": 14200000, "CloseDate": "2021-08-30", "StageName": "Closed Won", "AccountName": "Shopify Inc."}
+  ],
+  "contact_records": [
+    {"Id": "003ZD001", "Name": "Harley Finkelstein", "Email": "h.finkelstein@shopify.com", "Title": "President", "AccountName": "Shopify Inc."},
+    {"Id": "003ZD002", "Name": "Dara Khosrowshahi", "Email": "dara@uber.com", "Title": "CEO", "AccountName": "Uber Technologies"},
+    {"Id": "003ZD003", "Name": "Daniel Ek", "Email": "d.ek@stripe.com", "Title": "VP Customer Operations", "AccountName": "Stripe Inc."},
+    {"Id": "003ZD004", "Name": "Renata Quintini", "Email": "r.quintini@lyft.com", "Title": "SVP Operations", "AccountName": "Lyft Inc."},
+    {"Id": "003ZD005", "Name": "Sam Steadman", "Email": "s.steadman@airbnb.com", "Title": "Head of Support Engineering", "AccountName": "Airbnb Inc."}
+  ],
+  "activity_logs": [
+    {"Id": "00TZD001", "Subject": "QBR — Uber Enterprise", "ActivityDate": "2022-01-18", "Status": "Completed", "WhoId": "003ZD002"},
+    {"Id": "00TZD002", "Subject": "Renewal Negotiation — Lyft", "ActivityDate": "2022-01-25", "Status": "Completed", "WhoId": "003ZD004"},
+    {"Id": "00TZD003", "Subject": "Expansion Demo — Airbnb", "ActivityDate": "2022-02-02", "Status": "Completed", "WhoId": "003ZD005"},
+    {"Id": "00TZD004", "Subject": "Executive Sponsor Meeting — Shopify", "ActivityDate": "2022-02-08", "Status": "Not Started", "WhoId": "003ZD001"},
+    {"Id": "00TZD005", "Subject": "Legal Review — Stripe Contract", "ActivityDate": "2022-02-10", "Status": "In Progress", "WhoId": "003ZD003"}
+  ]
+}

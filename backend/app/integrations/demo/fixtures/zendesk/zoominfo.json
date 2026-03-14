@@ -1,0 +1,85 @@
+{
+  "_meta": {
+    "source": "ZoomInfo SalesOS",
+    "company": "Zendesk Inc.",
+    "fiscal_year": "FY2022 (ended January 31, 2022)",
+    "currency": "USD",
+    "note": "ZoomInfo shows 6,250 employees. SAP headcount = 6,100. 150-person discrepancy (2.5% gap) — likely contractors and recent hires not yet in HRIS. New CFO (Elena Gomez) joined Apr 2021."
+  },
+  "org_chart": {
+    "company": "Zendesk Inc.",
+    "total_employees": 6250,
+    "departments": [
+      {
+        "name": "Engineering & Product",
+        "headcount": 2310,
+        "head": "Adrian McDermott (President, Products)",
+        "sub_departments": [
+          {"name": "Core Platform Engineering", "headcount": 680},
+          {"name": "AI & Automation", "headcount": 420},
+          {"name": "Mobile & Integrations", "headcount": 340},
+          {"name": "Infrastructure & SRE", "headcount": 480},
+          {"name": "Product Management", "headcount": 220},
+          {"name": "Design & UX", "headcount": 170}
+        ]
+      },
+      {
+        "name": "Sales",
+        "headcount": 1620,
+        "head": "Kelly Bhatt (Chief Revenue Officer — VACANCY)",
+        "note": "CRO position open following departure of Jeff Titterton in Jan 2022. Interim coverage by SVP Enterprise Sales.",
+        "sub_departments": [
+          {"name": "Enterprise Sales", "headcount": 520},
+          {"name": "Mid-Market Sales", "headcount": 480},
+          {"name": "SMB & Inside Sales", "headcount": 380},
+          {"name": "Sales Development (SDR)", "headcount": 180},
+          {"name": "Sales Operations", "headcount": 60}
+        ]
+      },
+      {
+        "name": "Marketing",
+        "headcount": 640,
+        "head": "Colleen Berube (CMO)"
+      },
+      {
+        "name": "Customer Success & Support",
+        "headcount": 920,
+        "head": "Elisabeth Zornes (Chief Customer Officer)"
+      },
+      {
+        "name": "Finance & G&A",
+        "headcount": 760,
+        "head": "Elena Gomez (CFO, joined Apr 2021)"
+      }
+    ],
+    "leadership_team": [
+      {"name": "Mikkel Svane", "title": "CEO & Co-Founder", "tenure_years": 13.5, "linkedin_connections": 12840},
+      {"name": "Adrian McDermott", "title": "President, Products", "tenure_years": 8.2, "linkedin_connections": 6980},
+      {"name": "Elena Gomez", "title": "CFO", "tenure_years": 0.8, "linkedin_connections": 4120},
+      {"name": "Colleen Berube", "title": "CMO", "tenure_years": 4.1, "linkedin_connections": 8240},
+      {"name": "Elisabeth Zornes", "title": "Chief Customer Officer", "tenure_years": 3.6, "linkedin_connections": 5640},
+      {"name": "Norman Gennaro", "title": "President, Sales (Interim CRO)", "tenure_years": 2.4, "linkedin_connections": 3180}
+    ]
+  },
+  "employee_count_trends": [
+    {"period": "2019-Q1", "headcount": 3200, "net_change": 210},
+    {"period": "2019-Q3", "headcount": 3520, "net_change": 320},
+    {"period": "2020-Q1", "headcount": 3840, "net_change": 320},
+    {"period": "2020-Q3", "headcount": 4100, "net_change": 260},
+    {"period": "2021-Q1", "headcount": 4680, "net_change": 580},
+    {"period": "2021-Q3", "headcount": 5440, "net_change": 760},
+    {"period": "2022-Q1", "headcount": 6250, "net_change": 810}
+  ],
+  "tech_stack": {
+    "cloud_infrastructure": ["AWS (primary)", "GCP (ML / AI workloads)"],
+    "data_warehouse": ["Snowflake", "Google BigQuery"],
+    "languages": ["Ruby", "Python", "JavaScript", "Go", "Scala"],
+    "frameworks": ["React", "Ruby on Rails", "Kafka", "Spark"],
+    "databases": ["MySQL", "PostgreSQL", "Redis", "Elasticsearch"],
+    "devops": ["Kubernetes", "Terraform", "Jenkins", "Datadog", "PagerDuty"],
+    "security": ["Okta (SSO)", "CrowdStrike", "Qualys"],
+    "crm_marketing": ["Salesforce", "Marketo", "Demandbase"],
+    "finance": ["SAP S/4HANA", "Oracle Fusion", "Workday"],
+    "communication": ["Slack", "Zoom", "Google Workspace"]
+  }
+}
