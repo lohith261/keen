@@ -119,6 +119,11 @@ class BaseAgent(abc.ABC):
         else:
             self.current_step = 0
 
+        # Always refresh pipeline config from caller so agents can read it via
+        # self.state.get("pipeline_config").  Done after checkpoint restore so we
+        # merge fresh config on top of any previously-checkpointed state.
+        self.state["pipeline_config"] = config
+
         # Update agent run status
         await self._update_run_status(AgentRunStatus.RUNNING)
 
