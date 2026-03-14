@@ -187,12 +187,13 @@ async def start_engagement(
     engagement.status = EngagementStatus.RUNNING
     engagement.started_at = datetime.now(timezone.utc)
 
-    await db.flush()
+    # Commit NOW so the background task's separate session can see the agent runs.
+    # (FastAPI background tasks run before dependency teardown, so the auto-commit
+    # from get_session would arrive too late.)
+    await db.commit()
 
-    # Clear identity map so the reload sees newly added agent runs
+    # Reload with agent runs for the response
     db.expire_all()
-
-    # Reload with agent runs
     result = await db.execute(
         select(Engagement)
         .options(selectinload(Engagement.agent_runs))
@@ -268,9 +269,10 @@ async def resume_engagement(
         if run.status == AgentRunStatus.PAUSED:
             run.status = AgentRunStatus.QUEUED
 
-    await db.flush()
+    await db.commit()
 
     # Reload
+    db.expire_all()
     result = await db.execute(
         select(Engagement)
         .options(selectinload(Engagement.agent_runs))
