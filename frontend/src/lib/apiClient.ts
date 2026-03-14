@@ -126,6 +126,26 @@ export interface EngagementInput {
   notes?: string;
 }
 
+// ── Finding endpoints ───────────────────────────────────
+
+export interface Finding {
+  id: string;
+  agent_run_id: string;
+  finding_type: string;
+  source_system?: string;
+  title: string;
+  description?: string;
+  data?: Record<string, unknown>;
+  severity: 'info' | 'warning' | 'critical';
+  requires_human_review: boolean;
+  created_at: string;
+}
+
+export const findingsApi = {
+  list: (engagementId: string) =>
+    request<Finding[]>(`/engagements/${engagementId}/findings`),
+};
+
 export const engagementsApi = {
   create: (data: EngagementInput) =>
     request<Engagement>('/engagements', {

@@ -1,298 +1,267 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
-  TrendingUp, Users, BarChart3, FileText, ThumbsUp, ThumbsDown, Minus,
+  AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
+  Loader2, RefreshCw, Eye, EyeOff,
 } from 'lucide-react';
-import type { Engagement } from '../../lib/apiClient';
+import type { Engagement, Finding } from '../../lib/apiClient';
+import { findingsApi } from '../../lib/apiClient';
 
 interface Props {
   engagement: Engagement;
 }
 
-type FindingItem = {
-  title?: string;
-  description?: string;
-  type?: string;
-  severity?: string;
-  metric?: string;
-  notes?: string;
-  impact?: string;
-};
+const SEVERITY_CONFIG = {
+  critical: {
+    icon: XCircle,
+    color: 'text-red-400',
+    border: 'border-red-500/30',
+    bg: 'bg-red-500/8',
+    badge: 'bg-red-500/15 border-red-500/30 text-red-400',
+    label: 'CRITICAL',
+  },
+  warning: {
+    icon: AlertTriangle,
+    color: 'text-amber-400',
+    border: 'border-amber-500/30',
+    bg: 'bg-amber-500/8',
+    badge: 'bg-amber-500/15 border-amber-500/30 text-amber-400',
+    label: 'WARNING',
+  },
+  info: {
+    icon: Info,
+    color: 'text-blue-400',
+    border: 'border-blue-500/30',
+    bg: 'bg-blue-500/8',
+    badge: 'bg-blue-500/15 border-blue-500/30 text-blue-400',
+    label: 'INFO',
+  },
+} as const;
 
-function RecommendationBadge({ rec }: { rec: string }) {
-  if (!rec) return null;
-  const lower = rec.toLowerCase();
-  if (lower.includes('proceed') || lower.includes('recommend') || lower.includes('invest')) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
-                       bg-green-500/15 border border-green-500/30 text-green-400">
-        <ThumbsUp className="w-3.5 h-3.5" /> {rec}
-      </span>
-    );
-  }
-  if (lower.includes('pass') || lower.includes('decline') || lower.includes('reject')) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
-                       bg-red-500/15 border border-red-500/30 text-red-400">
-        <ThumbsDown className="w-3.5 h-3.5" /> {rec}
-      </span>
-    );
-  }
+type SevKey = keyof typeof SEVERITY_CONFIG;
+
+function FindingCard({ finding }: { finding: Finding }) {
+  const [expanded, setExpanded] = useState(false);
+  const sev = (finding.severity as SevKey) in SEVERITY_CONFIG
+    ? (finding.severity as SevKey)
+    : 'info';
+  const cfg = SEVERITY_CONFIG[sev];
+  const Icon = cfg.icon;
+
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
-                     bg-amber-500/15 border border-amber-500/30 text-amber-400">
-      <Minus className="w-3.5 h-3.5" /> {rec}
-    </span>
+    <div className={`border ${cfg.border} rounded-xl overflow-hidden`}>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className={`w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-theme-border/20 transition-colors ${cfg.bg}`}
+      >
+        <Icon className={`w-4 h-4 ${cfg.color} flex-shrink-0 mt-0.5`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold leading-snug">{finding.title}</p>
+          {finding.source_system && (
+            <p className="text-[10px] font-mono text-theme-text-muted mt-0.5">
+              {finding.source_system.replace(/_/g, ' → ').toUpperCase()}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {finding.requires_human_review && (
+            <span className="hidden sm:inline text-[9px] font-mono px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-400 bg-amber-500/10">
+              REVIEW
+            </span>
+          )}
+          {expanded
+            ? <ChevronDown className="w-3.5 h-3.5 text-theme-text-muted" />
+            : <ChevronRight className="w-3.5 h-3.5 text-theme-text-muted" />
+          }
+        </div>
+      </button>
+
+      {expanded && finding.description && (
+        <div className="px-4 py-3 border-t border-theme-border bg-theme-bg/40 space-y-2">
+          <p className="text-[11px] text-theme-text leading-relaxed">{finding.description}</p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span className={`inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full border ${cfg.badge}`}>
+              <Icon className="w-2.5 h-2.5" /> {cfg.label}
+            </span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full border border-theme-border text-theme-text-muted">
+              {finding.finding_type.replace(/_/g, ' ').toUpperCase()}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-function SeverityIcon({ severity }: { severity: string }) {
-  const s = severity?.toLowerCase();
-  if (s === 'critical') return <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />;
-  if (s === 'warning') return <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />;
-  return <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />;
-}
-
-function CollapsibleSection({
-  title,
-  icon: Icon,
-  count,
-  children,
+function SeverityGroup({
+  severity,
+  findings,
   defaultOpen = false,
 }: {
-  title: string;
-  icon: React.ElementType;
-  count?: number;
-  children: React.ReactNode;
+  severity: SevKey;
+  findings: Finding[];
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  if (findings.length === 0) return null;
+  const cfg = SEVERITY_CONFIG[severity];
+  const Icon = cfg.icon;
+
   return (
     <div className="border border-theme-border rounded-xl overflow-hidden">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-5 py-3.5 bg-theme-bg/60 hover:bg-theme-border/30 transition-colors"
       >
         <div className="flex items-center gap-2.5">
-          <Icon className="w-4 h-4 text-theme-text-muted" />
-          <span className="text-xs font-semibold tracking-wide">{title}</span>
-          {count !== undefined && (
-            <span className="px-2 py-0.5 rounded-full bg-theme-border text-[10px] font-mono text-theme-text-muted">
-              {count}
-            </span>
-          )}
+          <Icon className={`w-4 h-4 ${cfg.color}`} />
+          <span className="text-xs font-semibold tracking-wide">{cfg.label}</span>
+          <span className={`px-2 py-0.5 rounded-full border text-[10px] font-mono font-semibold ${cfg.badge}`}>
+            {findings.length}
+          </span>
         </div>
-        {open ? (
-          <ChevronDown className="w-4 h-4 text-theme-text-muted" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-theme-text-muted" />
-        )}
+        {open
+          ? <ChevronDown className="w-4 h-4 text-theme-text-muted" />
+          : <ChevronRight className="w-4 h-4 text-theme-text-muted" />
+        }
       </button>
-      {open && <div className="px-5 py-4 space-y-3">{children}</div>}
+      {open && (
+        <div className="px-4 py-3 space-y-2 border-t border-theme-border bg-theme-bg/20">
+          {findings.map((f) => (
+            <FindingCard key={f.id} finding={f} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 export default function ResultsPanel({ engagement }: Props) {
-  const config = engagement.config ?? {};
-  const pipelineData = (config.pipeline_data ?? {}) as Record<string, unknown>;
-  const deliveryResult = (pipelineData.delivery ?? {}) as Record<string, unknown>;
-  const analysisResult = (pipelineData.analysis ?? {}) as Record<string, unknown>;
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showReviewOnly, setShowReviewOnly] = useState(false);
 
-  // Extract nested results from compile steps
-  const execSummaryRaw = (deliveryResult.finalize_delivery as Record<string, unknown>)
-    ?? (deliveryResult.generate_executive_summary as Record<string, unknown>)
-    ?? {};
-  const execSummary = ((execSummaryRaw as Record<string, unknown>)?.executive_summary
-    ?? execSummaryRaw) as Record<string, unknown>;
+  const fetchFindings = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await findingsApi.list(engagement.id);
+      setFindings(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load findings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const analysisData = ((analysisResult.compile_analysis as Record<string, unknown>)
-    ?.analysis_summary ?? analysisResult) as Record<string, unknown>;
+  useEffect(() => {
+    fetchFindings();
+  }, [engagement.id]);
 
-  const keyFindings = (execSummary.key_findings ?? []) as FindingItem[];
-  const riskAssessment = execSummary.risk_assessment as string ?? '';
-  const recommendation = execSummary.recommendation as string ?? '';
-  const recommendationRationale = execSummary.recommendation_rationale as string ?? '';
-
-  const revenueVariances = (analysisData.revenue_variances ?? []) as FindingItem[];
-  const costVariances = (analysisData.cost_variances ?? []) as FindingItem[];
-  const crossRefs = (analysisData.cross_references ?? {}) as Record<string, unknown>;
-  const overallConfidence = (analysisData.overall_confidence as number) ?? 0;
-
-  const hasResults = keyFindings.length > 0 || revenueVariances.length > 0 || recommendation;
-
-  if (!hasResults) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-        <CheckCircle2 className="w-10 h-10 text-green-400" />
-        <p className="text-sm font-semibold">Pipeline completed</p>
-        <p className="text-xs text-theme-text-muted font-mono">
-          Results are being processed — reload to refresh
-        </p>
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-theme-text-muted" />
+        <p className="text-xs font-mono text-theme-text-muted">Loading findings…</p>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+        <XCircle className="w-8 h-8 text-red-400" />
+        <p className="text-sm font-semibold">Failed to load findings</p>
+        <p className="text-xs text-theme-text-muted font-mono">{error}</p>
+        <button
+          onClick={fetchFindings}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono border border-theme-border rounded-lg hover:bg-theme-border/30 transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" /> Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Filter out pure audit-trail entries for the summary (still shown in INFO group)
+  const visible = showReviewOnly ? findings.filter((f) => f.requires_human_review) : findings;
+  const criticals = visible.filter((f) => f.severity === 'critical');
+  const warnings  = visible.filter((f) => f.severity === 'warning');
+  const infos     = visible.filter((f) => f.severity === 'info');
+  const reviewCount = findings.filter((f) => f.requires_human_review).length;
+
   return (
     <div className="space-y-4">
-      {/* Summary header */}
-      <div className="border border-theme-border rounded-xl p-5 space-y-4">
-        <div className="flex items-start justify-between gap-4">
+      {/* Summary bar */}
+      <div className="border border-theme-border rounded-xl p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-sm font-semibold">{engagement.company_name} — Due Diligence Summary</h3>
+            <h3 className="text-sm font-semibold">{engagement.company_name} — Due Diligence Findings</h3>
             <p className="text-[11px] font-mono text-theme-text-muted mt-1">
               {engagement.completed_at
                 ? `Completed ${new Date(engagement.completed_at).toLocaleString()}`
                 : 'Completed'}
-              {overallConfidence > 0 && ` · Confidence: ${(overallConfidence * 100).toFixed(0)}%`}
+              {' · '}{findings.length} total findings
             </p>
           </div>
-          <RecommendationBadge rec={recommendation} />
+
+          {/* Severity summary pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {criticals.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border bg-red-500/15 border-red-500/30 text-red-400">
+                <XCircle className="w-3 h-3" /> {criticals.length} CRITICAL
+              </span>
+            )}
+            {warnings.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border bg-amber-500/15 border-amber-500/30 text-amber-400">
+                <AlertTriangle className="w-3 h-3" /> {warnings.length} WARNING
+              </span>
+            )}
+            {infos.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border bg-blue-500/15 border-blue-500/30 text-blue-400">
+                <Info className="w-3 h-3" /> {infos.length} INFO
+              </span>
+            )}
+          </div>
         </div>
 
-        {riskAssessment && (
-          <div className="bg-theme-border/30 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider mb-1">
-              Risk Assessment
-            </p>
-            <p className="text-xs text-theme-text">{riskAssessment}</p>
-          </div>
-        )}
-
-        {recommendationRationale && (
-          <div className="bg-theme-border/30 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider mb-1">
-              Rationale
-            </p>
-            <p className="text-xs text-theme-text">{recommendationRationale}</p>
-          </div>
-        )}
+        {/* Filter + refresh row */}
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-theme-border">
+          <button
+            onClick={() => setShowReviewOnly((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono rounded-lg border transition-colors ${
+              showReviewOnly
+                ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                : 'border-theme-border text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30'
+            }`}
+          >
+            {showReviewOnly ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+            NEEDS REVIEW ({reviewCount})
+          </button>
+          <button
+            onClick={fetchFindings}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border border-theme-border rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" /> REFRESH
+          </button>
+        </div>
       </div>
 
-      {/* Key findings */}
-      {keyFindings.length > 0 && (
-        <CollapsibleSection
-          title="KEY FINDINGS"
-          icon={CheckCircle2}
-          count={keyFindings.length}
-          defaultOpen
-        >
-          <div className="space-y-2">
-            {keyFindings.map((f, i) => (
-              <div
-                key={i}
-                className="flex gap-3 items-start p-3 rounded-lg border border-theme-border bg-theme-bg/40"
-              >
-                <SeverityIcon severity={f.severity ?? 'info'} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium">{f.title ?? f.metric}</p>
-                  {(f.description ?? f.notes ?? f.impact) && (
-                    <p className="text-[11px] text-theme-text-muted mt-1">
-                      {f.description ?? f.notes ?? f.impact}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleSection>
+      {findings.length === 0 ? (
+        <div className="border border-dashed border-theme-border rounded-xl py-16 text-center space-y-2">
+          <Info className="w-8 h-8 text-theme-text-muted mx-auto" />
+          <p className="text-sm font-semibold">No findings recorded</p>
+          <p className="text-xs text-theme-text-muted font-mono">
+            The pipeline completed but produced no findings
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <SeverityGroup severity="critical" findings={criticals} defaultOpen />
+          <SeverityGroup severity="warning"  findings={warnings}  defaultOpen />
+          <SeverityGroup severity="info"     findings={infos} />
+        </div>
       )}
-
-      {/* Revenue variances */}
-      {revenueVariances.length > 0 && (
-        <CollapsibleSection
-          title="REVENUE VARIANCES"
-          icon={TrendingUp}
-          count={revenueVariances.length}
-        >
-          <div className="space-y-2">
-            {revenueVariances.map((v, i) => (
-              <div
-                key={i}
-                className="flex gap-3 items-start p-3 rounded-lg border border-theme-border bg-theme-bg/40"
-              >
-                <SeverityIcon severity={v.severity ?? 'warning'} />
-                <div>
-                  <p className="text-xs font-medium">{v.title}</p>
-                  {v.description && (
-                    <p className="text-[11px] text-theme-text-muted mt-1">{v.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* Cost variances */}
-      {costVariances.length > 0 && (
-        <CollapsibleSection
-          title="COST VARIANCES"
-          icon={BarChart3}
-          count={costVariances.length}
-        >
-          <div className="space-y-2">
-            {costVariances.map((v, i) => (
-              <div
-                key={i}
-                className="flex gap-3 items-start p-3 rounded-lg border border-theme-border bg-theme-bg/40"
-              >
-                <SeverityIcon severity={v.severity ?? 'warning'} />
-                <div>
-                  <p className="text-xs font-medium">{v.title}</p>
-                  {v.description && (
-                    <p className="text-[11px] text-theme-text-muted mt-1">{v.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* Cross-references */}
-      {(crossRefs as Record<string, unknown[]>).crm_erp_overlap?.length > 0 && (
-        <CollapsibleSection
-          title="CROSS-REFERENCE DISCREPANCIES"
-          icon={Users}
-          count={(crossRefs as Record<string, unknown[]>).crm_erp_overlap?.length}
-        >
-          <div className="space-y-2">
-            {((crossRefs as Record<string, unknown[]>).crm_erp_overlap ?? []).map((xref: unknown, i: number) => {
-              const x = xref as Record<string, unknown>;
-              return (
-                <div
-                  key={i}
-                  className="flex gap-3 items-start p-3 rounded-lg border border-theme-border bg-theme-bg/40"
-                >
-                  <SeverityIcon severity="warning" />
-                  <div>
-                    <p className="text-xs font-medium">{x.metric as string}</p>
-                    {x.notes && (
-                      <p className="text-[11px] text-theme-text-muted mt-1">{x.notes as string}</p>
-                    )}
-                    {x.match_quality !== undefined && (
-                      <p className="text-[10px] font-mono text-theme-text-muted mt-1">
-                        Match quality: {((x.match_quality as number) * 100).toFixed(0)}%
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* Report sections placeholder */}
-      <CollapsibleSection title="DETAILED REPORT" icon={FileText}>
-        <p className="text-xs text-theme-text-muted font-mono">
-          The full 9-section report is available in the pipeline output.
-          View the complete report via the API: <code className="bg-theme-border px-1.5 py-0.5 rounded">
-            GET /api/v1/engagements/{engagement.id}
-          </code>
-        </p>
-      </CollapsibleSection>
     </div>
   );
 }
