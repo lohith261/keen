@@ -152,6 +152,9 @@ export const engagementsApi = {
 
   resume: (id: string) =>
     request<Engagement>(`/engagements/${id}/resume`, { method: 'POST' }),
+
+  delete: (id: string) =>
+    request<void>(`/engagements/${id}`, { method: 'DELETE' }),
 };
 
 // ── WebSocket ───────────────────────────────────────────

@@ -286,6 +286,18 @@ async def resume_engagement(
     return engagement
 
 
+@router.delete("/{engagement_id}", status_code=204)
+async def delete_engagement(
+    engagement_id: UUID,
+    db: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete an engagement and all its agent runs and findings (cascade)."""
+    engagement = await db.get(Engagement, engagement_id)
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+    await db.delete(engagement)
+
+
 @router.get("/{engagement_id}/findings", response_model=list[FindingResponse])
 async def get_engagement_findings(
     engagement_id: UUID,

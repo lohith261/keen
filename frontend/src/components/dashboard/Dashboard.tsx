@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
-  PauseCircle, FlaskConical, Radio, Search,
+  PauseCircle, FlaskConical, Radio, Search, Trash2,
 } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
@@ -28,6 +28,8 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<Engagement | null>(null);
   const [dashView, setDashView] = useState<DashView>('list');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     engagementsApi
@@ -73,6 +75,20 @@ export default function Dashboard() {
     setSelected(updated);
     setEngagements((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
     if (updated.status === 'completed') setDashView('results');
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await engagementsApi.delete(id);
+      setEngagements((prev) => prev.filter((e) => e.id !== id));
+      if (selected?.id === id) {
+        setSelected(null);
+        setDashView('list');
+      }
+    } catch {}
+    setDeletingId(null);
+    setConfirmDeleteId(null);
   };
 
   return (
@@ -196,20 +212,25 @@ export default function Dashboard() {
                 {engagements.map((e) => {
                   const cfg = STATUS_CONFIG[e.status] ?? STATUS_CONFIG.draft;
                   const isDemo = e.config?.demo_mode as boolean | undefined;
+                  const isConfirming = confirmDeleteId === e.id;
+                  const isDeleting = deletingId === e.id;
                   return (
-                    <button
+                    <div
                       key={e.id}
-                      onClick={() => openEngagement(e)}
                       className="w-full flex items-center justify-between px-5 py-4 border border-theme-border
                                  rounded-xl hover:border-theme-text/30 hover:bg-theme-border/20
-                                 transition-all text-left group"
+                                 transition-all group"
                     >
-                      <div className="flex items-center gap-4">
-                        <div>
+                      {/* Clickable main area */}
+                      <button
+                        onClick={() => openEngagement(e)}
+                        className="flex-1 flex items-center gap-4 text-left min-w-0"
+                      >
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold">{e.company_name}</p>
+                            <p className="text-sm font-semibold truncate">{e.company_name}</p>
                             {isDemo !== undefined && (
-                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border flex-shrink-0 ${
                                 isDemo
                                   ? 'border-amber-500/30 text-amber-400 bg-amber-500/10'
                                   : 'border-green-500/30 text-green-400 bg-green-500/10'
@@ -218,14 +239,16 @@ export default function Dashboard() {
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] font-mono text-theme-text-muted mt-0.5">
+                          <p className="text-[11px] font-mono text-theme-text-muted mt-0.5 truncate">
                             {String(e.config?.engagement_type ?? 'full_diligence').replace(/_/g, ' ')}
                             {e.pe_firm && ` · ${e.pe_firm}`}
                             {e.deal_size && ` · ${e.deal_size}`}
                           </p>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
+                      </button>
+
+                      {/* Right side: progress + status + delete */}
+                      <div className="flex items-center gap-4 flex-shrink-0 ml-4">
                         {/* Agent progress mini */}
                         {e.agent_runs && e.agent_runs.length > 0 && (
                           <div className="hidden md:flex items-center gap-1">
@@ -253,8 +276,39 @@ export default function Dashboard() {
                         <p className="text-[10px] font-mono text-theme-text-muted hidden lg:block">
                           {new Date(e.created_at).toLocaleDateString()}
                         </p>
+
+                        {/* Delete */}
+                        {isConfirming ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleDelete(e.id)}
+                              disabled={isDeleting}
+                              className="px-2 py-1 text-[10px] font-mono bg-red-500/20 border border-red-500/40
+                                         text-red-400 rounded hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                            >
+                              {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'DELETE'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-1 text-[10px] font-mono text-theme-text-muted
+                                         hover:text-theme-text transition-colors"
+                            >
+                              CANCEL
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(ev) => { ev.stopPropagation(); setConfirmDeleteId(e.id); }}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg
+                                       hover:bg-red-500/10 text-theme-text-muted hover:text-red-400
+                                       transition-all"
+                            title="Delete engagement"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
