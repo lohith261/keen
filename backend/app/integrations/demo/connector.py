@@ -56,7 +56,10 @@ class DemoConnector(BaseConnector):
         Falls back to generic fixtures:
           fixtures/{source_id}.json
         """
-        company_id = (self._company_id or "").lower().replace(" ", "_")
+        import re as _re
+        # Normalise: lowercase, replace spaces/punctuation with "_", collapse runs, strip trailing
+        _raw = (self._company_id or "").lower()
+        company_id = _re.sub(r"[^a-z0-9]+", "_", _raw).strip("_")
         company_path = _FIXTURES_DIR / company_id / f"{self.source_id}.json"
         generic_path  = _FIXTURES_DIR / f"{self.source_id}.json"
 
