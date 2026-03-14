@@ -128,8 +128,11 @@ class AnalysisAgent(BaseAgent):
     async def _ingest_research_data(self) -> StepResult:
         """Ingest and categorize data from the Research Agent."""
         pipeline_data = self.state.get("pipeline_config", {}).get("pipeline_data", {})
+        # Orchestrator stores step results directly under pipeline_data["research"]
+        # (it calls agent_result.get("results", {}) which already unwraps the "results" key).
+        # Path: pipeline_data["research"]["compile_results"]["raw_data"]
         research_data = pipeline_data.get("research", {})
-        raw_data = research_data.get("results", {}).get("compile_results", {}).get("raw_data", {})
+        raw_data = research_data.get("compile_results", {}).get("raw_data", {})
 
         self.state["ingested_data"] = raw_data
         self.state["source_count"] = len(raw_data)
