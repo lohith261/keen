@@ -95,6 +95,34 @@ class AnalysisAgent(BaseAgent):
         """Safely retrieve extracted data for a source + extraction type."""
         return self._get_ingested().get(source, {}).get(key, default if default is not None else [])
 
+    def _src_dict(self, source: str, key: str) -> dict:
+        """
+        Retrieve fixture data that the demo connector returns as a dict.
+
+        DemoConnector wraps fixture dicts inside a list so callers always
+        get a list.  This helper unwraps the first element when needed.
+        """
+        raw = self._src(source, key)
+        if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+            return raw[0]
+        if isinstance(raw, dict):
+            return raw
+        return {}
+
+    def _src_scalar(self, source: str, key: str, default: float = 0.0) -> float:
+        """
+        Retrieve a scalar numeric value from fixture data.
+
+        DemoConnector wraps scalar values as [value], so this helper
+        unwraps single-element lists of numbers.
+        """
+        raw = self._src(source, key)
+        if isinstance(raw, (int, float)):
+            return float(raw)
+        if isinstance(raw, list) and raw and isinstance(raw[0], (int, float)):
+            return float(raw[0])
+        return default
+
     # ── Step implementations ──────────────────────────────────────────────────
 
     async def _ingest_research_data(self) -> StepResult:
@@ -176,13 +204,13 @@ class AnalysisAgent(BaseAgent):
             }
 
             # ── Funding discrepancy: Crunchbase vs SEC Edgar ──────────────────
-            cb_funding  = self._src("crunchbase", "total_funding_crunchbase") or 0
+            cb_funding  = self._src_scalar("crunchbase", "total_funding_crunchbase")
             sec_filings = self._src("sec_edgar", "10k_filings") or []
             if cb_funding and sec_filings:
                 sec_cash = sec_filings[0].get("cash", 0) if sec_filings else 0
                 # Crunchbase shows total raised; cash on hand is typically much lower —
                 # flag only if Crunchbase figure looks inflated vs SEC
-                if isinstance(cb_funding, (int, float)) and cb_funding > 0:
+                if cb_funding > 0:
                     findings.append({
                         "type": "discrepancy",
                         "source_system": "crunchbase_vs_sec_edgar",
@@ -213,14 +241,16 @@ class AnalysisAgent(BaseAgent):
         findings: list[dict] = []
 
         # ── SAP FY2025 revenue vs NetSuite ARR-implied annual revenue ─────────
-        sap_fs    = self._src("sap", "financial_statements") or {}
+        sap_fs    = self._src_dict("sap", "financial_statements")
         ns_data   = self._src("netsuite", "revenue_data") or []
 
-        sap_revenue = sap_fs.get("income_statement", {}).get("revenue", 0) if isinstance(sap_fs, dict) else 0
-        # NetSuite ARR from latest period
+        sap_revenue = sap_fs.get("income_statement", {}).get("revenue", 0)
+        # NetSuite ARR from latest full fiscal year period (prefer Q4, fall back to last entry)
         ns_arr = 0
         if ns_data:
-            ns_arr = ns_data[-1].get("arr_contribution", 0)
+            full_periods = [q for q in ns_data if "partial" not in q.get("period", "").lower()]
+            latest_full = full_periods[-1] if full_periods else ns_data[-1]
+            ns_arr = latest_full.get("arr_contribution", 0)
 
         if sap_revenue and ns_arr:
             variance     = ns_arr - sap_revenue
@@ -280,18 +310,19 @@ class AnalysisAgent(BaseAgent):
         findings: list[dict] = []
 
         # ── R&D: SAP income statement vs Oracle GL annualised ─────────────────
-        sap_fs  = self._src("sap", "financial_statements") or {}
+        sap_fs  = self._src_dict("sap", "financial_statements")
         gl      = self._src("oracle", "gl_entries") or []
 
-        sap_rd = sap_fs.get("income_statement", {}).get("operating_expenses", {}).get("research_development", 0) if isinstance(sap_fs, dict) else 0
+        sap_rd = sap_fs.get("income_statement", {}).get("operating_expenses", {}).get("research_development", 0)
 
         # Oracle GL entries are Q4-period — annualise by ×4
+        # Only match explicit R&D expense accounts — not engineering headcount/salaries
         oracle_eng_q4 = sum(
             abs(e.get("net", 0))
             for e in gl
             if isinstance(e, dict) and any(
                 kw in e.get("account_name", "").lower()
-                for kw in ("research", "r&d", "engineering")
+                for kw in ("research", "r&d")
             )
         )
         oracle_rd_annual = oracle_eng_q4 * 4  # annualise
@@ -432,10 +463,10 @@ class AnalysisAgent(BaseAgent):
 
         # ── Headcount mismatch: ZoomInfo vs SAP ──────────────────────────────
         zi_trends  = self._src("zoominfo", "employee_count_trends") or []
-        sap_fs     = self._src("sap", "financial_statements") or {}
+        sap_fs     = self._src_dict("sap", "financial_statements")
 
         zi_latest_hc  = zi_trends[-1].get("headcount", 0) if zi_trends else 0
-        sap_hc        = sap_fs.get("headcount_by_department", {}).get("total", 0) if isinstance(sap_fs, dict) else 0
+        sap_hc        = sap_fs.get("headcount_by_department", {}).get("total", 0)
 
         if zi_latest_hc and sap_hc:
             hc_gap = abs(zi_latest_hc - sap_hc)
