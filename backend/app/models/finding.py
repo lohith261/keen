@@ -44,7 +44,7 @@ class Finding(Base):
         index=True,
     )
     finding_type = Column(
-        Enum(FindingType, name="finding_type"),
+        Enum(FindingType, name="finding_type", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
     )
     source_system = Column(String(100), nullable=True)
@@ -52,7 +52,7 @@ class Finding(Base):
     description = Column(Text, nullable=True)
     data = Column(JSONB, default=dict, doc="Structured finding data")
     severity = Column(
-        Enum(Severity, name="finding_severity"),
+        Enum(Severity, name="finding_severity", values_callable=lambda x: [e.value for e in x]),
         default=Severity.INFO,
         nullable=False,
     )

@@ -47,11 +47,11 @@ class AgentRun(Base):
         index=True,
     )
     agent_type = Column(
-        Enum(AgentType, name="agent_type"),
+        Enum(AgentType, name="agent_type", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
     )
     status = Column(
-        Enum(AgentRunStatus, name="agent_run_status"),
+        Enum(AgentRunStatus, name="agent_run_status", values_callable=lambda x: [e.value for e in x]),
         default=AgentRunStatus.QUEUED,
         nullable=False,
         index=True,

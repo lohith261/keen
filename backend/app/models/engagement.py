@@ -36,7 +36,7 @@ class Engagement(Base):
     deal_size = Column(String(100), nullable=True)
     engagement_type = Column(String(100), default="full_diligence")
     status = Column(
-        Enum(EngagementStatus, name="engagement_status"),
+        Enum(EngagementStatus, name="engagement_status", values_callable=lambda x: [e.value for e in x]),
         default=EngagementStatus.DRAFT,
         nullable=False,
         index=True,

@@ -39,7 +39,7 @@ class Credential(Base):
     )
     system_name = Column(String(100), nullable=False, index=True)
     credential_type = Column(
-        Enum(CredentialType, name="credential_type"),
+        Enum(CredentialType, name="credential_type", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
     )
     encrypted_data = Column(LargeBinary, nullable=False, doc="AES-256 encrypted credential blob")
