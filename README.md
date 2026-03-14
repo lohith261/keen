@@ -26,6 +26,61 @@ KEEN is a multi-agent operational intelligence platform designed to replicate Mc
 
 ---
 
+## 🚀 Try the Demo (5 minutes)
+
+The live demo runs the full 3-agent pipeline against a pre-built dataset — no credentials or setup required.
+
+**URL:** [keen-sigma.vercel.app](https://keen-sigma.vercel.app)
+
+### Step 1 — Check system status
+
+The nav bar shows a coloured status indicator. Click it to see which checks passed (API, Database, WebSocket). A green **Operational** badge means the backend is healthy and ready.
+
+### Step 2 — Confirm Demo mode is active
+
+Look for the **amber flask pill** labelled `DEMO` in the top nav. If it shows `LIVE` (green radio icon), click it once to switch back to Demo mode. Demo mode uses fixture data for the fictional company **Acme Analytics Corp** — no real credentials needed.
+
+### Step 3 — Open the Pipeline Dashboard
+
+Click **"Open Pipeline Dashboard"** (or the Dashboard button in the nav). This opens the engagement management view.
+
+### Step 4 — Create a new engagement
+
+Click **"+ New Engagement"** and fill in:
+
+| Field | Suggested value |
+|---|---|
+| **Target Company** | `Acme Analytics Corp` |
+| **PE Firm** | `Accel Partners` (optional) |
+| **Deal Size** | `$50M` (optional) |
+| **Engagement Type** | `Full Due Diligence` |
+
+Click **START PIPELINE →**. The engagement is created and the orchestrator starts immediately.
+
+### Step 5 — Watch the pipeline run
+
+The view switches to **Pipeline** mode. You'll see three agents execute in sequence:
+
+```
+Research Agent  →  Analysis Agent  →  Delivery Agent
+```
+
+Each agent shows real-time step progress via WebSocket. The Research Agent alone runs 30+ steps across 15 simulated enterprise sources.
+
+### Step 6 — Review the findings
+
+Once the pipeline completes (status turns green), the view switches to **Results**. You'll see:
+
+- **Revenue gap** — ~$1.3M discrepancy between Salesforce and NetSuite
+- **Funnel leakage** — HubSpot MQL conversion 7% vs 15–20% benchmark
+- **R&D cost mismatch** — ~$400K gap between SAP and Oracle GL
+- **Key person risk** — VP Engineering departure flagged (Feb 2026)
+- Plus 4 more baked-in discrepancies across funding, headcount, AR, and churn
+
+Findings are sorted by severity. Critical findings are automatically flagged for human review.
+
+---
+
 ## 🎯 Design Targets
 
 | Metric | Target |
