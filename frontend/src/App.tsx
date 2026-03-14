@@ -25,6 +25,7 @@ import ThemeToggle from './components/ThemeToggle';
 import DemoModeToggle from './components/DemoModeToggle';
 import Loader from './components/Loader';
 import Dashboard from './components/dashboard/Dashboard';
+import RequestAccessModal from './components/RequestAccessModal';
 import { useTheme } from './context/ThemeContext';
 import { useView } from './context/ViewContext';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
@@ -122,6 +123,7 @@ function App() {
   const [isVisible, setIsVisible] = useState(false);
   const [navSolid, setNavSolid] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [requestAccessOpen, setRequestAccessOpen] = useState(false);
   const { status: systemStatus, checks, loading: healthLoading, lastChecked, recheck } = useSystemHealth();
   const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
@@ -325,7 +327,10 @@ function App() {
             <ScrollReveal animation="fadeUp" delay={0.9}>
               <div className="mt-8 flex items-center gap-4">
                 <MagneticElement strength={0.2}>
-                  <button className="group px-6 py-3 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium transition-all duration-300 flex items-center gap-2">
+                  <button
+                    onClick={() => setRequestAccessOpen(true)}
+                    className="group px-6 py-3 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium transition-all duration-300 flex items-center gap-2"
+                  >
                     Request Access
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </button>
@@ -706,6 +711,11 @@ function App() {
           </ScrollReveal>
         </div>
       </footer>
+
+      {/* Request Access Modal */}
+      {requestAccessOpen && (
+        <RequestAccessModal onClose={() => setRequestAccessOpen(false)} />
+      )}
     </div>
   );
 }
