@@ -14,6 +14,14 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
+  Target,
+  Zap,
+  Download,
+  TableProperties,
+  Shield,
+  Share2,
+  Play,
+  Clock,
 } from 'lucide-react';
 import WebGLBackground from './components/WebGLBackground';
 import ScrollReveal from './components/ScrollReveal';
@@ -31,6 +39,7 @@ import RequestAccessModal from './components/RequestAccessModal';
 import { useTheme } from './context/ThemeContext';
 import { useView } from './context/ViewContext';
 import { useAuth } from './context/AuthContext';
+import { useDemoMode } from './context/DemoModeContext';
 import AuthModal from './components/auth/AuthModal';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
 import { useSystemHealth } from './hooks/useSystemHealth';
@@ -135,6 +144,12 @@ function App() {
   const { theme } = useTheme();
   const { view, setView } = useView();
   const { user, signOut, loading: authLoading } = useAuth();
+  const { setMode } = useDemoMode();
+
+  const tryDemo = () => {
+    setMode('demo');
+    setView('dashboard');
+  };
 
   const openDashboard = () => {
     if (user) {
@@ -417,14 +432,13 @@ function App() {
                   </button>
                 </MagneticElement>
                 <MagneticElement strength={0.2}>
-                  <a
-                    href="https://github.com/keen-platform/keen/blob/main/README.md"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 border border-theme-border hover:border-orange-600/50 text-sm font-medium transition-all duration-300 text-theme-text-secondary hover:text-theme-text inline-block"
+                  <button
+                    onClick={tryDemo}
+                    className="flex items-center gap-2 px-6 py-3 border border-theme-border hover:border-orange-600/50 text-sm font-medium transition-all duration-300 text-theme-text-secondary hover:text-theme-text"
                   >
-                    View Documentation
-                  </a>
+                    <Play className="w-3.5 h-3.5" />
+                    Try Live Demo
+                  </button>
                 </MagneticElement>
               </div>
             </ScrollReveal>
@@ -436,6 +450,90 @@ function App() {
             }`}
           >
             <ChevronDown className="w-5 h-5 text-theme-text-faint animate-bounce" />
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="relative py-16 md:py-24 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <ScrollReveal animation="fadeUp" className="mb-12 md:mb-16 text-center">
+            <p className="text-xs font-mono text-orange-600 mb-3 tracking-widest">THE PROCESS</p>
+            <TextReveal
+              text="How It Works"
+              tag="h3"
+              className="text-3xl md:text-5xl font-bold"
+              stagger={0.04}
+            />
+            <p className="text-sm md:text-base text-theme-text-muted mt-4 max-w-xl mx-auto">
+              From company name to board-ready report — fully autonomous, start to finish.
+            </p>
+          </ScrollReveal>
+
+          <div className="relative">
+            {/* Connector line (desktop) */}
+            <div className="hidden md:block absolute top-12 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-transparent via-orange-600/30 to-transparent" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+              {[
+                {
+                  step: '01',
+                  icon: Target,
+                  title: 'Define Your Engagement',
+                  description:
+                    'Name the target company, set your objectives, and configure your credential vault once. That\'s it — no templates, no manual setup.',
+                  detail: 'Takes ~5 minutes',
+                  color: 'from-orange-600/10',
+                },
+                {
+                  step: '02',
+                  icon: Zap,
+                  title: 'Agents Run Autonomously',
+                  description:
+                    'Three specialized agents work in parallel — researching live systems, cross-referencing data, flagging discrepancies — without human intervention.',
+                  detail: 'Runs for ~4 hours',
+                  color: 'from-blue-600/10',
+                },
+                {
+                  step: '03',
+                  icon: Download,
+                  title: 'Receive Your Report',
+                  description:
+                    'A board-ready executive PDF, financial model, and full audit trail delivered directly to your inbox, Slack workspace, or Google Drive.',
+                  detail: 'Delivered automatically',
+                  color: 'from-green-600/10',
+                },
+              ].map(({ step, icon: Icon, title, description, detail, color }, idx) => (
+                <ScrollReveal key={idx} animation="fadeUp" delay={idx * 0.15}>
+                  <div className="relative group">
+                    {/* Step number badge */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-full border border-orange-600/40 bg-orange-600/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-mono font-bold text-orange-500">{step}</span>
+                      </div>
+                      <div className="flex-1 h-px bg-theme-border" />
+                    </div>
+
+                    <div className={`relative bg-theme-surface backdrop-blur-sm border border-theme-border p-6 md:p-8 hover:border-orange-600/30 transition-all duration-500 overflow-hidden`}>
+                      <div className={`absolute inset-0 bg-gradient-to-br ${color} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                      <div className="relative z-10">
+                        <div className="w-12 h-12 flex items-center justify-center border border-theme-border group-hover:border-orange-600/40 transition-all duration-300 mb-5">
+                          <Icon className="w-6 h-6 text-orange-600" />
+                        </div>
+                        <h4 className="text-xl font-bold mb-3">{title}</h4>
+                        <p className="text-sm text-theme-text-secondary leading-relaxed mb-5">
+                          {description}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3 text-orange-600/60" />
+                          <span className="text-[11px] font-mono text-theme-text-muted">{detail}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollReveal>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -471,6 +569,81 @@ function App() {
                     <p className="text-xs text-theme-text-muted">{insight.metric}</p>
                   </div>
                   <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-600/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What You Receive */}
+      <section className="relative py-16 md:py-20 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <ScrollReveal animation="fadeUp" className="mb-10 md:mb-14">
+            <p className="text-xs font-mono text-orange-600 mb-3 tracking-widest">DELIVERABLES</p>
+            <TextReveal
+              text="What You Receive"
+              tag="h3"
+              className="text-3xl md:text-5xl font-bold"
+              stagger={0.04}
+            />
+            <p className="text-sm md:text-base text-theme-text-muted mt-4 max-w-2xl">
+              Every engagement produces four concrete outputs — structured, formatted, and distributed automatically.
+            </p>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                icon: FileText,
+                label: 'EXECUTIVE REPORT',
+                title: 'Board-Ready PDF',
+                description: 'Narrative summary with key findings, red flags, and strategic recommendations formatted for investment committee review.',
+                tag: 'PDF Export',
+                accent: 'border-orange-600/60 bg-orange-600/5',
+                iconColor: 'text-orange-500',
+              },
+              {
+                icon: TableProperties,
+                label: 'FINANCIAL MODEL',
+                title: 'Excel Workbook',
+                description: 'Live-synced financial data with built-in actuals, variance analysis, and scenario modelling across all extracted sources.',
+                tag: 'Excel Export',
+                accent: 'border-green-600/40 bg-green-600/5',
+                iconColor: 'text-green-500',
+              },
+              {
+                icon: Shield,
+                label: 'AUDIT TRAIL',
+                title: 'Compliance Record',
+                description: 'Full chain-of-custody log with timestamped evidence for every data point extracted. Defensible at every step.',
+                tag: 'Included',
+                accent: 'border-blue-600/40 bg-blue-600/5',
+                iconColor: 'text-blue-400',
+              },
+              {
+                icon: Share2,
+                label: 'DISTRIBUTION',
+                title: 'Multi-Channel Delivery',
+                description: 'Automatically pushed to Slack, email, Google Drive, or Sheets. No manual downloads — results land where your team works.',
+                tag: 'Auto-delivered',
+                accent: 'border-purple-600/40 bg-purple-600/5',
+                iconColor: 'text-purple-400',
+              },
+            ].map(({ icon: Icon, label, title, description, tag, accent, iconColor }, idx) => (
+              <ScrollReveal key={idx} animation="fadeUp" delay={idx * 0.1}>
+                <div className={`group relative bg-theme-surface backdrop-blur-sm border ${accent} p-6 hover:shadow-lg hover:shadow-black/20 transition-all duration-500 h-full flex flex-col`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 flex items-center justify-center border border-theme-border group-hover:border-current transition-all duration-300">
+                      <Icon className={`w-5 h-5 ${iconColor}`} />
+                    </div>
+                    <span className={`text-[9px] font-mono px-2 py-1 rounded-full border ${accent} ${iconColor} border-current/40`}>
+                      {tag}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-mono text-theme-text-muted mb-1.5 tracking-wider">{label}</p>
+                  <h4 className="text-base font-bold mb-3">{title}</h4>
+                  <p className="text-xs text-theme-text-secondary leading-relaxed flex-1">{description}</p>
                 </div>
               </ScrollReveal>
             ))}
@@ -741,6 +914,60 @@ function App() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Get Started CTA */}
+      <section className="relative py-20 md:py-28 px-4 md:px-6">
+        <div className="max-w-4xl mx-auto">
+          <ScrollReveal animation="scale">
+            <div className="relative bg-theme-surface backdrop-blur-sm border border-orange-600/30 p-10 md:p-16 overflow-hidden text-center">
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-600/8 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-px bg-gradient-to-r from-transparent via-orange-600/60 to-transparent" />
+
+              <div className="relative z-10">
+                <p className="text-xs font-mono text-orange-600 mb-4 tracking-widest">GET STARTED</p>
+
+                <TextReveal
+                  text="Ready to compress 4 weeks into 4 hours?"
+                  tag="h3"
+                  className="text-3xl md:text-5xl font-bold leading-tight mb-5"
+                  stagger={0.03}
+                />
+
+                <p className="text-sm md:text-base text-theme-text-muted max-w-lg mx-auto mb-10 leading-relaxed">
+                  Start your first pilot engagement today. No analyst team required.
+                  Board-ready results delivered automatically.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <MagneticElement strength={0.2}>
+                    <button
+                      onClick={() => setRequestAccessOpen(true)}
+                      className="group w-full sm:w-auto px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      Request Access
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    </button>
+                  </MagneticElement>
+                  <MagneticElement strength={0.2}>
+                    <button
+                      onClick={tryDemo}
+                      className="group w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 border border-theme-border hover:border-orange-600/50 text-sm font-medium transition-all duration-300 text-theme-text-secondary hover:text-theme-text"
+                    >
+                      <Play className="w-3.5 h-3.5" />
+                      Explore Live Demo
+                    </button>
+                  </MagneticElement>
+                </div>
+
+                <p className="text-[11px] font-mono text-theme-text-faint mt-8">
+                  Backed by TinyFish Accelerator · Enterprise-grade security · No setup fee
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
