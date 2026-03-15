@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search,
   BarChart3,
@@ -42,10 +43,8 @@ import MagneticElement from './components/MagneticElement';
 import ThemeToggle from './components/ThemeToggle';
 import DemoModeToggle from './components/DemoModeToggle';
 import Loader from './components/Loader';
-import Dashboard from './components/dashboard/Dashboard';
 import RequestAccessModal from './components/RequestAccessModal';
 import { useTheme } from './context/ThemeContext';
-import { useView } from './context/ViewContext';
 import { useAuth } from './context/AuthContext';
 import { useDemoMode } from './context/DemoModeContext';
 import AuthModal from './components/auth/AuthModal';
@@ -227,18 +226,19 @@ function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
   const { theme } = useTheme();
-  const { view, setView } = useView();
   const { user, signOut, loading: authLoading } = useAuth();
-  const { setMode, isDemoMode } = useDemoMode();
+  const { setMode } = useDemoMode();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const tryDemo = () => {
     setMode('demo');
-    setView('dashboard');
+    navigate('/dashboard');
   };
 
   const openDashboard = () => {
     if (user) {
-      setView('dashboard');
+      navigate('/dashboard');
     } else {
       setAuthModalTab('signin');
       setAuthModalOpen(true);
@@ -256,13 +256,15 @@ function App() {
     requestAnimationFrame(() => setIsVisible(true));
   }, []);
 
+  // Open sign-in modal when ProtectedRoute redirects here with openAuth state
   useEffect(() => {
-    if (view === 'dashboard' && !authLoading && !user && !isDemoMode) {
-      setView('landing');
+    if (location.state?.openAuth) {
       setAuthModalTab('signin');
       setAuthModalOpen(true);
+      // Clear the state so refreshing doesn't re-open it
+      window.history.replaceState({}, '');
     }
-  }, [view, user, authLoading, isDemoMode, setView]);
+  }, [location.state]);
 
   useEffect(() => {
     const updateTimestamp = () => {
@@ -280,18 +282,6 @@ function App() {
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
-
-  if (view === 'dashboard' && authLoading && !isDemoMode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-theme-bg">
-        <div className="w-1.5 h-1.5 rounded-full bg-theme-text-muted animate-pulse" />
-      </div>
-    );
-  }
-
-  if (view === 'dashboard' && (user || isDemoMode)) {
-    return <Dashboard />;
-  }
 
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text overflow-x-hidden transition-colors duration-400">
@@ -1003,7 +993,7 @@ function App() {
         <AuthModal
           initialTab={authModalTab}
           onClose={() => setAuthModalOpen(false)}
-          onSuccess={() => { setAuthModalOpen(false); setView('dashboard'); }}
+          onSuccess={() => { setAuthModalOpen(false); navigate('/dashboard'); }}
         />
       )}
     </div>

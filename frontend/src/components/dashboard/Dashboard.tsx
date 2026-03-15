@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, FlaskConical, Radio, Search, Trash2,
@@ -6,7 +7,6 @@ import {
 } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
-import { useView } from '../../context/ViewContext';
 import { ToastProvider } from '../ui/Toast';
 import { useAuth } from '../../context/AuthContext';
 import NewEngagementModal from './NewEngagementModal';
@@ -80,7 +80,7 @@ function StatsBar({ engagements }: { engagements: Engagement[] }) {
 
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { setView } = useView();
+  const navigate = useNavigate();
   const { isDemoMode } = useDemoMode();
   const { user, signOut } = useAuth();
   const [engagements, setEngagements] = useState<Engagement[]>([]);
@@ -166,7 +166,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setView('landing')}
+                  onClick={() => navigate('/')}
                   className="flex items-center gap-1.5 text-[11px] font-mono text-theme-text-muted
                              hover:text-theme-text transition-colors"
                 >
