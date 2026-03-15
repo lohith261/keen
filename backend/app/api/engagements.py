@@ -351,9 +351,16 @@ async def export_pdf(
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
 
-    # Gather pipeline_data from engagement config
+    # Gather deliverables from engagement config.
+    # The delivery agent stores them at:
+    #   pipeline_data.delivery.finalize_delivery.deliverables
     pipeline_data = engagement.config.get("pipeline_data", {})
-    deliverables = pipeline_data.get("deliverables", {})
+    deliverables = (
+        pipeline_data
+        .get("delivery", {})
+        .get("finalize_delivery", {})
+        .get("deliverables", {})
+    )
 
     # If no deliverables yet, build a minimal placeholder so the PDF still renders
     if not deliverables:
