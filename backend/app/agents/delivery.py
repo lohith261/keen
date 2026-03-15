@@ -10,6 +10,7 @@ Receives validated analysis from the Analysis Agent and:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -443,6 +444,72 @@ class DeliveryAgent(BaseAgent):
                         folder_path=folder,
                     )
                     distribution_result.update(result)
+
+            elif channel == "google_drive":
+                # Reuse google_sheets vault credentials (same service account)
+                sa_json_str = config.get("google_drive_service_account_json", "")
+                if not sa_json_str:
+                    distribution_result["status"] = "skipped"
+                    distribution_result["reason"] = (
+                        "google_drive_service_account_json not in engagement config; "
+                        "add Google credentials via the Credentials panel"
+                    )
+                else:
+                    import json as _json
+
+                    from app.export.excel import create_excel_report
+                    from app.export.pdf import create_pdf_report
+                    from app.integrations.distribution.google_drive import (
+                        upload_report as gd_upload,
+                    )
+
+                    try:
+                        sa_info = _json.loads(sa_json_str)
+                    except Exception as exc:  # noqa: BLE001
+                        sa_info = None
+                        distribution_result["status"] = "error"
+                        distribution_result["error"] = f"Invalid service_account_json: {exc}"
+
+                    if sa_info:
+                        folder_id = config.get("google_drive_folder_id") or None
+                        share_email = config.get("google_drive_share_email") or None
+
+                        # Generate PDF + Excel in executor (sync libs)
+                        loop = asyncio.get_event_loop()
+                        pdf_bytes = await loop.run_in_executor(
+                            None,
+                            lambda: create_pdf_report(
+                                deliverables=deliverables,
+                                findings=findings_raw,
+                                target_company=target_company,
+                                pe_firm=pe_firm,
+                            ),
+                        )
+                        excel_bytes = await loop.run_in_executor(
+                            None,
+                            lambda: create_excel_report(
+                                deliverables=deliverables,
+                                findings=findings_raw,
+                                source_data={},
+                                target_company=target_company,
+                                pe_firm=pe_firm,
+                            ),
+                        )
+
+                        result = await loop.run_in_executor(
+                            None,
+                            lambda: gd_upload(
+                                service_account_info=sa_info,
+                                target_company=target_company,
+                                deliverables=deliverables,
+                                findings=findings_raw,
+                                pdf_bytes=pdf_bytes,
+                                excel_bytes=excel_bytes,
+                                folder_id=folder_id,
+                                share_email=share_email,
+                            ),
+                        )
+                        distribution_result.update(result)
 
             else:
                 distribution_result["status"] = "unknown_channel"

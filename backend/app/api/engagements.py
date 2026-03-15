@@ -648,3 +648,165 @@ async def export_gsheets(
         raise HTTPException(status_code=500, detail=f"Google Sheets export failed: {exc}") from exc
 
     return {"url": sheet_url}
+
+
+@router.get(
+    "/{engagement_id}/export/drive",
+    summary="Upload the due diligence report (PDF + Excel) to Google Drive",
+    tags=["Export"],
+)
+async def export_drive(
+    engagement_id: UUID,
+    credentials_id: str | None = None,
+    db: AsyncSession = Depends(get_session),
+):
+    """
+    Generate a PDF and Excel report for a completed engagement, upload both
+    to Google Drive using the stored Google service-account credentials, and
+    return shareable links.
+
+    Credentials are loaded from the vault under system key ``google_sheets``
+    (same service account is reused for Drive access).
+
+    Returns JSON::
+
+        {
+          "pdf":   {"url": "https://drive.google.com/file/d/.../view"},
+          "excel": {"url": "https://drive.google.com/file/d/.../view"},
+          "status": "completed" | "partial" | "error"
+        }
+    """
+    import json as _json
+
+    from app.auth.vault import CredentialVault
+    from app.export.excel import create_excel_report
+    from app.export.pdf import create_pdf_report
+    from app.integrations.distribution.google_drive import upload_report as gd_upload
+
+    # Load the engagement
+    engagement = await db.get(Engagement, engagement_id)
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    # Load Google credentials from vault (reuse google_sheets service account)
+    vault = CredentialVault(db=db)
+    try:
+        cred_engagement_id = UUID(credentials_id) if credentials_id else engagement_id
+    except ValueError:
+        cred_engagement_id = engagement_id
+
+    raw_creds = await vault.get_credentials(cred_engagement_id, "google_sheets")
+    if not raw_creds:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No Google credentials found. "
+                "Please add a Google service account key via the Credentials panel."
+            ),
+        )
+
+    sa_json_str = raw_creds.get("service_account_json", "")
+    if not sa_json_str:
+        raise HTTPException(
+            status_code=400,
+            detail="service_account_json is empty in stored credentials.",
+        )
+    try:
+        service_account_info = _json.loads(sa_json_str)
+    except _json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"service_account_json is not valid JSON: {exc}",
+        ) from exc
+
+    folder_id: str | None = raw_creds.get("folder_id") or None
+    share_email: str | None = raw_creds.get("share_email") or None
+
+    # Gather engagement data
+    pipeline_data = engagement.config.get("pipeline_data", {})
+    deliverables = (
+        pipeline_data
+        .get("delivery", {})
+        .get("finalize_delivery", {})
+        .get("deliverables", {})
+    ) or {}
+
+    research_state = pipeline_data.get("research", {})
+    source_data: dict = {}
+    for key, value in research_state.items():
+        if key.startswith("data_") and isinstance(value, dict):
+            source_data[key.replace("data_", "")] = value
+
+    findings_result = await db.execute(
+        select(Finding)
+        .join(AgentRun)
+        .where(AgentRun.engagement_id == engagement_id)
+        .order_by(Finding.severity.desc(), Finding.created_at.asc())
+    )
+    db_findings = findings_result.scalars().all()
+    findings_dicts = [
+        {
+            "id": str(f.id),
+            "finding_type": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
+            "source_system": f.source_system,
+            "title": f.title,
+            "description": f.description,
+            "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+            "requires_human_review": f.requires_human_review,
+        }
+        for f in db_findings
+    ]
+
+    config = engagement.config or {}
+    target_company = config.get("target_company") or config.get("company_name", "Target Company")
+    pe_firm = config.get("company_name", "PE Firm")
+
+    # Generate PDF + Excel bytes (sync libraries → run in executor)
+    loop = asyncio.get_event_loop()
+    try:
+        pdf_bytes = await loop.run_in_executor(
+            None,
+            lambda: create_pdf_report(
+                deliverables=deliverables,
+                findings=findings_dicts,
+                target_company=target_company,
+                pe_firm=pe_firm,
+            ),
+        )
+        excel_bytes = await loop.run_in_executor(
+            None,
+            lambda: create_excel_report(
+                deliverables=deliverables,
+                findings=findings_dicts,
+                source_data=source_data,
+                target_company=target_company,
+                pe_firm=pe_firm,
+            ),
+        )
+    except Exception as exc:
+        logger.exception("Report generation failed for Drive export, engagement %s", engagement_id)
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {exc}") from exc
+
+    # Upload to Drive
+    try:
+        result = await loop.run_in_executor(
+            None,
+            lambda: gd_upload(
+                service_account_info=service_account_info,
+                target_company=target_company,
+                deliverables=deliverables,
+                findings=findings_dicts,
+                pdf_bytes=pdf_bytes,
+                excel_bytes=excel_bytes,
+                folder_id=folder_id,
+                share_email=share_email,
+            ),
+        )
+    except Exception as exc:
+        logger.exception("Google Drive upload failed for engagement %s", engagement_id)
+        raise HTTPException(status_code=500, detail=f"Google Drive upload failed: {exc}") from exc
+
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("error", "Drive upload failed"))
+
+    return result

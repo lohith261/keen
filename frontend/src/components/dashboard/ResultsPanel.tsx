@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
   Loader2, RefreshCw, Eye, EyeOff, FileText, TrendingUp, Download,
-  FileSpreadsheet,
+  FileSpreadsheet, HardDrive,
 } from 'lucide-react';
 import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
@@ -222,6 +222,8 @@ export default function ResultsPanel({ engagement }: Props) {
   const [showReviewOnly, setShowReviewOnly] = useState(false);
   const [sheetsLoading, setSheetsLoading] = useState(false);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
+  const [driveLoading, setDriveLoading] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
 
   const fetchFindings = async () => {
     setLoading(true);
@@ -254,6 +256,33 @@ export default function ResultsPanel({ engagement }: Props) {
       setSheetsError(e instanceof Error ? e.message : 'Google Sheets export failed');
     } finally {
       setSheetsLoading(false);
+    }
+  };
+
+  const handleDriveExport = async () => {
+    setDriveLoading(true);
+    setDriveError(null);
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/drive?credentials_id=${engagement.id}`,
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { detail?: string }).detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json() as {
+        status: string;
+        pdf?: { url: string };
+        excel?: { url: string };
+      };
+      // Open PDF link (primary), fall back to Excel link
+      const link = data.pdf?.url ?? data.excel?.url;
+      if (link) window.open(link, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      setDriveError(e instanceof Error ? e.message : 'Google Drive export failed');
+    } finally {
+      setDriveLoading(false);
     }
   };
 
@@ -352,9 +381,9 @@ export default function ResultsPanel({ engagement }: Props) {
           </button>
           {/* Export buttons */}
           <div className="ml-auto flex items-center gap-2">
-            {sheetsError && (
-              <span className="text-[10px] font-mono text-red-400 max-w-[160px] truncate" title={sheetsError}>
-                {sheetsError}
+            {(sheetsError || driveError) && (
+              <span className="text-[10px] font-mono text-red-400 max-w-[200px] truncate" title={sheetsError ?? driveError ?? ''}>
+                {sheetsError ?? driveError}
               </span>
             )}
             <a
@@ -392,6 +421,20 @@ export default function ResultsPanel({ engagement }: Props) {
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <FileSpreadsheet className="w-3 h-3" />}
               {sheetsLoading ? 'EXPORTING...' : 'SHEETS'}
+            </button>
+            <button
+              onClick={handleDriveExport}
+              disabled={driveLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border
+                         border-blue-500/30 rounded-lg text-blue-400/70
+                         hover:text-blue-400 hover:bg-blue-500/10 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Upload PDF + Excel to Google Drive (requires Google service account credentials)"
+            >
+              {driveLoading
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <HardDrive className="w-3 h-3" />}
+              {driveLoading ? 'UPLOADING...' : 'DRIVE'}
             </button>
           </div>
         </div>

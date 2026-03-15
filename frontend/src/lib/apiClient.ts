@@ -349,7 +349,7 @@ export const CREDENTIAL_SPECS: SystemCredentialSpec[] = [
   },
   {
     system_name: "google_sheets",
-    display_name: "Google Sheets",
+    display_name: "Google Sheets & Drive",
     category: "Export",
     auth_type: "Service Account",
     fields: [
@@ -361,8 +361,15 @@ export const CREDENTIAL_SPECS: SystemCredentialSpec[] = [
         required: true,
       },
       {
+        key: "folder_id",
+        label: "Google Drive Folder ID (for Drive export)",
+        placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms",
+        secret: false,
+        required: false,
+      },
+      {
         key: "share_email",
-        label: "Share sheet with (email)",
+        label: "Share with (email)",
         placeholder: "partner@firm.com",
         secret: false,
         required: false,
