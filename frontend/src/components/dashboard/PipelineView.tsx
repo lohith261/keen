@@ -152,6 +152,7 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
   );
   const [findings, setFindings] = useState<Finding[]>([]);
   const [overallStatus, setOverallStatus] = useState(engagement.status);
+  const [wsOnline, setWsOnline] = useState(true);
   const wsRef = useRef<WebSocket | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const findingsEndRef = useRef<HTMLDivElement>(null);
@@ -282,6 +283,10 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
       }
     });
 
+    ws.onopen  = () => setWsOnline(true);
+    ws.onclose = () => setWsOnline(false);
+    ws.onerror = () => setWsOnline(false);
+
     wsRef.current = ws;
     return () => ws.close();
   }, [engagement.id]);
@@ -311,6 +316,17 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           onClose={() => setShowCredentials(false)}
         />
       )}
+
+      {/* WebSocket offline banner */}
+      {!wsOnline && isActive && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/30
+                        bg-amber-500/8 text-amber-400 text-[11px] font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+          Live feed disconnected — reconnecting…
+          <span className="ml-auto text-amber-400/60">pipeline continues server-side</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
+import { useToast } from '../ui/Toast';
 
 const BACKEND_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -216,6 +217,7 @@ function SeverityGroup({
 }
 
 export default function ResultsPanel({ engagement }: Props) {
+  const { addToast } = useToast();
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -251,9 +253,17 @@ export default function ResultsPanel({ engagement }: Props) {
         throw new Error((body as { detail?: string }).detail || `HTTP ${res.status}`);
       }
       const { url } = await res.json() as { url: string };
-      window.open(url, '_blank', 'noopener,noreferrer');
+      addToast({
+        type: 'success',
+        message: 'Google Sheet created',
+        detail: 'Report exported successfully',
+        action: { label: 'Open Sheet', onClick: () => window.open(url, '_blank', 'noopener,noreferrer') },
+        duration: 10000,
+      });
     } catch (e) {
-      setSheetsError(e instanceof Error ? e.message : 'Google Sheets export failed');
+      const msg = e instanceof Error ? e.message : 'Google Sheets export failed';
+      setSheetsError(msg);
+      addToast({ type: 'error', message: 'Sheets export failed', detail: msg });
     } finally {
       setSheetsLoading(false);
     }
@@ -276,11 +286,23 @@ export default function ResultsPanel({ engagement }: Props) {
         pdf?: { url: string };
         excel?: { url: string };
       };
-      // Open PDF link (primary), fall back to Excel link
-      const link = data.pdf?.url ?? data.excel?.url;
-      if (link) window.open(link, '_blank', 'noopener,noreferrer');
+      const pdfUrl  = data.pdf?.url;
+      const xlsxUrl = data.excel?.url;
+      addToast({
+        type: 'success',
+        message: 'Uploaded to Google Drive',
+        detail: [pdfUrl && 'PDF', xlsxUrl && 'Excel'].filter(Boolean).join(' + ') + ' ready',
+        action: pdfUrl
+          ? { label: 'Open PDF', onClick: () => window.open(pdfUrl, '_blank', 'noopener,noreferrer') }
+          : xlsxUrl
+          ? { label: 'Open Excel', onClick: () => window.open(xlsxUrl, '_blank', 'noopener,noreferrer') }
+          : undefined,
+        duration: 12000,
+      });
     } catch (e) {
-      setDriveError(e instanceof Error ? e.message : 'Google Drive export failed');
+      const msg = e instanceof Error ? e.message : 'Google Drive export failed';
+      setDriveError(msg);
+      addToast({ type: 'error', message: 'Drive upload failed', detail: msg });
     } finally {
       setDriveLoading(false);
     }
@@ -381,12 +403,7 @@ export default function ResultsPanel({ engagement }: Props) {
           </button>
           {/* Export buttons */}
           <div className="ml-auto flex items-center gap-2">
-            {(sheetsError || driveError) && (
-              <span className="text-[10px] font-mono text-red-400 max-w-[200px] truncate" title={sheetsError ?? driveError ?? ''}>
-                {sheetsError ?? driveError}
-              </span>
-            )}
-            <a
+              <a
               href={`${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/pdf`}
               target="_blank"
               rel="noopener noreferrer"
