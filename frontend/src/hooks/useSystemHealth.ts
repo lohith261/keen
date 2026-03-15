@@ -66,22 +66,36 @@ async function checkReadiness(): Promise<HealthCheck[]> {
 
 async function checkLlm(): Promise<HealthCheck> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/health/llm`, { signal: AbortSignal.timeout(15000) });
-    const data = await res.json() as { status: string; llm: string; model: string | null };
+    const res = await fetch(`${BACKEND_URL}/api/v1/health/llm`, { signal: AbortSignal.timeout(20000) });
+    const data = await res.json() as {
+      status: string;
+      providers: Record<string, { ok: boolean; detail?: string }>;
+    };
+
+    const providers = data.providers ?? {};
+    const passing = Object.entries(providers)
+      .filter(([, p]) => p.ok)
+      .map(([name, p]) => `${name}${p.detail ? ` (${p.detail})` : ''}`);
+    const failing = Object.entries(providers)
+      .filter(([, p]) => !p.ok)
+      .map(([name, p]) => `${name}: ${p.detail ?? 'error'}`);
+
     if (data.status === 'connected') {
       return {
         name: 'LLM',
-        description: 'Anthropic Claude API',
+        description: 'AI Providers',
         status: 'pass',
-        detail: data.model ?? undefined,
+        detail: passing.join(', '),
       };
     }
-    if (data.status === 'unconfigured') {
-      return { name: 'LLM', description: 'Anthropic Claude API', status: 'fail', detail: 'API key not configured' };
-    }
-    return { name: 'LLM', description: 'Anthropic Claude API', status: 'fail', detail: data.llm };
+    return {
+      name: 'LLM',
+      description: 'AI Providers',
+      status: 'fail',
+      detail: failing.join(' · '),
+    };
   } catch (err) {
-    return { name: 'LLM', description: 'Anthropic Claude API', status: 'fail', detail: (err as Error).message };
+    return { name: 'LLM', description: 'AI Providers', status: 'fail', detail: (err as Error).message };
   }
 }
 
@@ -116,7 +130,7 @@ export function useSystemHealth(pollIntervalMs = 60_000): SystemHealth {
     { name: 'Database', description: 'PostgreSQL connectivity', status: 'pending' },
     { name: 'Redis', description: 'Redis connectivity', status: 'pending' },
     { name: 'WebSocket', description: 'Real-time agent updates', status: 'pending' },
-    { name: 'LLM', description: 'Anthropic Claude API', status: 'pending' },
+    { name: 'LLM', description: 'AI Providers', status: 'pending' },
   ]);
   const [loading, setLoading] = useState(true);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);

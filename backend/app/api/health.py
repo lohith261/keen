@@ -55,63 +55,98 @@ async def readiness(
 
 @router.get("/llm")
 async def llm_health() -> dict:
-    """LLM health check — makes a minimal Anthropic API call to verify the key is valid and the service is reachable."""
+    """
+    LLM health check — probes Anthropic, OpenAI, and Gemini in parallel.
+    Passes if at least one provider can respond to a real message.
+    Fails only if all three are unavailable/unconfigured/out-of-credits.
+    """
+    import asyncio
+
     import anthropic
+    import openai
 
     from app.config import get_settings
 
     settings = get_settings()
 
-    if not settings.anthropic_api_key:
-        return {
-            "status": "unconfigured",
-            "llm": "error: ANTHROPIC_API_KEY not set",
-            "model": None,
-        }
+    # ── Per-provider probe functions ─────────────────────────────────────────
 
-    try:
-        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-        # Cheapest possible call: 1 input token, 1 output token
-        msg = await client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=1,
-            messages=[{"role": "user", "content": "hi"}],
-        )
-        model_used = msg.model
-        return {
-            "status": "connected",
-            "llm": "connected",
-            "model": model_used,
-        }
-    except anthropic.AuthenticationError:
-        return {
-            "status": "error",
-            "llm": "error: invalid API key",
-            "model": None,
-        }
-    except anthropic.RateLimitError:
-        # Rate-limited means the key is valid but we're throttled — treat as connected
-        return {
-            "status": "connected",
-            "llm": "connected (rate limited)",
-            "model": "claude-haiku-4-5",
-        }
-    except anthropic.BadRequestError as exc:
-        exc_str = str(exc)
-        if "credit balance is too low" in exc_str or "quota" in exc_str.lower():
-            return {
-                "status": "error",
-                "llm": "error: insufficient credits — top up at console.anthropic.com",
-                "model": None,
-            }
-        return {
-            "status": "error",
-            "llm": f"error: {exc}",
-            "model": None,
-        }
-    except Exception as exc:
-        return {
-            "status": "error",
-            "llm": f"error: {exc}",
-            "model": None,
-        }
+    async def _check_anthropic() -> dict:
+        if not settings.anthropic_api_key:
+            return {"provider": "anthropic", "ok": False, "detail": "API key not configured"}
+        try:
+            client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+            msg = await client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=1,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+            return {"provider": "anthropic", "ok": True, "detail": msg.model}
+        except anthropic.AuthenticationError:
+            return {"provider": "anthropic", "ok": False, "detail": "invalid API key"}
+        except anthropic.RateLimitError:
+            return {"provider": "anthropic", "ok": False, "detail": "rate limited"}
+        except anthropic.BadRequestError as exc:
+            exc_str = str(exc)
+            if "credit balance is too low" in exc_str or "quota" in exc_str.lower():
+                return {"provider": "anthropic", "ok": False, "detail": "insufficient credits"}
+            return {"provider": "anthropic", "ok": False, "detail": str(exc)}
+        except Exception as exc:
+            return {"provider": "anthropic", "ok": False, "detail": str(exc)}
+
+    async def _check_openai() -> dict:
+        if not settings.openai_api_key:
+            return {"provider": "openai", "ok": False, "detail": "API key not configured"}
+        try:
+            client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
+            resp = await client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=1,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+            model_used = resp.model
+            return {"provider": "openai", "ok": True, "detail": model_used}
+        except openai.AuthenticationError:
+            return {"provider": "openai", "ok": False, "detail": "invalid API key"}
+        except openai.RateLimitError:
+            return {"provider": "openai", "ok": False, "detail": "rate limited"}
+        except openai.BadRequestError as exc:
+            return {"provider": "openai", "ok": False, "detail": str(exc)}
+        except Exception as exc:
+            return {"provider": "openai", "ok": False, "detail": str(exc)}
+
+    async def _check_gemini() -> dict:
+        if not settings.gemini_api_key:
+            return {"provider": "gemini", "ok": False, "detail": "API key not configured"}
+        try:
+            import google.generativeai as genai  # type: ignore[import]
+            genai.configure(api_key=settings.gemini_api_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            resp = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: model.generate_content("hi", generation_config={"max_output_tokens": 1})
+            )
+            _ = resp.text  # raises if blocked/error
+            return {"provider": "gemini", "ok": True, "detail": "gemini-1.5-flash"}
+        except Exception as exc:
+            exc_str = str(exc)
+            if "API_KEY_INVALID" in exc_str or "invalid" in exc_str.lower():
+                detail = "invalid API key"
+            elif "quota" in exc_str.lower() or "429" in exc_str:
+                detail = "quota exceeded"
+            else:
+                detail = exc_str[:120]
+            return {"provider": "gemini", "ok": False, "detail": detail}
+
+    # ── Run all three in parallel ─────────────────────────────────────────────
+    results = await asyncio.gather(_check_anthropic(), _check_openai(), _check_gemini())
+
+    providers = {r["provider"]: r for r in results}
+    any_ok = any(r["ok"] for r in results)
+
+    return {
+        "status": "connected" if any_ok else "error",
+        "providers": {
+            name: {"ok": r["ok"], "detail": r.get("detail")}
+            for name, r in providers.items()
+        },
+    }
