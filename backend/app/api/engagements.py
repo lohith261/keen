@@ -547,8 +547,8 @@ async def export_gsheets(
     """
     import json as _json
 
+    from app.auth.vault import CredentialVault
     from app.export.gsheets import GSPREAD_AVAILABLE, create_google_sheet
-    from app.integrations.credentials import CredentialVault
 
     if not GSPREAD_AVAILABLE:
         raise HTTPException(
@@ -562,8 +562,12 @@ async def export_gsheets(
         raise HTTPException(status_code=404, detail="Engagement not found")
 
     # Load Google credentials from vault
-    vault = CredentialVault(namespace=credentials_id)
-    raw_creds = vault.get("google_sheets")
+    vault = CredentialVault(db=db)
+    try:
+        cred_engagement_id = UUID(credentials_id)
+    except ValueError:
+        cred_engagement_id = engagement_id
+    raw_creds = await vault.get_credentials(cred_engagement_id, "google_sheets")
     if not raw_creds:
         raise HTTPException(
             status_code=400,
