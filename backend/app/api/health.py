@@ -121,12 +121,25 @@ async def llm_health() -> dict:
         try:
             import google.generativeai as genai  # type: ignore[import]
             genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            resp = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: model.generate_content("hi", generation_config={"max_output_tokens": 1})
-            )
-            _ = resp.text  # raises if blocked/error
-            return {"provider": "gemini", "ok": True, "detail": "gemini-1.5-flash"}
+            # Try models in order of preference; fall through if a model is unavailable
+            gemini_model_used = None
+            resp = None
+            for model_name in ("gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro"):
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    resp = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda m=model: m.generate_content(
+                            "hi", generation_config={"max_output_tokens": 1}
+                        )
+                    )
+                    _ = resp.text  # raises if response is blocked
+                    gemini_model_used = model_name
+                    break
+                except Exception:
+                    continue
+            if gemini_model_used is None:
+                raise RuntimeError("No Gemini model responded successfully")
+            return {"provider": "gemini", "ok": True, "detail": gemini_model_used}
         except Exception as exc:
             exc_str = str(exc)
             if "API_KEY_INVALID" in exc_str or "invalid" in exc_str.lower():
