@@ -99,11 +99,10 @@ async def llm_health() -> dict:
     except anthropic.BadRequestError as exc:
         exc_str = str(exc)
         if "credit balance is too low" in exc_str or "quota" in exc_str.lower():
-            # Key is valid and service is reachable — just insufficient credits
             return {
-                "status": "connected",
-                "llm": "connected (low credits)",
-                "model": "claude-haiku-4-5",
+                "status": "error",
+                "llm": "error: insufficient credits — top up at console.anthropic.com",
+                "model": None,
             }
         return {
             "status": "error",
