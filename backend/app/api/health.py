@@ -119,39 +119,62 @@ async def llm_health() -> dict:
         if not settings.gemini_api_key:
             return {"provider": "gemini", "ok": False, "detail": "API key not configured"}
         try:
-            import google.generativeai as genai  # type: ignore[import]
-            genai.configure(api_key=settings.gemini_api_key)
-            # Try models in order of preference; fall through if a model is unavailable
-            gemini_model_used = None
-            resp = None
-            for model_name in ("gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro"):
-                try:
-                    model = genai.GenerativeModel(model_name)
-                    resp = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda m=model: m.generate_content(
-                            "hi", generation_config={"max_output_tokens": 1}
-                        )
-                    )
-                    _ = resp.text  # raises if response is blocked
-                    gemini_model_used = model_name
-                    break
-                except Exception:
-                    continue
-            if gemini_model_used is None:
-                raise RuntimeError("No Gemini model responded successfully")
-            return {"provider": "gemini", "ok": True, "detail": gemini_model_used}
+            import httpx
+            # Use the v1 REST API directly — avoids the google-generativeai SDK
+            # defaulting to v1beta which doesn't support newer model IDs.
+            for model_name in ("gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.0-pro"):
+                url = (
+                    f"https://generativelanguage.googleapis.com/v1/models/"
+                    f"{model_name}:generateContent?key={settings.gemini_api_key}"
+                )
+                payload = {
+                    "contents": [{"parts": [{"text": "hi"}]}],
+                    "generationConfig": {"maxOutputTokens": 1},
+                }
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(url, json=payload)
+                if resp.status_code == 200:
+                    return {"provider": "gemini", "ok": True, "detail": model_name}
+                if resp.status_code == 404:
+                    continue  # model not found, try next
+                # Auth / quota errors — no point retrying other models
+                body = resp.json()
+                err_msg = body.get("error", {}).get("message", resp.text)[:120]
+                if resp.status_code == 400 and "API_KEY_INVALID" in err_msg:
+                    return {"provider": "gemini", "ok": False, "detail": "invalid API key"}
+                if resp.status_code == 429:
+                    return {"provider": "gemini", "ok": False, "detail": "quota exceeded"}
+                return {"provider": "gemini", "ok": False, "detail": err_msg}
+            return {"provider": "gemini", "ok": False, "detail": "no supported model found"}
+        except Exception as exc:
+            return {"provider": "gemini", "ok": False, "detail": str(exc)[:120]}
+
+    async def _check_groq() -> dict:
+        if not settings.groq_api_key:
+            return {"provider": "groq", "ok": False, "detail": "API key not configured"}
+        try:
+            from groq import AsyncGroq  # type: ignore[import]
+            client = AsyncGroq(api_key=settings.groq_api_key)
+            resp = await client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                max_tokens=1,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+            return {"provider": "groq", "ok": True, "detail": resp.model}
         except Exception as exc:
             exc_str = str(exc)
-            if "API_KEY_INVALID" in exc_str or "invalid" in exc_str.lower():
+            if "invalid_api_key" in exc_str.lower() or "401" in exc_str:
                 detail = "invalid API key"
-            elif "quota" in exc_str.lower() or "429" in exc_str:
-                detail = "quota exceeded"
+            elif "429" in exc_str or "rate" in exc_str.lower():
+                detail = "rate limited"
             else:
                 detail = exc_str[:120]
-            return {"provider": "gemini", "ok": False, "detail": detail}
+            return {"provider": "groq", "ok": False, "detail": detail}
 
-    # ── Run all three in parallel ─────────────────────────────────────────────
-    results = await asyncio.gather(_check_anthropic(), _check_openai(), _check_gemini())
+    # ── Run all four in parallel ──────────────────────────────────────────────
+    results = await asyncio.gather(
+        _check_anthropic(), _check_openai(), _check_gemini(), _check_groq()
+    )
 
     providers = {r["provider"]: r for r in results}
     any_ok = any(r["ok"] for r in results)
