@@ -64,6 +64,27 @@ async function checkReadiness(): Promise<HealthCheck[]> {
   }
 }
 
+async function checkLlm(): Promise<HealthCheck> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/health/llm`, { signal: AbortSignal.timeout(15000) });
+    const data = await res.json() as { status: string; llm: string; model: string | null };
+    if (data.status === 'connected') {
+      return {
+        name: 'LLM',
+        description: 'Anthropic Claude API',
+        status: 'pass',
+        detail: data.model ?? undefined,
+      };
+    }
+    if (data.status === 'unconfigured') {
+      return { name: 'LLM', description: 'Anthropic Claude API', status: 'fail', detail: 'API key not configured' };
+    }
+    return { name: 'LLM', description: 'Anthropic Claude API', status: 'fail', detail: data.llm };
+  } catch (err) {
+    return { name: 'LLM', description: 'Anthropic Claude API', status: 'fail', detail: (err as Error).message };
+  }
+}
+
 function checkWebSocket(): Promise<HealthCheck> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
@@ -95,18 +116,20 @@ export function useSystemHealth(pollIntervalMs = 60_000): SystemHealth {
     { name: 'Database', description: 'PostgreSQL connectivity', status: 'pending' },
     { name: 'Redis', description: 'Redis connectivity', status: 'pending' },
     { name: 'WebSocket', description: 'Real-time agent updates', status: 'pending' },
+    { name: 'LLM', description: 'Anthropic Claude API', status: 'pending' },
   ]);
   const [loading, setLoading] = useState(true);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const run = useCallback(async () => {
     setLoading(true);
-    const [api, readiness, ws] = await Promise.all([
+    const [api, readiness, ws, llm] = await Promise.all([
       checkApi(),
       checkReadiness(),
       checkWebSocket(),
+      checkLlm(),
     ]);
-    setChecks([api, ...readiness, ws]);
+    setChecks([api, ...readiness, ws, llm]);
     setLastChecked(new Date());
     setLoading(false);
   }, []);
