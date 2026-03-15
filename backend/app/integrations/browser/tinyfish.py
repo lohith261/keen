@@ -1,29 +1,30 @@
 """
 TinyFish AI browser automation client.
 
-TinyFish provides AI-powered browser sessions that can navigate websites,
-fill forms, handle authentication flows, and extract structured data using
-natural language instructions rather than brittle CSS selectors.
+TinyFish takes a URL + natural-language goal and returns structured JSON.
+It handles navigation, authentication, dynamic content, and multi-step
+flows autonomously — one API call per task.
 
-API pattern:
-  POST   /v1/sessions                    Create a new browser session
-  POST   /v1/sessions/{id}/navigate      Navigate to a URL
-  POST   /v1/sessions/{id}/act           Execute a natural-language action
-  POST   /v1/sessions/{id}/extract       Extract structured data
-  GET    /v1/sessions/{id}/cookies       Retrieve session cookies
-  POST   /v1/sessions/{id}/screenshot    Take a screenshot (for debugging)
-  DELETE /v1/sessions/{id}              Close and release the session
+Endpoint:
+  POST https://agent.tinyfish.ai/v1/automation/run-sse
 
-Sessions are stateful — cookies, local-storage and JS context persist
-across navigate/act/extract calls within the same session.
+Authentication:
+  X-API-Key: <your_tinyfish_api_key>
 
-Configure via environment variables:
-  TINYFISH_API_KEY      Required for live mode  (e.g. tf-xxxx)
-  TINYFISH_BASE_URL     Defaults to https://api.tinyfish.io
+Response:
+  Server-Sent Events (SSE) stream. The final COMPLETE event carries
+  `resultJson` (the extracted data as a JSON string or dict).
+
+Environment variables:
+  TINYFISH_API_KEY    Required. Obtain at https://agent.tinyfish.ai/api-keys
+  TINYFISH_BASE_URL   Defaults to https://agent.tinyfish.ai
+
+Docs: https://docs.tinyfish.ai
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -33,259 +34,172 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=5.0)
+_SSE_ENDPOINT = "/v1/automation/run-sse"
+_TIMEOUT = httpx.Timeout(connect=15.0, read=300.0, write=30.0, pool=5.0)
 
 
 class TinyFishError(Exception):
-    """Raised when the TinyFish API returns an error or times out."""
+    """Raised on TinyFish API errors, auth failures, or task failures."""
 
 
-class TinyFishSession:
+def _parse_sse_stream(raw: str) -> Any:
     """
-    Represents an active TinyFish browser session.
+    Parse an SSE stream string and return the resultJson from the COMPLETE event.
 
-    Keeps the session_id and provides helper coroutines for common operations.
-    Always call close() (or use as an async context manager) when done.
+    TinyFish SSE format:
+      data: {"type":"progress","message":"..."}
+      data: {"type":"complete","status":"COMPLETED","resultJson":{...}}
+      data: {"type":"error","message":"..."}
     """
+    result_json: Any = None
+    last_data: dict = {}
 
-    def __init__(self, client: TinyFishClient, session_id: str) -> None:
-        self._client = client
-        self.session_id = session_id
-        self.cookies: list[dict] = []
-
-    # ── Navigation ────────────────────────────────────────────────────────────
-
-    async def navigate(self, url: str, wait_for: str = "networkidle") -> dict:
-        """
-        Navigate to a URL and wait for the page to settle.
-
-        Args:
-            url:       Target URL.
-            wait_for:  Page-ready signal: "networkidle" | "load" | "domcontentloaded"
-
-        Returns:
-            API response dict with at least {"status": "ok", "current_url": ...}.
-        """
-        return await self._client._post(
-            f"/v1/sessions/{self.session_id}/navigate",
-            {"url": url, "wait_for": wait_for},
-        )
-
-    # ── Interaction ───────────────────────────────────────────────────────────
-
-    async def act(self, instruction: str, context: dict | None = None) -> dict:
-        """
-        Execute a natural-language browser action.
-
-        Examples:
-          "Click the 'Sign In' button"
-          "Type 'user@example.com' into the email field and press Tab"
-          "Wait for the loading spinner to disappear, then click 'Continue'"
-
-        Args:
-            instruction: Human-readable action to perform.
-            context:     Optional extra data available to the AI (e.g. credentials).
-
-        Returns:
-            API response dict with {"status": "ok", "actions_performed": [...]}.
-        """
-        payload: dict[str, Any] = {"instruction": instruction}
-        if context:
-            payload["context"] = context
-        return await self._client._post(
-            f"/v1/sessions/{self.session_id}/act",
-            payload,
-        )
-
-    # ── Extraction ────────────────────────────────────────────────────────────
-
-    async def extract(
-        self,
-        instruction: str,
-        schema: dict | None = None,
-        paginate: bool = False,
-    ) -> Any:
-        """
-        Extract structured data from the current page.
-
-        Args:
-            instruction: What to extract, in natural language.
-            schema:      Optional JSON Schema describing the expected output shape.
-                         If provided, TinyFish will conform its output to the schema.
-            paginate:    If True, automatically click "Next" / "Load more" buttons
-                         and accumulate results across pages.
-
-        Returns:
-            Extracted data — structure depends on schema. Typically a list or dict.
-        """
-        payload: dict[str, Any] = {
-            "instruction": instruction,
-            "paginate": paginate,
-        }
-        if schema:
-            payload["schema"] = schema
-        response = await self._client._post(
-            f"/v1/sessions/{self.session_id}/extract",
-            payload,
-        )
-        return response.get("data", response)
-
-    # ── Cookies ───────────────────────────────────────────────────────────────
-
-    async def get_cookies(self) -> list[dict]:
-        """Retrieve all cookies from the current browser session."""
-        response = await self._client._get(f"/v1/sessions/{self.session_id}/cookies")
-        self.cookies = response.get("cookies", [])
-        return self.cookies
-
-    # ── Lifecycle ─────────────────────────────────────────────────────────────
-
-    async def close(self) -> None:
-        """Close and release the browser session."""
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        payload_str = line[len("data:"):].strip()
+        if not payload_str:
+            continue
         try:
-            await self._client._delete(f"/v1/sessions/{self.session_id}")
-            logger.debug("TinyFish: closed session %s", self.session_id)
-        except Exception as exc:
-            logger.warning("TinyFish: error closing session %s: %s", self.session_id, exc)
+            payload = json.loads(payload_str)
+        except json.JSONDecodeError:
+            continue
 
-    async def __aenter__(self) -> TinyFishSession:
-        return self
+        last_data = payload
+        event_type = (payload.get("type") or "").lower()
 
-    async def __aexit__(self, *_: Any) -> None:
-        await self.close()
+        # Accept "complete" or "COMPLETE" or status == "COMPLETED"
+        if event_type in ("complete", "completed") or payload.get("status") == "COMPLETED":
+            # resultJson may be a pre-parsed dict/list or a JSON string
+            rj = payload.get("resultJson") or payload.get("result") or payload.get("data")
+            if isinstance(rj, str):
+                try:
+                    rj = json.loads(rj)
+                except json.JSONDecodeError:
+                    pass
+            result_json = rj
+
+        elif event_type in ("error", "failed"):
+            raise TinyFishError(
+                f"TinyFish task failed: {payload.get('message') or payload_str[:200]}"
+            )
+
+    # If we got a result, return it
+    if result_json is not None:
+        return result_json
+
+    # Try the last data block as a fallback (some versions don't use "complete" type)
+    rj = last_data.get("resultJson") or last_data.get("result") or last_data.get("data")
+    if rj is not None:
+        if isinstance(rj, str):
+            try:
+                rj = json.loads(rj)
+            except json.JSONDecodeError:
+                pass
+        return rj
+
+    raise TinyFishError(
+        f"No COMPLETE event found in TinyFish SSE stream. Last event: {last_data}"
+    )
 
 
 class TinyFishClient:
     """
-    HTTP client for the TinyFish browser automation API.
-
-    Obtain a session with create_session() and use it to navigate,
-    interact with, and extract data from websites.
+    Thin async client for the TinyFish web automation API.
 
     Usage:
         client = TinyFishClient()
-        async with client:
-            session = await client.create_session()
-            async with session:
-                await session.navigate("https://example.com/login")
-                await session.act("Fill in email 'user@co.com' and password 'pw', click Login")
-                data = await session.extract("Extract all table rows")
+        if client.is_configured:
+            data = await client.run(
+                url="https://bloomberg.com/login",
+                goal="Log in with username 'user' password 'pw', "
+                     "then extract peer comparison table as JSON",
+            )
     """
 
-    def __init__(
-        self,
-        api_key: str = "",
-        base_url: str = "",
-    ) -> None:
+    def __init__(self, api_key: str = "", base_url: str = "") -> None:
         settings = get_settings()
         self._api_key = api_key or settings.tinyfish_api_key
-        self._base_url = (base_url or settings.tinyfish_base_url).rstrip("/")
-        self._http: httpx.AsyncClient | None = None
+        self._base_url = (base_url or settings.tinyfish_base_url or "https://agent.tinyfish.ai").rstrip("/")
 
     @property
     def is_configured(self) -> bool:
-        """True if an API key is available (live mode possible)."""
         return bool(self._api_key)
 
-    def _build_client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            base_url=self._base_url,
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "X-Client": "KEEN/0.1.0",
-            },
-            timeout=_TIMEOUT,
-        )
-
-    async def _get_http(self) -> httpx.AsyncClient:
-        if self._http is None or self._http.is_closed:
-            self._http = self._build_client()
-        return self._http
-
-    async def _post(self, path: str, body: dict) -> dict:
-        client = await self._get_http()
-        try:
-            response = await client.post(path, json=body)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as exc:
-            raise TinyFishError(
-                f"TinyFish API error {exc.response.status_code} at {path}: "
-                f"{exc.response.text[:200]}"
-            ) from exc
-        except httpx.TimeoutException as exc:
-            raise TinyFishError(f"TinyFish timed out at {path}") from exc
-
-    async def _get(self, path: str) -> dict:
-        client = await self._get_http()
-        try:
-            response = await client.get(path)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as exc:
-            raise TinyFishError(
-                f"TinyFish API error {exc.response.status_code} at {path}: "
-                f"{exc.response.text[:200]}"
-            ) from exc
-
-    async def _delete(self, path: str) -> dict:
-        client = await self._get_http()
-        try:
-            response = await client.delete(path)
-            response.raise_for_status()
-            return response.json()
-        except Exception:
-            return {}
-
-    async def create_session(
+    async def run(
         self,
-        headless: bool = True,
-        viewport: dict | None = None,
-        proxy: dict | None = None,
-    ) -> TinyFishSession:
+        url: str,
+        goal: str,
+        proxy_config: dict | None = None,
+        browser_profile: str = "stealth",
+    ) -> Any:
         """
-        Launch a new headless browser session.
+        Execute a browser automation task and return the extracted JSON data.
 
         Args:
-            headless:  Run browser without a visible window (default True).
-            viewport:  Browser window size, e.g. {"width": 1920, "height": 1080}.
-            proxy:     Optional proxy config, e.g. {"server": "http://proxy:8080"}.
+            url:            Starting URL (e.g. login page).
+            goal:           Natural-language description of what to do and
+                            what JSON structure to return.
+            proxy_config:   Optional proxy settings, e.g. {"enabled": True}.
+            browser_profile: "stealth" (default) for bot-protected sites.
 
         Returns:
-            TinyFishSession ready for navigation.
+            Parsed Python object from resultJson (list, dict, etc.).
+
+        Raises:
+            TinyFishError: if the API returns an error or the task fails.
         """
         if not self.is_configured:
             raise TinyFishError(
-                "TINYFISH_API_KEY is not configured. "
-                "Set it as an environment variable or use demo_mode=True."
+                "TINYFISH_API_KEY is not set. "
+                "Configure it as an environment variable or use demo_mode=True."
             )
 
         payload: dict[str, Any] = {
-            "headless": headless,
-            "viewport": viewport or {"width": 1440, "height": 900},
+            "url": url,
+            "goal": goal,
+            "browser_profile": browser_profile,
         }
-        if proxy:
-            payload["proxy"] = proxy
+        if proxy_config is not None:
+            payload["proxy_config"] = proxy_config
+        else:
+            payload["proxy_config"] = {"enabled": False}
 
-        response = await self._post("/v1/sessions", payload)
-        session_id = response.get("session_id") or response.get("id")
-        if not session_id:
-            raise TinyFishError(
-                f"TinyFish session creation failed — no session_id in response: {response}"
-            )
+        logger.info("TinyFish: running task at %s (goal length=%d chars)", url, len(goal))
 
-        logger.info("TinyFish: created session %s", session_id)
-        return TinyFishSession(self, session_id)
+        async with httpx.AsyncClient(
+            base_url=self._base_url,
+            headers={
+                "X-API-Key": self._api_key,
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+            },
+            timeout=_TIMEOUT,
+        ) as client:
+            try:
+                async with client.stream("POST", _SSE_ENDPOINT, json=payload) as response:
+                    if response.status_code == 401:
+                        raise TinyFishError(
+                            "TinyFish: 401 Unauthorized — check your TINYFISH_API_KEY"
+                        )
+                    if response.status_code == 403:
+                        raise TinyFishError(
+                            f"TinyFish: 403 Forbidden — {await response.aread()}"
+                        )
+                    if response.status_code >= 400:
+                        body = (await response.aread()).decode("utf-8", errors="replace")
+                        raise TinyFishError(
+                            f"TinyFish: HTTP {response.status_code} — {body[:300]}"
+                        )
 
-    async def close(self) -> None:
-        """Close the underlying HTTP client."""
-        if self._http and not self._http.is_closed:
-            await self._http.aclose()
+                    raw = (await response.aread()).decode("utf-8", errors="replace")
 
-    async def __aenter__(self) -> TinyFishClient:
-        return self
+                result = _parse_sse_stream(raw)
+                logger.info("TinyFish: task completed successfully")
+                return result
 
-    async def __aexit__(self, *_: Any) -> None:
-        await self.close()
+            except httpx.TimeoutException as exc:
+                raise TinyFishError(f"TinyFish request timed out: {exc}") from exc
+            except httpx.ConnectError as exc:
+                raise TinyFishError(f"TinyFish connection error: {exc}") from exc

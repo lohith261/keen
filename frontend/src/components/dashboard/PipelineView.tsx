@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Search, BarChart3, FileText, CheckCircle2, Clock, XCircle,
-  AlertTriangle, Info, Loader2, PauseCircle, Terminal,
+  AlertTriangle, Info, Loader2, PauseCircle, Terminal, KeyRound,
 } from 'lucide-react';
 import { connectAgentStatus, engagementsApi, type Engagement } from '../../lib/apiClient';
+import CredentialsModal from './CredentialsModal';
 
 interface AgentState {
   status: string;
@@ -295,6 +296,8 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
     try { await engagementsApi.resume(engagement.id); setOverallStatus('running'); } catch {}
   };
 
+  const [showCredentials, setShowCredentials] = useState(false);
+
   const isActive = overallStatus === 'running';
   const isDone   = overallStatus === 'completed';
   const isFailed = overallStatus === 'failed';
@@ -302,6 +305,12 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
 
   return (
     <div className="space-y-4">
+      {showCredentials && (
+        <CredentialsModal
+          engagementId={engagement.id}
+          onClose={() => setShowCredentials(false)}
+        />
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -317,6 +326,17 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Configure Credentials — always visible so users can set up before starting */}
+          <button
+            onClick={() => setShowCredentials(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono
+                       border border-white/15 text-white/50 rounded-lg
+                       hover:bg-white/5 hover:text-white/80 transition-colors"
+          >
+            <KeyRound className="w-3 h-3" />
+            CREDENTIALS
+          </button>
+
           {isActive && (
             <button onClick={handlePause}
               className="px-3 py-1.5 text-[10px] font-mono border border-amber-500/40 text-amber-400

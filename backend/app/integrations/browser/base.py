@@ -1,11 +1,13 @@
 """
 BaseBrowserConnector — abstract base for TinyFish-powered browser connectors.
 
-Extends BaseConnector with:
-- TinyFish session lifecycle management (create → authenticate → extract → close)
-- Graceful fallback to DemoConnector fixture data when TINYFISH_API_KEY is not set
-- Cookie-based session persistence between authenticate() and extract() calls
-- Structured error reporting that surfaces as empty results rather than crashes
+Architecture: TinyFish is a single-shot API.  Each extract() call composes
+a complete natural-language goal (login + navigate + extract) and sends it
+as one POST to /v1/automation/run-sse.  There is no persistent session state.
+
+Subclasses implement:
+  login_url       Class attribute — URL of the login page
+  _build_goal()   Returns a complete NL goal for login + extraction per query type
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ from typing import Any
 
 from app.auth.manager import AuthFlowType, AuthSession
 from app.integrations.base import BaseConnector
-from app.integrations.browser.tinyfish import TinyFishClient, TinyFishError, TinyFishSession
+from app.integrations.browser.tinyfish import TinyFishClient, TinyFishError
 
 logger = logging.getLogger(__name__)
 
@@ -24,75 +26,67 @@ class BaseBrowserConnector(BaseConnector):
     """
     Abstract base class for connectors that drive a real browser via TinyFish.
 
-    Subclasses implement:
-      login_url       Class attribute — URL of the login page
-      _login()        Perform the site-specific login flow in the active session
-      _do_extract()   Navigate to data page(s) and extract structured records
+    Each extraction call sends ONE goal to TinyFish that covers:
+      1. Navigating to the login page (self.login_url)
+      2. Logging in with the provided credentials
+      3. Navigating to the target data page(s)
+      4. Extracting structured JSON and returning it
 
-    The base class handles:
-      - Creating / closing the TinyFish session
-      - Storing the authenticated session_id across calls
-      - Falling back to demo fixture data when TinyFish is unavailable
+    Subclasses implement:
+      login_url      Class attribute — starting URL (typically the login page)
+      _build_goal()  Returns a complete NL goal string per query_type
     """
 
     system_name: str = "browser"
     category: str = "browser"
 
-    # Subclasses set these
+    # Subclasses set this
     login_url: str = ""
     auth_flow: AuthFlowType = AuthFlowType.BROWSER
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._tinyfish = TinyFishClient()
-        self._session: TinyFishSession | None = None
         self._credentials: dict = {}
         self._company_name: str = ""
 
     # ── Abstract interface for subclasses ─────────────────────────────────────
 
-    async def _login(self, session: TinyFishSession, credentials: dict) -> None:
-        """
-        Perform the site-specific login flow.
-
-        Override in each subclass. The session has already navigated to
-        self.login_url before this is called.
-
-        Args:
-            session:     Active TinyFish session already at the login page.
-            credentials: Decrypted credentials dict from the vault.
-        """
-        raise NotImplementedError
-
-    async def _do_extract(
+    def _build_goal(
         self,
-        session: TinyFishSession,
         query_type: str,
         company_name: str,
-    ) -> list[dict]:
+        credentials: dict,
+    ) -> str:
         """
-        Navigate to the relevant page and extract structured records.
+        Build a complete natural-language goal for TinyFish.
 
-        Override in each subclass. The session is already authenticated.
+        The goal must describe ALL of:
+          1. How to log in (which fields to fill, which button to click)
+          2. Where to navigate after login
+          3. What data to extract
+          4. What JSON structure to return
 
         Args:
-            session:      Active authenticated TinyFish session.
-            query_type:   The extraction type (e.g. "market_comps").
-            company_name: Target company to search/filter for.
+            query_type:   Extraction type (e.g. "market_comps").
+            company_name: Target company name.
+            credentials:  Decrypted credentials dict (username, password, etc.).
 
         Returns:
-            List of normalized record dicts.
+            A detailed natural-language goal string for TinyFish.
         """
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement _build_goal()"
+        )
 
     # ── BaseConnector implementation ──────────────────────────────────────────
 
     async def authenticate(self, credentials: dict) -> AuthSession:
         """
-        Open a TinyFish browser session and log in to the target platform.
+        Store credentials for later use in extract().
 
-        If TINYFISH_API_KEY is not configured, logs a warning and returns
-        a stub AuthSession (extract() will return empty results).
+        No network call is made here — TinyFish handles login as part of
+        each extraction goal.
         """
         self._credentials = credentials
         self._company_name = credentials.get("company_name", "")
@@ -103,78 +97,93 @@ class BaseBrowserConnector(BaseConnector):
                 "Set the key or use demo_mode=True.",
                 self.system_name,
             )
-            return AuthSession(self.system_name, self.auth_flow, {"session_id": ""})
-
-        try:
-            session = await self._tinyfish.create_session()
-
-            # Navigate to the login page
-            await session.navigate(self.login_url)
-            logger.info("%s: navigated to login page %s", self.system_name, self.login_url)
-
-            # Delegate to the subclass for site-specific login steps
-            await self._login(session, credentials)
-
-            # Grab cookies for later requests / debugging
-            await session.get_cookies()
-            self._session = session
-
-            logger.info("%s: authenticated successfully via TinyFish", self.system_name)
             return AuthSession(
-                self.system_name,
-                self.auth_flow,
-                {
-                    "session_id": session.session_id,
-                    "cookies": session.cookies,
-                },
+                self.system_name, self.auth_flow, {"configured": False}
             )
 
-        except TinyFishError as exc:
-            logger.warning("%s: TinyFish authentication failed: %s", self.system_name, exc)
-            return AuthSession(self.system_name, self.auth_flow, {"session_id": "", "error": str(exc)})
-        except Exception as exc:
-            logger.exception("%s: unexpected authentication error: %s", self.system_name, exc)
-            return AuthSession(self.system_name, self.auth_flow, {"session_id": "", "error": str(exc)})
+        logger.info(
+            "%s: credentials stored (username=%s), ready for extraction",
+            self.system_name,
+            credentials.get("username", "<none>"),
+        )
+        return AuthSession(self.system_name, self.auth_flow, {"configured": True})
 
     async def extract(self, query: dict) -> list[dict]:
         """
-        Use the active TinyFish session to extract data from the platform.
+        Compose a full login+navigate+extract goal and execute it via TinyFish.
 
-        Falls back to empty results if TinyFish is not configured or
-        authentication failed.
+        Each call is an independent, stateless TinyFish run. The goal string
+        contains everything TinyFish needs to log in and extract data.
         """
         query_type = query.get("type", "")
         company_name = query.get("company_name") or self._company_name
 
-        if not self._session:
+        if not self._tinyfish.is_configured:
             logger.warning(
-                "%s: no active TinyFish session — call authenticate() first or use demo_mode=True",
+                "%s[%s]: TINYFISH_API_KEY not set — returning empty results",
                 self.system_name,
+                query_type,
+            )
+            return []
+
+        if not self._credentials:
+            logger.warning(
+                "%s[%s]: no credentials — call authenticate() first",
+                self.system_name,
+                query_type,
             )
             return []
 
         try:
-            records = await self._do_extract(
-                session=self._session,
-                query_type=query_type,
-                company_name=company_name,
-            )
+            goal = self._build_goal(query_type, company_name, self._credentials)
             logger.info(
-                "%s[%s]: extracted %d records via TinyFish",
-                self.system_name, query_type, len(records),
+                "%s[%s]: submitting TinyFish goal (%d chars) starting at %s",
+                self.system_name,
+                query_type,
+                len(goal),
+                self.login_url,
+            )
+
+            result = await self._tinyfish.run(
+                url=self.login_url,
+                goal=goal,
+            )
+
+            # Normalize to list[dict]
+            if isinstance(result, list):
+                records = [r for r in result if isinstance(r, dict)]
+            elif isinstance(result, dict):
+                records = [result]
+            else:
+                logger.warning(
+                    "%s[%s]: unexpected result type %s", self.system_name, query_type, type(result)
+                )
+                records = []
+
+            logger.info(
+                "%s[%s]: extracted %d record(s) via TinyFish",
+                self.system_name,
+                query_type,
+                len(records),
             )
             return records
+
         except TinyFishError as exc:
-            logger.warning("%s[%s]: TinyFish extraction failed: %s", self.system_name, query_type, exc)
+            logger.warning(
+                "%s[%s]: TinyFish error: %s", self.system_name, query_type, exc
+            )
             return []
         except Exception as exc:
             logger.exception(
-                "%s[%s]: unexpected extraction error: %s", self.system_name, query_type, exc
+                "%s[%s]: unexpected error during extraction: %s",
+                self.system_name,
+                query_type,
+                exc,
             )
             return []
 
     async def validate(self, data: list[dict]) -> dict:
-        """Basic validation: checks that records were returned."""
+        """Basic validation — checks that records were returned."""
         return {
             "total_records": len(data),
             "valid": True,
@@ -182,9 +191,5 @@ class BaseBrowserConnector(BaseConnector):
         }
 
     async def disconnect(self) -> None:
-        """Close the TinyFish session and HTTP client."""
-        if self._session:
-            await self._session.close()
-            self._session = None
-        await self._tinyfish.close()
+        """Nothing to close — TinyFish calls are stateless."""
         await super().disconnect()

@@ -11,6 +11,9 @@ Required credentials keys:
   - company_name Target company to research
 
 CapIQ URL: https://www.capitaliq.spglobal.com
+
+TinyFish Architecture: Each extract() call sends a single natural-language
+goal that includes login + navigation + extraction.  No persistent session.
 """
 
 from __future__ import annotations
@@ -18,7 +21,6 @@ from __future__ import annotations
 import logging
 
 from app.integrations.browser.base import BaseBrowserConnector
-from app.integrations.browser.tinyfish import TinyFishSession
 
 logger = logging.getLogger(__name__)
 
@@ -30,193 +32,78 @@ class CapIQConnector(BaseBrowserConnector):
     category = "market_data"
     login_url = "https://www.capitaliq.spglobal.com/web/client#auth/login"
 
-    # ── Login flow ────────────────────────────────────────────────────────────
+    # ── Goal builder ──────────────────────────────────────────────────────────
 
-    async def _login(self, session: TinyFishSession, credentials: dict) -> None:
-        """Authenticate to Capital IQ platform."""
+    def _build_goal(self, query_type: str, company_name: str, credentials: dict) -> str:
         username = credentials.get("username", "")
         password = credentials.get("password", "")
 
-        if not username or not password:
-            logger.warning("CapIQ: credentials missing username or password")
-            return
-
-        await session.act(
-            "Find the email or username field and enter the username",
-            context={"username": username},
-        )
-        await session.act(
-            "Find the password field and enter the password",
-            context={"password": password},
-        )
-        await session.act(
-            "Click the 'Sign In' or 'Log In' button and wait for the main dashboard to appear"
+        login_steps = (
+            f"Go to https://www.capitaliq.spglobal.com/web/client#auth/login. "
+            f"Find the email or username field and enter '{username}'. "
+            f"Find the password field and enter '{password}'. "
+            f"Click the 'Sign In' or 'Log In' button and wait for the main dashboard. "
+            f"Use the search bar to search for '{company_name}' and click the correct "
+            f"company result to open its profile page. "
+            f"Wait for the company profile to fully load. "
         )
 
-        logger.info("CapIQ: login flow completed")
+        if query_type == "credit_analysis":
+            return (
+                login_steps
+                + "Navigate to the 'Financials' or 'Credit Analysis' section. "
+                "Extract the credit and liquidity analysis data. "
+                "Return a single JSON object with these fields: "
+                "as_of (string, date of data), "
+                "liquidity.cash_and_equivalents (number, USD millions), "
+                "liquidity.short_term_investments (number, USD millions), "
+                "liquidity.undrawn_revolver (number, USD millions), "
+                "liquidity.total_liquidity (number, USD millions), "
+                "liquidity.monthly_cash_burn_avg (number, USD millions), "
+                "liquidity.runway_months (number), "
+                "liquidity.current_ratio (number), "
+                "liquidity.quick_ratio (number), "
+                "leverage.total_debt (number, USD millions), "
+                "leverage.net_debt (number, USD millions), "
+                "leverage.debt_to_equity (number), "
+                "leverage.net_leverage (string description), "
+                "leverage.interest_coverage (string description), "
+                "credit_score_implied (string, e.g. BB+), "
+                "key_covenants_if_leveraged (array of strings)."
+            )
 
-    # ── Extraction ────────────────────────────────────────────────────────────
+        elif query_type == "peer_comparison":
+            return (
+                login_steps
+                + "Navigate to the 'Benchmarking' or 'Peer Comparison' section. "
+                "Extract the full peer comparison table. "
+                "Return a JSON array where each object has: "
+                "metric (string, metric name), "
+                "acme (string, the target company's value for this metric), "
+                "peer_median (string, peer median value), "
+                "percentile (number, target company's percentile rank 0-100), "
+                "signal (string, interpretation or signal text)."
+            )
 
-    async def _do_extract(
-        self,
-        session: TinyFishSession,
-        query_type: str,
-        company_name: str,
-    ) -> list[dict]:
-        extractors = {
-            "credit_analysis": self._extract_credit_analysis,
-            "peer_comparison": self._extract_peer_comparison,
-            "ownership_structure": self._extract_ownership_structure,
-        }
-        extractor = extractors.get(query_type)
-        if not extractor:
+        elif query_type == "ownership_structure":
+            return (
+                login_steps
+                + "Navigate to the 'Ownership' or 'Cap Table' or 'Shareholders' section. "
+                "Extract the full ownership and cap table data. "
+                "Return a single JSON object with: "
+                "total_shares_fully_diluted (number), "
+                "common_shares_outstanding (number), "
+                "options_and_warrants (number), "
+                "cap_table (array, each item: shareholder string, shares number, "
+                "pct_basic number, pct_diluted number, investment_total_m number in USD millions, series string), "
+                "liquidation_preferences (array, each item: series string, amount_m number in USD millions, preference string), "
+                "total_liquidation_stack_m (number, total liquidation stack in USD millions)."
+            )
+
+        else:
             logger.warning("CapIQ: unknown query type '%s'", query_type)
-            return []
-        return await extractor(session, company_name)
-
-    async def _search_company(self, session: TinyFishSession, company_name: str) -> None:
-        """Navigate to the target company's profile page."""
-        await session.act(
-            f"Use the search bar to search for '{company_name}' and click on the correct company result"
-        )
-        await session.act(
-            "Wait for the company profile page to fully load"
-        )
-
-    async def _extract_credit_analysis(
-        self, session: TinyFishSession, company_name: str
-    ) -> list[dict]:
-        """Extract liquidity, leverage, and credit metrics."""
-        await self._search_company(session, company_name)
-        await session.act(
-            "Navigate to the 'Financials' or 'Credit Analysis' section of the company profile"
-        )
-
-        credit = await session.extract(
-            instruction=(
-                "Extract the credit and liquidity analysis data including: "
-                "cash and equivalents, short-term investments, undrawn credit facility/revolver, "
-                "total liquidity, average monthly cash burn, runway in months, "
-                "current ratio, quick ratio, total debt, net debt, debt-to-equity ratio, "
-                "net leverage description, interest coverage, implied credit score, "
-                "and any key financial covenants."
-            ),
-            schema={
-                "type": "object",
-                "properties": {
-                    "as_of": {"type": "string"},
-                    "liquidity": {
-                        "type": "object",
-                        "properties": {
-                            "cash_and_equivalents": {"type": "number"},
-                            "short_term_investments": {"type": "number"},
-                            "undrawn_revolver": {"type": "number"},
-                            "total_liquidity": {"type": "number"},
-                            "monthly_cash_burn_avg": {"type": "number"},
-                            "runway_months": {"type": "number"},
-                            "current_ratio": {"type": "number"},
-                            "quick_ratio": {"type": "number"},
-                        },
-                    },
-                    "leverage": {
-                        "type": "object",
-                        "properties": {
-                            "total_debt": {"type": "number"},
-                            "net_debt": {"type": "number"},
-                            "debt_to_equity": {"type": "number"},
-                            "net_leverage": {"type": "string"},
-                            "interest_coverage": {"type": "string"},
-                        },
-                    },
-                    "credit_score_implied": {"type": "string"},
-                    "key_covenants_if_leveraged": {"type": "array", "items": {"type": "string"}},
-                },
-            },
-        )
-        return [credit] if isinstance(credit, dict) else credit
-
-    async def _extract_peer_comparison(
-        self, session: TinyFishSession, company_name: str
-    ) -> list[dict]:
-        """Extract peer benchmarking metrics vs. comparable companies."""
-        await self._search_company(session, company_name)
-        await session.act(
-            "Navigate to the 'Benchmarking' or 'Peer Comparison' section"
-        )
-
-        peers = await session.extract(
-            instruction=(
-                "Extract the peer comparison table. For each metric row include: "
-                "metric name, the target company's value, peer median value, "
-                "percentile ranking, and signal/interpretation text."
-            ),
-            schema={
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "metric": {"type": "string"},
-                        "acme": {"type": "string"},
-                        "peer_median": {"type": "string"},
-                        "percentile": {"type": "number"},
-                        "signal": {"type": "string"},
-                    },
-                },
-            },
-        )
-        return peers if isinstance(peers, list) else [peers]
-
-    async def _extract_ownership_structure(
-        self, session: TinyFishSession, company_name: str
-    ) -> list[dict]:
-        """Extract cap table, shareholder structure, and liquidation preferences."""
-        await self._search_company(session, company_name)
-        await session.act(
-            "Navigate to the 'Ownership' or 'Cap Table' or 'Shareholders' section"
-        )
-
-        ownership = await session.extract(
-            instruction=(
-                "Extract the full ownership structure including: "
-                "total shares fully diluted, common shares outstanding, options and warrants, "
-                "cap table (for each shareholder: name, shares, percentage basic, percentage diluted, "
-                "total investment amount in millions, series), and "
-                "liquidation preferences (series, amount, preference type). "
-                "Also include total liquidation stack."
-            ),
-            schema={
-                "type": "object",
-                "properties": {
-                    "total_shares_fully_diluted": {"type": "number"},
-                    "common_shares_outstanding": {"type": "number"},
-                    "options_and_warrants": {"type": "number"},
-                    "cap_table": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "shareholder": {"type": "string"},
-                                "shares": {"type": "number"},
-                                "pct_basic": {"type": "number"},
-                                "pct_diluted": {"type": "number"},
-                                "investment_total_m": {"type": "number"},
-                                "series": {"type": "string"},
-                            },
-                        },
-                    },
-                    "liquidation_preferences": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "series": {"type": "string"},
-                                "amount_m": {"type": "number"},
-                                "preference": {"type": "string"},
-                            },
-                        },
-                    },
-                    "total_liquidation_stack_m": {"type": "number"},
-                },
-            },
-        )
-        return [ownership] if isinstance(ownership, dict) else ownership
+            return (
+                login_steps
+                + f"Extract any available financial or market data about {company_name} "
+                "as a JSON array of objects."
+            )

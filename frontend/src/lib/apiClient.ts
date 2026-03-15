@@ -177,6 +177,192 @@ export const engagementsApi = {
     request<void>(`/engagements/${id}`, { method: 'DELETE' }),
 };
 
+// ── Credentials endpoints ───────────────────────────────
+
+export interface CredentialField {
+  key: string;
+  label: string;
+  placeholder: string;
+  secret: boolean;        // true → render as password input
+  required: boolean;
+}
+
+export interface SystemCredentialSpec {
+  system_name: string;
+  display_name: string;
+  category: string;
+  auth_type: string;
+  fields: CredentialField[];
+}
+
+// Static registry of what fields each system needs.
+// Matches the required credentials keys documented in each connector.
+export const CREDENTIAL_SPECS: SystemCredentialSpec[] = [
+  {
+    system_name: "salesforce",
+    display_name: "Salesforce CRM",
+    category: "CRM",
+    auth_type: "OAuth",
+    fields: [
+      { key: "client_id",     label: "Client ID",      placeholder: "3MVG9...",      secret: false, required: true },
+      { key: "client_secret", label: "Client Secret",  placeholder: "abc123...",     secret: true,  required: true },
+      { key: "refresh_token", label: "Refresh Token",  placeholder: "5Aep861...",    secret: true,  required: true },
+      { key: "instance_url",  label: "Instance URL",   placeholder: "https://mycompany.salesforce.com", secret: false, required: true },
+    ],
+  },
+  {
+    system_name: "netsuite",
+    display_name: "NetSuite ERP",
+    category: "ERP",
+    auth_type: "Token (OAuth 1.0)",
+    fields: [
+      { key: "account_id",       label: "Account ID",        placeholder: "1234567",   secret: false, required: true },
+      { key: "consumer_key",     label: "Consumer Key",      placeholder: "abc...",    secret: false, required: true },
+      { key: "consumer_secret",  label: "Consumer Secret",   placeholder: "xyz...",    secret: true,  required: true },
+      { key: "token_id",         label: "Token ID",          placeholder: "tkn...",    secret: false, required: true },
+      { key: "token_secret",     label: "Token Secret",      placeholder: "tks...",    secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "hubspot",
+    display_name: "HubSpot",
+    category: "Marketing",
+    auth_type: "API Key",
+    fields: [
+      { key: "access_token", label: "Private App Token", placeholder: "pat-na1-...", secret: true, required: true },
+    ],
+  },
+  {
+    system_name: "crunchbase",
+    display_name: "Crunchbase",
+    category: "Intelligence",
+    auth_type: "API Key",
+    fields: [
+      { key: "api_key",   label: "API Key",    placeholder: "cb_usr_...", secret: true,  required: true },
+      { key: "permalink", label: "Company Permalink (optional)", placeholder: "acme-corp", secret: false, required: false },
+    ],
+  },
+  {
+    system_name: "bloomberg",
+    display_name: "Bloomberg Terminal",
+    category: "Market Data",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username", label: "Bloomberg Username", placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password", label: "Bloomberg Password", placeholder: "",              secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "capiq",
+    display_name: "S&P Capital IQ",
+    category: "Market Data",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username", label: "CapIQ Email",    placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password", label: "CapIQ Password", placeholder: "",              secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "pitchbook",
+    display_name: "PitchBook",
+    category: "Market Data",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username", label: "PitchBook Email",    placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password", label: "PitchBook Password", placeholder: "",              secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "sales_navigator",
+    display_name: "LinkedIn Sales Navigator",
+    category: "Intelligence",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username", label: "LinkedIn Email",    placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password", label: "LinkedIn Password", placeholder: "",              secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "quickbooks",
+    display_name: "QuickBooks Online",
+    category: "Accounting",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username", label: "Intuit Email",       placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password", label: "Intuit Password",    placeholder: "",              secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "zoominfo",
+    display_name: "ZoomInfo",
+    category: "Intelligence",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username", label: "ZoomInfo Email",    placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password", label: "ZoomInfo Password", placeholder: "",              secret: true,  required: true },
+    ],
+  },
+  {
+    system_name: "marketo",
+    display_name: "Marketo Engage",
+    category: "Marketing",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username",     label: "Marketo Email",        placeholder: "user@firm.com",            secret: false, required: true },
+      { key: "password",     label: "Marketo Password",     placeholder: "",                         secret: true,  required: true },
+      { key: "instance_url", label: "Instance URL",         placeholder: "https://app-abc123.marketo.com", secret: false, required: false },
+    ],
+  },
+  {
+    system_name: "dynamics",
+    display_name: "Microsoft Dynamics 365",
+    category: "CRM",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username",     label: "Microsoft 365 Email",  placeholder: "user@company.com",         secret: false, required: true },
+      { key: "password",     label: "Microsoft 365 Password", placeholder: "",                       secret: true,  required: true },
+      { key: "instance_url", label: "Dynamics Instance URL", placeholder: "https://org.crm.dynamics.com", secret: false, required: false },
+    ],
+  },
+  {
+    system_name: "sap",
+    display_name: "SAP ERP",
+    category: "ERP",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username",     label: "SAP User ID",      placeholder: "JDOE",             secret: false, required: true },
+      { key: "password",     label: "SAP Password",     placeholder: "",                 secret: true,  required: true },
+      { key: "instance_url", label: "SAP Fiori URL",    placeholder: "https://company.sapbydesign.com", secret: false, required: true },
+      { key: "client",       label: "Client Number",    placeholder: "100",              secret: false, required: false },
+    ],
+  },
+  {
+    system_name: "oracle",
+    display_name: "Oracle Cloud ERP",
+    category: "ERP",
+    auth_type: "Browser Login",
+    fields: [
+      { key: "username",     label: "Oracle Cloud Email", placeholder: "user@company.com",          secret: false, required: true },
+      { key: "password",     label: "Oracle Cloud Password", placeholder: "",                       secret: true,  required: true },
+      { key: "instance_url", label: "Oracle Cloud URL",   placeholder: "https://company.fa.em2.oraclecloud.com", secret: false, required: true },
+    ],
+  },
+];
+
+export const credentialsApi = {
+  store: (engagementId: string, systemName: string, credentials: Record<string, string>) =>
+    request<{ message: string; credential_id: string }>(
+      `/credentials/${engagementId}/${systemName}`,
+      { method: 'POST', body: { credentials } as unknown as Record<string, unknown> },
+    ),
+
+  list: (engagementId: string) =>
+    request<{ systems: string[] }>(`/credentials/${engagementId}`),
+
+  remove: (engagementId: string, systemName: string) =>
+    request<void>(`/credentials/${engagementId}/${systemName}`, { method: 'DELETE' }),
+};
+
 // ── WebSocket ───────────────────────────────────────────
 
 export function connectAgentStatus(

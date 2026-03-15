@@ -276,27 +276,69 @@ class DeliveryAgent(BaseAgent):
         )
 
     async def _compliance_review(self) -> StepResult:
-        """Check output against regulatory and compliance requirements."""
-        # TODO: In production, verify:
-        # - PII/PHI is properly redacted
-        # - Disclaimers are present
-        # - Data sourcing is properly attributed
-        # - Regulatory requirements met
+        """
+        Scan deliverables for PII, credential leaks, and compliance requirements.
 
+        Checks:
+          1. PII scan — SSNs, credit cards, personal emails, API key strings
+          2. Confidentiality disclaimer presence
+          3. Data source attribution presence
+          4. Credential string detection
+        """
+        from app.compliance.pii import scan_deliverables
+
+        deliverables = self.state.get("deliverables", {})
         findings = []
-        compliance_status = "passed"
 
-        self.state["compliance"] = {
-            "status": compliance_status,
-            "checks_passed": 0,
-            "checks_failed": 0,
-        }
+        report = scan_deliverables(deliverables)
+        report_dict = report.to_dict()
+        self.state["compliance"] = report_dict
 
+        # Convert PII hits to agent findings
+        for hit in report.pii_hits:
+            findings.append({
+                "type": "exception" if hit.severity == "critical" else "flag",
+                "source_system": "compliance_scanner",
+                "title": f"PII detected: {hit.pii_type.replace('_', ' ').title()}",
+                "description": (
+                    f"{hit.pii_type.replace('_', ' ').title()} found at {hit.location}. "
+                    f"Sample: {hit.sample}. Must be redacted before distribution."
+                ),
+                "severity": hit.severity,
+                "requires_human_review": hit.severity == "critical",
+            })
+
+        for issue in report.issues:
+            findings.append({
+                "type": "exception",
+                "source_system": "compliance_scanner",
+                "title": "Compliance issue",
+                "description": issue,
+                "severity": "critical",
+                "requires_human_review": True,
+            })
+
+        for warning in report.warnings:
+            findings.append({
+                "type": "flag",
+                "source_system": "compliance_scanner",
+                "title": "Compliance warning",
+                "description": warning,
+                "severity": "warning",
+                "requires_human_review": False,
+            })
+
+        status_emoji = {"passed": "✅", "warnings": "⚠️", "failed": "❌"}.get(report.status, "❓")
         return StepResult(
-            success=True,
-            data={"compliance_status": compliance_status},
+            success=report.status != "failed",
+            data=report_dict,
             findings=findings,
-            message=f"Compliance review: {compliance_status}",
+            message=(
+                f"Compliance review: {report.status} {status_emoji} — "
+                f"{report.checks_passed} passed, "
+                f"{report.checks_warned} warnings, "
+                f"{report.checks_failed} failed"
+            ),
         )
 
     async def _distribute(self, channel: str) -> StepResult:

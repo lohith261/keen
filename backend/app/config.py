@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # ── TinyFish ─────────────────────────────────────────
     tinyfish_api_key: str = ""
-    tinyfish_base_url: str = "https://api.tinyfish.io"
+    tinyfish_base_url: str = "https://agent.tinyfish.ai"
 
     # ── Agent Settings ───────────────────────────────────
     checkpoint_interval_seconds: int = 90

@@ -29,17 +29,25 @@ logger = logging.getLogger(__name__)
 
 LIVE_CONNECTORS: dict[str, tuple[str, str]] = {
     # ── REST / API-based connectors ───────────────────────────────────────────
-    "salesforce": ("app.integrations.salesforce", "SalesforceConnector"),
-    "netsuite": ("app.integrations.netsuite", "NetSuiteConnector"),
-    "sec_edgar": ("app.integrations.sec_edgar", "SECEdgarConnector"),
+    "salesforce":    ("app.integrations.salesforce",  "SalesforceConnector"),
+    "netsuite":      ("app.integrations.netsuite",    "NetSuiteConnector"),
+    "sec_edgar":     ("app.integrations.sec_edgar",   "SECEdgarConnector"),
+    "hubspot":       ("app.integrations.hubspot",     "HubSpotConnector"),
+    "crunchbase":    ("app.integrations.crunchbase",  "CrunchbaseConnector"),
 
     # ── TinyFish browser-based connectors ─────────────────────────────────────
     # These require TINYFISH_API_KEY to be set. Without it they return empty
     # results and fall back to demo fixture data automatically.
-    "bloomberg": ("app.integrations.browser.bloomberg", "BloombergConnector"),
-    "capiq": ("app.integrations.browser.capiq", "CapIQConnector"),
-    "pitchbook": ("app.integrations.browser.pitchbook", "PitchBookConnector"),
+    "bloomberg":     ("app.integrations.browser.bloomberg",       "BloombergConnector"),
+    "capiq":         ("app.integrations.browser.capiq",           "CapIQConnector"),
+    "pitchbook":     ("app.integrations.browser.pitchbook",       "PitchBookConnector"),
     "sales_navigator": ("app.integrations.browser.sales_navigator", "SalesNavigatorConnector"),
+    "quickbooks":    ("app.integrations.browser.quickbooks",      "QuickBooksConnector"),
+    "zoominfo":      ("app.integrations.browser.zoominfo",        "ZoomInfoConnector"),
+    "marketo":       ("app.integrations.browser.marketo",         "MarketoConnector"),
+    "dynamics":      ("app.integrations.browser.dynamics",        "DynamicsConnector"),
+    "sap":           ("app.integrations.browser.sap",             "SAPConnector"),
+    "oracle":        ("app.integrations.browser.oracle",          "OracleConnector"),
 }
 
 

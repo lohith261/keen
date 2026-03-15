@@ -11,6 +11,9 @@ Required credentials keys:
   - company_name Target company to research
 
 PitchBook URL: https://pitchbook.com
+
+TinyFish Architecture: Each extract() call sends a single natural-language
+goal that includes login + navigation + extraction.  No persistent session.
 """
 
 from __future__ import annotations
@@ -18,7 +21,6 @@ from __future__ import annotations
 import logging
 
 from app.integrations.browser.base import BaseBrowserConnector
-from app.integrations.browser.tinyfish import TinyFishSession
 
 logger = logging.getLogger(__name__)
 
@@ -30,176 +32,84 @@ class PitchBookConnector(BaseBrowserConnector):
     category = "market_data"
     login_url = "https://pitchbook.com/login"
 
-    # ── Login flow ────────────────────────────────────────────────────────────
+    # ── Goal builder ──────────────────────────────────────────────────────────
 
-    async def _login(self, session: TinyFishSession, credentials: dict) -> None:
-        """Authenticate to PitchBook platform."""
+    def _build_goal(self, query_type: str, company_name: str, credentials: dict) -> str:
         username = credentials.get("username", "")
         password = credentials.get("password", "")
 
-        if not username or not password:
-            logger.warning("PitchBook: credentials missing username or password")
-            return
-
-        await session.act(
-            "Find the email input field and type the username/email",
-            context={"username": username},
-        )
-        await session.act(
-            "Find the password field and type the password",
-            context={"password": password},
-        )
-        await session.act(
-            "Click the 'Sign In' or 'Log In' button and wait until the PitchBook dashboard loads"
+        login_steps = (
+            f"Go to https://pitchbook.com/login. "
+            f"Find the email input field and enter '{username}'. "
+            f"Find the password field and enter '{password}'. "
+            f"Click the 'Sign In' or 'Log In' button and wait for the PitchBook dashboard to load. "
+            f"Use the search bar at the top to search for '{company_name}' and click the "
+            f"correct company in the results list. "
+            f"Wait for the company profile to fully load. "
         )
 
-        logger.info("PitchBook: login flow completed")
+        if query_type == "deal_comps":
+            return (
+                login_steps
+                + "Navigate to the 'Deals' or 'Comparable Transactions' section. "
+                "Filter for M&A deals in the same sector from the past 3 years. "
+                "Extract the list of comparable M&A transactions. "
+                "Return a JSON array where each object has: "
+                "target (string, target company name), "
+                "acquirer (string, acquirer name), "
+                "deal_date (string, YYYY-MM-DD format), "
+                "deal_value_m (number, deal value in USD millions), "
+                "revenue_at_deal_m (number, revenue at time of deal in USD millions), "
+                "ev_revenue (number, EV/Revenue multiple), "
+                "arr_at_deal_m (number, ARR at deal in USD millions), "
+                "growth_pct (number, revenue growth % at time of deal), "
+                "deal_type (string, e.g. Buyout/Strategic Acquisition/Platform Roll-up). "
+                "Include all pages of results."
+            )
 
-    # ── Extraction ────────────────────────────────────────────────────────────
+        elif query_type == "valuation_multiples":
+            return (
+                login_steps
+                + "Navigate to the 'Valuation' or 'Multiples' section of the company profile. "
+                "Look for benchmark valuation data for the company's sector and ARR range. "
+                "Return a single JSON object with: "
+                "segment (string, segment description), "
+                "sample_size (integer, number of comparable deals), "
+                "arr_range (string, e.g. '$10M-$50M ARR'), "
+                "ev_arr_median (number, median EV/ARR multiple), "
+                "ev_arr_mean (number, mean EV/ARR multiple), "
+                "ev_arr_25th_percentile (number), "
+                "ev_arr_75th_percentile (number), "
+                "ev_arr_top_decile (number), "
+                "growth_premium_per_10pct (number, EV/ARR premium per 10% additional growth), "
+                "gross_margin_premium_per_5pct (number, premium per 5% gross margin improvement), "
+                "nrr_premium_above_120pct (number, premium for NRR > 120%), "
+                "implied_range_for_target.low (number, implied valuation low in USD millions), "
+                "implied_range_for_target.mid (number, implied valuation mid in USD millions), "
+                "implied_range_for_target.high (number, implied valuation high in USD millions), "
+                "implied_range_for_target.basis (string, valuation basis description)."
+            )
 
-    async def _do_extract(
-        self,
-        session: TinyFishSession,
-        query_type: str,
-        company_name: str,
-    ) -> list[dict]:
-        extractors = {
-            "deal_comps": self._extract_deal_comps,
-            "valuation_multiples": self._extract_valuation_multiples,
-            "fund_performance": self._extract_fund_performance,
-        }
-        extractor = extractors.get(query_type)
-        if not extractor:
+        elif query_type == "fund_performance":
+            return (
+                login_steps
+                + "Navigate to the 'Investors' section of the company profile to see VC/PE backers. "
+                "For each lead investor, click through to view their fund performance metrics. "
+                "Return a JSON array where each object represents a fund and has: "
+                "fund (string, fund name), "
+                "vintage (integer, vintage year), "
+                "irr_pct (number, IRR as a percentage), "
+                "moic (number, multiple on invested capital), "
+                "dpi (number, distributions to paid-in ratio), "
+                "fund_size_m (number, fund size in USD millions), "
+                "notable_exits (array of strings, list of notable portfolio exits). "
+                "Include all investors shown on the page."
+            )
+
+        else:
             logger.warning("PitchBook: unknown query type '%s'", query_type)
-            return []
-        return await extractor(session, company_name)
-
-    async def _search_company(self, session: TinyFishSession, company_name: str) -> None:
-        """Navigate to the target company's PitchBook profile."""
-        await session.act(
-            f"Use the search bar at the top to search for '{company_name}' and click on "
-            "the correct company in the results list"
-        )
-        await session.act("Wait for the company profile to fully load")
-
-    async def _extract_deal_comps(
-        self, session: TinyFishSession, company_name: str
-    ) -> list[dict]:
-        """Extract recent M&A deal comparables in the target company's segment."""
-        await self._search_company(session, company_name)
-        await session.act(
-            "Navigate to the 'Deals' or 'Comparable Transactions' section. "
-            "Filter for M&A deals in the same sector from the past 3 years."
-        )
-
-        deals = await session.extract(
-            instruction=(
-                "Extract the list of comparable M&A transactions. For each deal include: "
-                "target company name, acquirer name, deal date (YYYY-MM-DD), "
-                "deal value in millions, revenue at time of deal in millions, "
-                "EV/Revenue multiple, ARR at deal in millions, revenue growth percentage, "
-                "and deal type (e.g. Buyout, Strategic Acquisition, Platform Roll-up)."
-            ),
-            schema={
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "target": {"type": "string"},
-                        "acquirer": {"type": "string"},
-                        "deal_date": {"type": "string"},
-                        "deal_value_m": {"type": "number"},
-                        "revenue_at_deal_m": {"type": "number"},
-                        "ev_revenue": {"type": "number"},
-                        "arr_at_deal_m": {"type": "number"},
-                        "growth_pct": {"type": "number"},
-                        "deal_type": {"type": "string"},
-                    },
-                },
-            },
-            paginate=True,
-        )
-        return deals if isinstance(deals, list) else [deals]
-
-    async def _extract_valuation_multiples(
-        self, session: TinyFishSession, company_name: str
-    ) -> list[dict]:
-        """Extract PE/M&A valuation multiple benchmarks for the company's segment."""
-        await self._search_company(session, company_name)
-        await session.act(
-            "Navigate to the 'Valuation' or 'Multiples' section of the company profile. "
-            "Look for benchmark valuation data for the company's sector and ARR range."
-        )
-
-        multiples = await session.extract(
-            instruction=(
-                "Extract the valuation multiples benchmarking data including: "
-                "segment description, sample size, ARR range, median EV/ARR, mean EV/ARR, "
-                "25th percentile EV/ARR, 75th percentile EV/ARR, top decile EV/ARR, "
-                "growth premium per 10% additional growth, gross margin premium per 5% improvement, "
-                "NRR premium above 120%, and implied valuation range for the target company "
-                "(low, mid, high, and basis description)."
-            ),
-            schema={
-                "type": "object",
-                "properties": {
-                    "segment": {"type": "string"},
-                    "sample_size": {"type": "integer"},
-                    "arr_range": {"type": "string"},
-                    "ev_arr_median": {"type": "number"},
-                    "ev_arr_mean": {"type": "number"},
-                    "ev_arr_25th_percentile": {"type": "number"},
-                    "ev_arr_75th_percentile": {"type": "number"},
-                    "ev_arr_top_decile": {"type": "number"},
-                    "growth_premium_per_10pct": {"type": "number"},
-                    "gross_margin_premium_per_5pct": {"type": "number"},
-                    "nrr_premium_above_120pct": {"type": "number"},
-                    "implied_range_for_target": {
-                        "type": "object",
-                        "properties": {
-                            "low": {"type": "number"},
-                            "mid": {"type": "number"},
-                            "high": {"type": "number"},
-                            "basis": {"type": "string"},
-                        },
-                    },
-                },
-            },
-        )
-        return [multiples] if isinstance(multiples, dict) else multiples
-
-    async def _extract_fund_performance(
-        self, session: TinyFishSession, company_name: str
-    ) -> list[dict]:
-        """Extract investor fund performance data for the target company's backers."""
-        await self._search_company(session, company_name)
-        await session.act(
-            "Navigate to the 'Investors' section of the company profile to see VC/PE backers"
-        )
-        await session.act(
-            "Click on each lead investor to view their fund performance metrics"
-        )
-
-        funds = await session.extract(
-            instruction=(
-                "Extract the fund performance data for each investor. Include: "
-                "fund name, vintage year, IRR percentage, MOIC (multiple on invested capital), "
-                "DPI (distributions to paid-in), fund size in millions, and notable exits list."
-            ),
-            schema={
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "fund": {"type": "string"},
-                        "vintage": {"type": "integer"},
-                        "irr_pct": {"type": "number"},
-                        "moic": {"type": "number"},
-                        "dpi": {"type": "number"},
-                        "fund_size_m": {"type": "number"},
-                        "notable_exits": {"type": "array", "items": {"type": "string"}},
-                    },
-                },
-            },
-        )
-        return funds if isinstance(funds, list) else [funds]
+            return (
+                login_steps
+                + f"Extract any available deal or investment data about {company_name} "
+                "as a JSON array of objects."
+            )
