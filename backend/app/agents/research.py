@@ -28,9 +28,18 @@ logger = logging.getLogger(__name__)
 # Sources not in this map will return empty results in live mode.
 
 LIVE_CONNECTORS: dict[str, tuple[str, str]] = {
+    # ── REST / API-based connectors ───────────────────────────────────────────
     "salesforce": ("app.integrations.salesforce", "SalesforceConnector"),
     "netsuite": ("app.integrations.netsuite", "NetSuiteConnector"),
     "sec_edgar": ("app.integrations.sec_edgar", "SECEdgarConnector"),
+
+    # ── TinyFish browser-based connectors ─────────────────────────────────────
+    # These require TINYFISH_API_KEY to be set. Without it they return empty
+    # results and fall back to demo fixture data automatically.
+    "bloomberg": ("app.integrations.browser.bloomberg", "BloombergConnector"),
+    "capiq": ("app.integrations.browser.capiq", "CapIQConnector"),
+    "pitchbook": ("app.integrations.browser.pitchbook", "PitchBookConnector"),
+    "sales_navigator": ("app.integrations.browser.sales_navigator", "SalesNavigatorConnector"),
 }
 
 

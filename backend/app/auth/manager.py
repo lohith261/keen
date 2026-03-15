@@ -201,21 +201,91 @@ class AuthManager:
         """
         Handle browser-based authentication via TinyFish.
 
-        For systems like Bloomberg Terminal, PitchBook, Capital IQ
-        that require browser interaction for login.
+        Launches a TinyFish headless browser session, navigates to the target
+        system's login page, and uses AI-powered form filling to authenticate.
+        The session cookies are extracted and stored for subsequent API/page calls.
 
-        TODO: Integrate with TinyFish API:
-        1. Launch headless browser session via TinyFish
-        2. Navigate to login page
-        3. Use semantic understanding to fill credentials
-        4. Handle CAPTCHA / MFA if needed
-        5. Extract authenticated session cookies
+        Requires TINYFISH_API_KEY to be set in the environment. If not set,
+        returns an empty stub session — the connector will surface this as
+        empty extraction results (falling back to demo mode if configured).
         """
-        return AuthSession(
-            system_name,
-            AuthFlowType.BROWSER,
-            {"cookies": {}, "session_id": ""},
-        )
+        from app.integrations.browser.tinyfish import TinyFishClient, TinyFishError
+
+        client = TinyFishClient()
+
+        if not client.is_configured:
+            logger.warning(
+                "AuthManager._auth_browser: TINYFISH_API_KEY not configured — "
+                "returning stub session for %s",
+                system_name,
+            )
+            return AuthSession(
+                system_name,
+                AuthFlowType.BROWSER,
+                {"cookies": {}, "session_id": "", "error": "tinyfish_not_configured"},
+            )
+
+        # Map system names to their login pages
+        login_urls: dict[str, str] = {
+            "bloomberg": "https://bba.bloomberg.net",
+            "capiq": "https://www.capitaliq.spglobal.com/web/client#auth/login",
+            "pitchbook": "https://pitchbook.com/login",
+            "sales_navigator": "https://www.linkedin.com/login",
+        }
+
+        login_url = login_urls.get(system_name, "")
+        if not login_url:
+            logger.warning(
+                "AuthManager._auth_browser: no login URL registered for '%s'",
+                system_name,
+            )
+            return AuthSession(
+                system_name,
+                AuthFlowType.BROWSER,
+                {"cookies": {}, "session_id": "", "error": f"no_login_url_{system_name}"},
+            )
+
+        try:
+            session = await client.create_session()
+            await session.navigate(login_url)
+            await session.act(
+                "Fill in the username/email field with the provided username and "
+                "the password field with the provided password, then submit the form",
+                context={
+                    "username": credentials.get("username", ""),
+                    "password": credentials.get("password", ""),
+                },
+            )
+            cookies = await session.get_cookies()
+
+            auth_session = AuthSession(
+                system_name,
+                AuthFlowType.BROWSER,
+                {
+                    "session_id": session.session_id,
+                    "cookies": cookies,
+                },
+            )
+            # Store the open TinyFish session so the connector can reuse it
+            auth_session._tinyfish_session = session  # type: ignore[attr-defined]
+            auth_session._tinyfish_client = client     # type: ignore[attr-defined]
+
+            logger.info(
+                "AuthManager: browser auth completed for %s (session %s)",
+                system_name, session.session_id,
+            )
+            return auth_session
+
+        except TinyFishError as exc:
+            logger.warning(
+                "AuthManager._auth_browser: TinyFish error for %s: %s", system_name, exc
+            )
+            await client.close()
+            return AuthSession(
+                system_name,
+                AuthFlowType.BROWSER,
+                {"cookies": {}, "session_id": "", "error": str(exc)},
+            )
 
     async def _auth_token(self, system_name: str, credentials: dict) -> AuthSession:
         """Handle token-based authentication."""
