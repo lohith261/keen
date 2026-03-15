@@ -432,3 +432,95 @@ async def export_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get(
+    "/{engagement_id}/export/excel",
+    response_class=StreamingResponse,
+    summary="Download the due diligence report as Excel workbook",
+    tags=["Export"],
+)
+async def export_excel(
+    engagement_id: UUID,
+    db: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    """
+    Generate and download a structured Excel workbook for a completed engagement.
+
+    The workbook includes:
+    - Cover sheet (engagement metadata + recommendation)
+    - Executive Summary tab
+    - Key Findings tab (severity-colour-coded)
+    - One data tab per connected source (Salesforce, NetSuite, Bloomberg, etc.)
+    - Compliance tab (PII scan results)
+    """
+    import asyncio
+    import io
+
+    from app.export.excel import generate_excel
+
+    # Load the engagement
+    engagement = await db.get(Engagement, engagement_id)
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    pipeline_data = engagement.config.get("pipeline_data", {})
+    deliverables = (
+        pipeline_data
+        .get("delivery", {})
+        .get("finalize_delivery", {})
+        .get("deliverables", {})
+    ) or {}
+
+    # Source data lives in research step state
+    research_state = pipeline_data.get("research", {})
+    source_data: dict = {}
+    for key, value in research_state.items():
+        if key.startswith("data_") and isinstance(value, dict):
+            source_data[key.replace("data_", "")] = value
+
+    # Pull findings from DB
+    findings_result = await db.execute(
+        select(Finding)
+        .join(AgentRun)
+        .where(AgentRun.engagement_id == engagement_id)
+        .order_by(Finding.severity.desc(), Finding.created_at.asc())
+    )
+    db_findings = findings_result.scalars().all()
+    findings_dicts = [
+        {
+            "id": str(f.id),
+            "finding_type": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
+            "source_system": f.source_system,
+            "title": f.title,
+            "description": f.description,
+            "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+            "requires_human_review": f.requires_human_review,
+        }
+        for f in db_findings
+    ]
+
+    config = engagement.config or {}
+    target_company = config.get("target_company") or config.get("company_name", "Target Company")
+    pe_firm = config.get("company_name", "PE Firm")
+
+    loop = asyncio.get_event_loop()
+    excel_bytes = await loop.run_in_executor(
+        None,
+        lambda: generate_excel(
+            deliverables=deliverables,
+            findings=findings_dicts,
+            source_data=source_data,
+            target_company=target_company,
+            pe_firm=pe_firm,
+        ),
+    )
+
+    safe_name = target_company.replace(" ", "_").replace("/", "-")[:40]
+    filename = f"KEEN_DiligenceReport_{safe_name}.xlsx"
+
+    return StreamingResponse(
+        io.BytesIO(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

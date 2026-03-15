@@ -417,8 +417,32 @@ class DeliveryAgent(BaseAgent):
                         distribution_result["error"] = result["error"]
 
             elif channel == "sharepoint":
-                # Future: upload to SharePoint document library
-                distribution_result["status"] = "pending_integration"
+                from app.integrations.distribution.sharepoint import upload_report as sp_upload
+                tenant_id     = config.get("sharepoint_tenant_id", "")
+                client_id_sp  = config.get("sharepoint_client_id", "")
+                client_secret = config.get("sharepoint_client_secret", "")
+                site_url      = config.get("sharepoint_site_url", "")
+                folder        = config.get("sharepoint_folder", "KEEN Reports")
+
+                if not all([tenant_id, client_id_sp, client_secret, site_url]):
+                    distribution_result["status"] = "skipped"
+                    distribution_result["reason"] = (
+                        "sharepoint_tenant_id / sharepoint_client_id / "
+                        "sharepoint_client_secret / sharepoint_site_url not configured"
+                    )
+                else:
+                    result = await sp_upload(
+                        tenant_id=tenant_id,
+                        client_id=client_id_sp,
+                        client_secret=client_secret,
+                        site_url=site_url,
+                        deliverables=deliverables,
+                        findings=findings_raw,
+                        target_company=target_company,
+                        pe_firm=pe_firm,
+                        folder_path=folder,
+                    )
+                    distribution_result.update(result)
 
             else:
                 distribution_result["status"] = "unknown_channel"

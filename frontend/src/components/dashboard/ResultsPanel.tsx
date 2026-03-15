@@ -326,16 +326,31 @@ export default function ResultsPanel({ engagement }: Props) {
           >
             <RefreshCw className="w-3 h-3" /> REFRESH
           </button>
-          {/* PDF export — links directly to the streaming PDF endpoint */}
-          <a
-            href={`${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border border-theme-border rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30 transition-colors"
-            title="Download full due diligence report as PDF"
-          >
-            <Download className="w-3 h-3" /> EXPORT PDF
-          </a>
+          {/* Export buttons */}
+          <div className="ml-auto flex items-center gap-2">
+            <a
+              href={`${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border
+                         border-theme-border rounded-lg text-theme-text-muted
+                         hover:text-theme-text hover:bg-theme-border/30 transition-colors"
+              title="Download report as PDF"
+            >
+              <Download className="w-3 h-3" /> PDF
+            </a>
+            <a
+              href={`${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/excel`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border
+                         border-green-500/30 rounded-lg text-green-400/70
+                         hover:text-green-400 hover:bg-green-500/10 transition-colors"
+              title="Download financial model as Excel workbook"
+            >
+              <Download className="w-3 h-3" /> EXCEL
+            </a>
+          </div>
         </div>
       </div>
 
