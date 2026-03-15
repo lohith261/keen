@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
-  Loader2, RefreshCw, Eye, EyeOff, FileText, TrendingUp,
+  Loader2, RefreshCw, Eye, EyeOff, FileText, TrendingUp, Download,
 } from 'lucide-react';
 import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
+
+const BACKEND_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 interface Props {
   engagement: Engagement;
@@ -305,7 +307,7 @@ export default function ResultsPanel({ engagement }: Props) {
           </div>
         </div>
 
-        {/* Filter + refresh row */}
+        {/* Filter + refresh + export row */}
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-theme-border">
           <button
             onClick={() => setShowReviewOnly((v) => !v)}
@@ -324,6 +326,16 @@ export default function ResultsPanel({ engagement }: Props) {
           >
             <RefreshCw className="w-3 h-3" /> REFRESH
           </button>
+          {/* PDF export — links directly to the streaming PDF endpoint */}
+          <a
+            href={`${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border border-theme-border rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30 transition-colors"
+            title="Download full due diligence report as PDF"
+          >
+            <Download className="w-3 h-3" /> EXPORT PDF
+          </a>
         </div>
       </div>
 

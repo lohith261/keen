@@ -8,16 +8,30 @@ human analyst would, storing structured records with source attribution.
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 from typing import Any
 
 from app.agents.base import BaseAgent, StepResult
+from app.integrations.base import BaseConnector
 from app.integrations.demo import DemoConnector
 from app.llm.exceptions import LLMError
 from app.llm.prompts import SYSTEM_PLAN_EXTRACTION, USER_PLAN_EXTRACTION
 
 logger = logging.getLogger(__name__)
+
+
+# ── Live connector registry ───────────────────────────────
+# Maps DATA_SOURCES keys → (module_path, class_name) for live connectors.
+# Only sources with real connector implementations are listed here.
+# Sources not in this map will return empty results in live mode.
+
+LIVE_CONNECTORS: dict[str, tuple[str, str]] = {
+    "salesforce": ("app.integrations.salesforce", "SalesforceConnector"),
+    "netsuite": ("app.integrations.netsuite", "NetSuiteConnector"),
+    "sec_edgar": ("app.integrations.sec_edgar", "SECEdgarConnector"),
+}
 
 
 # ── Data source registry ─────────────────────────────────
@@ -246,8 +260,35 @@ class ResearchAgent(BaseAgent):
             self.state[f"_connector_{source}"] = connector
             logger.info("DemoConnector: authenticated to %s (demo mode)", source)
         else:
-            # Production: call AuthManager here
-            logger.info("Authenticating to %s via %s (production)", source, auth_type)
+            # Production: instantiate the real connector and authenticate via vault credentials
+            connector_spec = LIVE_CONNECTORS.get(source)
+            if connector_spec:
+                try:
+                    module_path, class_name = connector_spec
+                    module = importlib.import_module(module_path)
+                    connector_class = getattr(module, class_name)
+                    live_connector: BaseConnector = connector_class()
+
+                    # Load credentials from vault for this engagement
+                    credentials: dict = {}
+                    if self.db:
+                        from app.auth.vault import CredentialVault
+                        vault = CredentialVault(self.db)
+                        credentials = await vault.get_credentials(self.engagement_id, source)
+
+                    await live_connector.authenticate(credentials)
+                    self.state[f"_connector_{source}"] = live_connector
+                    logger.info("Live connector: authenticated to %s via vault credentials", source)
+                except Exception as exc:
+                    logger.warning(
+                        "Live connector authentication failed for %s: %s — will return empty data",
+                        source, exc,
+                    )
+            else:
+                logger.info(
+                    "No live connector registered for '%s' — skipping (use demo_mode=True or implement connector)",
+                    source,
+                )
 
         self.state[f"auth_{source}"] = {
             "authenticated": True,
@@ -290,14 +331,37 @@ class ResearchAgent(BaseAgent):
                 total_records += len(records)
                 logger.debug("DemoConnector[%s/%s]: %d records", source, extraction_type, len(records))
         else:
-            # Production: instantiate the appropriate connector and call extract()
-            for extraction_type in extractions:
-                extracted_data[extraction_type] = {
-                    "source": source,
-                    "type": extraction_type,
-                    "records_extracted": 0,
-                    "status": "pending_live_integration",
-                }
+            # Production: use the live connector authenticated in _authenticate_source
+            live_connector: BaseConnector | None = self.state.get(f"_connector_{source}")
+            if live_connector:
+                for extraction_type in extractions:
+                    try:
+                        records = await live_connector.extract({"type": extraction_type})
+                        extracted_data[extraction_type] = records
+                        total_records += len(records)
+                        logger.debug(
+                            "LiveConnector[%s/%s]: %d records",
+                            source, extraction_type, len(records),
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "LiveConnector extraction failed [%s/%s]: %s",
+                            source, extraction_type, exc,
+                        )
+                        extracted_data[extraction_type] = []
+                # Disconnect after all extractions for this source
+                try:
+                    await live_connector.disconnect()
+                except Exception:
+                    pass
+            else:
+                # No connector available for this source in live mode
+                for extraction_type in extractions:
+                    extracted_data[extraction_type] = []
+                logger.info(
+                    "No live connector for '%s' — returning empty datasets",
+                    source,
+                )
 
         self.state[f"data_{source}"] = extracted_data
 

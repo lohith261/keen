@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -315,3 +316,112 @@ async def get_engagement_findings(
         .order_by(Finding.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+@router.get(
+    "/{engagement_id}/export/pdf",
+    response_class=StreamingResponse,
+    summary="Download the due diligence report as PDF",
+    tags=["Export"],
+)
+async def export_pdf(
+    engagement_id: UUID,
+    db: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    """
+    Generate and download a full PDF due diligence report for a completed engagement.
+
+    The PDF includes:
+    - Cover page with recommendation banner
+    - Executive summary
+    - Findings table (severity-coded)
+    - Detailed analysis sections
+    - Data sources & methodology appendix
+    """
+    from app.export.pdf import generate_pdf, REPORTLAB_AVAILABLE
+
+    if not REPORTLAB_AVAILABLE:
+        raise HTTPException(
+            status_code=501,
+            detail="PDF export is not available: reportlab package is not installed.",
+        )
+
+    # Load the engagement
+    engagement = await db.get(Engagement, engagement_id)
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    # Gather pipeline_data from engagement config
+    pipeline_data = engagement.config.get("pipeline_data", {})
+    deliverables = pipeline_data.get("deliverables", {})
+
+    # If no deliverables yet, build a minimal placeholder so the PDF still renders
+    if not deliverables:
+        deliverables = {
+            "executive_summary": {
+                "title": "Due Diligence Executive Summary",
+                "recommendation": "proceed_with_caution",
+                "recommendation_rationale": "Analysis is still in progress or no pipeline has been run.",
+                "key_findings": [],
+                "risk_assessment": "",
+                "source_count": 0,
+            },
+            "detailed_report": {"sections": [], "status": "pending"},
+            "audit_trail": {
+                "sources_accessed": [],
+                "findings_generated": 0,
+                "compliance_status": "pending",
+            },
+        }
+
+    # Pull all findings from DB
+    findings_result = await db.execute(
+        select(Finding)
+        .join(AgentRun)
+        .where(AgentRun.engagement_id == engagement_id)
+        .order_by(
+            Finding.severity.desc(),   # critical first
+            Finding.created_at.asc(),
+        )
+    )
+    db_findings = findings_result.scalars().all()
+    findings_dicts = [
+        {
+            "id": str(f.id),
+            "finding_type": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
+            "source_system": f.source_system,
+            "title": f.title,
+            "description": f.description,
+            "data": f.data,
+            "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+            "requires_human_review": f.requires_human_review,
+        }
+        for f in db_findings
+    ]
+
+    config = engagement.config or {}
+    target_company = config.get("target_company") or config.get("company_name", "Target Company")
+    pe_firm = config.get("company_name", "PE Firm")
+
+    # Generate the PDF (runs synchronously — fast enough for a report)
+    import asyncio
+    loop = asyncio.get_event_loop()
+    pdf_bytes = await loop.run_in_executor(
+        None,
+        lambda: generate_pdf(
+            deliverables=deliverables,
+            findings=findings_dicts,
+            target_company=target_company,
+            pe_firm=pe_firm,
+        ),
+    )
+
+    safe_name = target_company.replace(" ", "_").replace("/", "-")[:40]
+    filename = f"KEEN_DiligenceReport_{safe_name}.pdf"
+
+    import io
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

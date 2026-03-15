@@ -304,24 +304,94 @@ class DeliveryAgent(BaseAgent):
         Distribute deliverables via a configured channel.
 
         Supported channels:
-        - internal: Store in the system (always available)
-        - sharepoint: Upload to SharePoint
-        - slack: Post summary to Slack channel
-        - email: Send formatted email
+        - internal:    Always available — deliverables stored in engagement config.
+        - slack:       Post summary to Slack via Incoming Webhook.
+        - email:       Send formatted HTML email + PDF attachment via SMTP.
+        - sharepoint:  Upload to SharePoint (future integration).
         """
-        # TODO: Implement actual distribution integrations
-        distribution_result = {
+        config = self.state.get("pipeline_config", {})
+        deliverables = {
+            "executive_summary": self.state.get("executive_summary", {}),
+            "detailed_report": self.state.get("detailed_report", {}),
+            "data_appendix": self.state.get("data_appendix", {}),
+            "audit_trail": self.state.get("audit_trail", {}),
+        }
+        target_company = config.get("target_company") or config.get("company_name", "Target Company")
+        pe_firm = config.get("company_name", "KEEN Capital")
+
+        # Collect findings from state for distribution summaries
+        findings_raw: list[dict] = self.state.get("all_findings", [])
+
+        distribution_result: dict = {
             "channel": channel,
-            "status": "pending_integration",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+        try:
+            if channel == "internal":
+                # Already stored in engagement config by the orchestrator
+                distribution_result["status"] = "completed"
+
+            elif channel == "slack":
+                slack_webhook = config.get("slack_webhook_url") or ""
+                if not slack_webhook:
+                    distribution_result["status"] = "skipped"
+                    distribution_result["reason"] = "slack_webhook_url not configured"
+                else:
+                    from app.integrations.distribution.slack import post_summary
+                    result = await post_summary(
+                        webhook_url=slack_webhook,
+                        deliverables=deliverables,
+                        findings=findings_raw,
+                        target_company=target_company,
+                        pe_firm=pe_firm,
+                    )
+                    distribution_result["status"] = result.get("status", "error")
+                    if "error" in result:
+                        distribution_result["error"] = result["error"]
+
+            elif channel == "email":
+                email_recipients = config.get("email_recipients") or []
+                if isinstance(email_recipients, str):
+                    email_recipients = [r.strip() for r in email_recipients.split(",") if r.strip()]
+                if not email_recipients:
+                    distribution_result["status"] = "skipped"
+                    distribution_result["reason"] = "email_recipients not configured"
+                else:
+                    from app.integrations.distribution.email import send_report
+                    result = await send_report(
+                        to_addresses=email_recipients,
+                        deliverables=deliverables,
+                        findings=findings_raw,
+                        target_company=target_company,
+                        pe_firm=pe_firm,
+                        # PDF bytes omitted here — too slow to generate in-pipeline
+                        # Users can download via the /export/pdf endpoint instead
+                        pdf_bytes=None,
+                    )
+                    distribution_result["status"] = result.get("status", "error")
+                    distribution_result["recipients"] = result.get("recipients", [])
+                    if "error" in result:
+                        distribution_result["error"] = result["error"]
+
+            elif channel == "sharepoint":
+                # Future: upload to SharePoint document library
+                distribution_result["status"] = "pending_integration"
+
+            else:
+                distribution_result["status"] = "unknown_channel"
+
+        except Exception as exc:
+            logger.exception("Distribution failed for channel '%s': %s", channel, exc)
+            distribution_result["status"] = "error"
+            distribution_result["error"] = str(exc)
 
         self.state.setdefault("distributions", []).append(distribution_result)
 
         return StepResult(
             success=True,
-            data={"channel": channel, "distributed": True},
-            message=f"Distributed via {channel}",
+            data={"channel": channel, "result": distribution_result},
+            message=f"Distributed via {channel}: {distribution_result.get('status', 'unknown')}",
         )
 
     def _rule_based_executive_summary(self, analysis: dict, config: dict) -> dict:

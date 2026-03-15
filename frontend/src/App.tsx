@@ -336,9 +336,14 @@ function App() {
                   </button>
                 </MagneticElement>
                 <MagneticElement strength={0.2}>
-                  <button className="px-6 py-3 border border-theme-border hover:border-orange-600/50 text-sm font-medium transition-all duration-300 text-theme-text-secondary hover:text-theme-text">
+                  <a
+                    href="https://github.com/keen-platform/keen/blob/main/README.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 border border-theme-border hover:border-orange-600/50 text-sm font-medium transition-all duration-300 text-theme-text-secondary hover:text-theme-text inline-block"
+                  >
                     View Documentation
-                  </button>
+                  </a>
                 </MagneticElement>
               </div>
             </ScrollReveal>
