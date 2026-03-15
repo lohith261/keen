@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, FlaskConical, Radio, Loader2 } from 'lucide-react';
+import { X, FlaskConical, Radio, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
 
@@ -24,6 +24,16 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
     engagement_type: 'full_diligence',
     notes: '',
   });
+  const [distribution, setDistribution] = useState({
+    slack_webhook_url: '',
+    email_recipients: '',
+    sharepoint_site_url: '',
+    sharepoint_tenant_id: '',
+    sharepoint_client_id: '',
+    sharepoint_client_secret: '',
+    sharepoint_folder: 'KEEN Reports',
+  });
+  const [showDistribution, setShowDistribution] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,12 +43,32 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
     setLoading(true);
     setError('');
     try {
+      // Build distribution config — only include non-empty fields
+      const distConfig: Record<string, string> = {};
+      if (distribution.slack_webhook_url.trim())
+        distConfig.slack_webhook_url = distribution.slack_webhook_url.trim();
+      if (distribution.email_recipients.trim())
+        distConfig.email_recipients = distribution.email_recipients.trim();
+      if (distribution.sharepoint_site_url.trim())
+        distConfig.sharepoint_site_url = distribution.sharepoint_site_url.trim();
+      if (distribution.sharepoint_tenant_id.trim())
+        distConfig.sharepoint_tenant_id = distribution.sharepoint_tenant_id.trim();
+      if (distribution.sharepoint_client_id.trim())
+        distConfig.sharepoint_client_id = distribution.sharepoint_client_id.trim();
+      if (distribution.sharepoint_client_secret.trim())
+        distConfig.sharepoint_client_secret = distribution.sharepoint_client_secret.trim();
+      if (distribution.sharepoint_folder.trim())
+        distConfig.sharepoint_folder = distribution.sharepoint_folder.trim();
+
       const engagement = await engagementsApi.create({
         company_name: form.company_name.trim(),
         pe_firm: form.pe_firm.trim() || undefined,
         deal_size: form.deal_size.trim() || undefined,
         notes: form.notes.trim() || undefined,
-        config: { engagement_type: form.engagement_type },
+        config: {
+          engagement_type: form.engagement_type,
+          ...distConfig,
+        },
       });
       await engagementsApi.start(engagement.id);
       onCreated({ ...engagement, status: 'running' });
@@ -174,6 +204,106 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
                          placeholder:text-theme-text-muted/50 focus:outline-none focus:border-theme-text-muted
                          transition-colors"
             />
+          </div>
+
+          {/* Distribution config — collapsible */}
+          <div className="border border-theme-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowDistribution((v) => !v)}
+              className="flex w-full items-center justify-between px-3 py-2.5 text-left
+                         hover:bg-theme-border/20 transition-colors"
+            >
+              <span className="text-[11px] font-mono text-theme-text-muted uppercase tracking-wider">
+                Distribution Channels (optional)
+              </span>
+              {showDistribution
+                ? <ChevronDown className="w-3.5 h-3.5 text-theme-text-muted" />
+                : <ChevronRight className="w-3.5 h-3.5 text-theme-text-muted" />
+              }
+            </button>
+
+            {showDistribution && (
+              <div className="border-t border-theme-border px-3 py-3 space-y-3 bg-theme-bg/30">
+                <div>
+                  <label className="block text-[10px] font-mono text-theme-text-muted mb-1 uppercase tracking-wider">
+                    Slack Webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    value={distribution.slack_webhook_url}
+                    onChange={(e) => setDistribution((d) => ({ ...d, slack_webhook_url: e.target.value }))}
+                    placeholder="https://hooks.slack.com/services/..."
+                    className="w-full px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                               placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-theme-text-muted mb-1 uppercase tracking-wider">
+                    Email Recipients (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={distribution.email_recipients}
+                    onChange={(e) => setDistribution((d) => ({ ...d, email_recipients: e.target.value }))}
+                    placeholder="partner@firm.com, analyst@firm.com"
+                    className="w-full px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                               placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                  />
+                </div>
+
+                <div className="pt-1">
+                  <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider mb-2">
+                    SharePoint
+                  </p>
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={distribution.sharepoint_site_url}
+                      onChange={(e) => setDistribution((d) => ({ ...d, sharepoint_site_url: e.target.value }))}
+                      placeholder="SharePoint site URL (https://contoso.sharepoint.com/sites/deals)"
+                      className="w-full px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                                 placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={distribution.sharepoint_tenant_id}
+                        onChange={(e) => setDistribution((d) => ({ ...d, sharepoint_tenant_id: e.target.value }))}
+                        placeholder="Azure Tenant ID"
+                        className="px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                                   placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                      />
+                      <input
+                        type="text"
+                        value={distribution.sharepoint_client_id}
+                        onChange={(e) => setDistribution((d) => ({ ...d, sharepoint_client_id: e.target.value }))}
+                        placeholder="App Client ID"
+                        className="px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                                   placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                      />
+                    </div>
+                    <input
+                      type="password"
+                      value={distribution.sharepoint_client_secret}
+                      onChange={(e) => setDistribution((d) => ({ ...d, sharepoint_client_secret: e.target.value }))}
+                      placeholder="App Client Secret"
+                      className="w-full px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                                 placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                    />
+                    <input
+                      type="text"
+                      value={distribution.sharepoint_folder}
+                      onChange={(e) => setDistribution((d) => ({ ...d, sharepoint_folder: e.target.value }))}
+                      placeholder="Folder path (default: KEEN Reports)"
+                      className="w-full px-3 py-1.5 bg-transparent border border-theme-border rounded-lg text-xs
+                                 placeholder:text-theme-text-muted/40 focus:outline-none focus:border-theme-text-muted"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {error && (
