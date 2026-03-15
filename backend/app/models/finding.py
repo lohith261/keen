@@ -26,6 +26,7 @@ class FindingType(str, enum.Enum):
     EXCEPTION = "exception"
     INSIGHT = "insight"
     EXECUTIVE_SUMMARY = "executive_summary"
+    FLAG = "flag"
 
 
 class Severity(str, enum.Enum):

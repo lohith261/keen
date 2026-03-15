@@ -318,14 +318,25 @@ class BaseAgent(abc.ABC):
 
     async def _create_finding(self, data: dict) -> Finding:
         """Persist a finding to the database."""
+        # Safely coerce type/severity to valid enum values, falling back to defaults
+        try:
+            finding_type = FindingType(data.get("type", "data_point"))
+        except ValueError:
+            logger.warning("Unknown FindingType '%s' — defaulting to 'data_point'", data.get("type"))
+            finding_type = FindingType.DATA_POINT
+        try:
+            severity = Severity(data.get("severity", "info"))
+        except ValueError:
+            logger.warning("Unknown Severity '%s' — defaulting to 'info'", data.get("severity"))
+            severity = Severity.INFO
         finding = Finding(
             agent_run_id=self.agent_run_id,
-            finding_type=FindingType(data.get("type", "data_point")),
+            finding_type=finding_type,
             source_system=data.get("source_system"),
             title=data.get("title", "Untitled Finding"),
             description=data.get("description"),
             data=data.get("data", {}),
-            severity=Severity(data.get("severity", "info")),
+            severity=severity,
             requires_human_review=data.get("requires_human_review", False),
         )
         self.db.add(finding)
