@@ -23,7 +23,7 @@ interface Props {
   onClose: () => void;
 }
 
-const CATEGORY_ORDER = ['CRM', 'ERP', 'Accounting', 'Marketing', 'Market Data', 'Intelligence'];
+const CATEGORY_ORDER = ['CRM', 'ERP', 'Accounting', 'Marketing', 'Market Data', 'Intelligence', 'Export'];
 
 function groupByCategory(specs: SystemCredentialSpec[]): Record<string, SystemCredentialSpec[]> {
   const groups: Record<string, SystemCredentialSpec[]> = {};
@@ -216,20 +216,36 @@ export default function CredentialsModal({ engagementId, onClose }: Props) {
                     {field.label}
                     {field.required && <span className="text-red-400">*</span>}
                   </label>
+                  {/* Use textarea for long JSON fields, otherwise normal input */}
                   <div className="relative">
-                    <input
-                      type={field.secret && !isVisible ? 'password' : 'text'}
-                      placeholder={field.placeholder}
-                      value={values[field.key] ?? ''}
-                      onChange={(e) =>
-                        setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
-                      }
-                      autoComplete={field.secret ? 'new-password' : 'off'}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5
-                                 pr-10 text-sm text-white placeholder-white/25 outline-none
-                                 transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
-                    />
-                    {field.secret && (
+                    {field.placeholder.startsWith('{') ? (
+                      <textarea
+                        rows={5}
+                        placeholder={field.placeholder}
+                        value={values[field.key] ?? ''}
+                        onChange={(e) =>
+                          setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                        }
+                        autoComplete="off"
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5
+                                   text-sm text-white placeholder-white/25 outline-none resize-y
+                                   font-mono transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                      />
+                    ) : (
+                      <input
+                        type={field.secret && !isVisible ? 'password' : 'text'}
+                        placeholder={field.placeholder}
+                        value={values[field.key] ?? ''}
+                        onChange={(e) =>
+                          setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                        }
+                        autoComplete={field.secret ? 'new-password' : 'off'}
+                        className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5
+                                   pr-10 text-sm text-white placeholder-white/25 outline-none
+                                   transition focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                      />
+                    )}
+                    {field.secret && !field.placeholder.startsWith('{') && (
                       <button
                         type="button"
                         onClick={() =>

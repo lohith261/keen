@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
   Loader2, RefreshCw, Eye, EyeOff, FileText, TrendingUp, Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
@@ -219,6 +220,8 @@ export default function ResultsPanel({ engagement }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showReviewOnly, setShowReviewOnly] = useState(false);
+  const [sheetsLoading, setSheetsLoading] = useState(false);
+  const [sheetsError, setSheetsError] = useState<string | null>(null);
 
   const fetchFindings = async () => {
     setLoading(true);
@@ -230,6 +233,27 @@ export default function ResultsPanel({ engagement }: Props) {
       setError(e instanceof Error ? e.message : 'Failed to load findings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSheetsExport = async () => {
+    setSheetsLoading(true);
+    setSheetsError(null);
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/gsheets?credentials_id=${engagement.id}`,
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { detail?: string }).detail || `HTTP ${res.status}`);
+      }
+      const { url } = await res.json() as { url: string };
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      setSheetsError(e instanceof Error ? e.message : 'Google Sheets export failed');
+    } finally {
+      setSheetsLoading(false);
     }
   };
 
@@ -328,6 +352,11 @@ export default function ResultsPanel({ engagement }: Props) {
           </button>
           {/* Export buttons */}
           <div className="ml-auto flex items-center gap-2">
+            {sheetsError && (
+              <span className="text-[10px] font-mono text-red-400 max-w-[160px] truncate" title={sheetsError}>
+                {sheetsError}
+              </span>
+            )}
             <a
               href={`${BACKEND_URL}/api/v1/engagements/${engagement.id}/export/pdf`}
               target="_blank"
@@ -350,6 +379,20 @@ export default function ResultsPanel({ engagement }: Props) {
             >
               <Download className="w-3 h-3" /> EXCEL
             </a>
+            <button
+              onClick={handleSheetsExport}
+              disabled={sheetsLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border
+                         border-emerald-500/30 rounded-lg text-emerald-400/70
+                         hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export to Google Sheets (requires Google service account credentials)"
+            >
+              {sheetsLoading
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <FileSpreadsheet className="w-3 h-3" />}
+              {sheetsLoading ? 'EXPORTING...' : 'SHEETS'}
+            </button>
           </div>
         </div>
       </div>

@@ -524,3 +524,123 @@ async def export_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get(
+    "/{engagement_id}/export/gsheets",
+    summary="Export the due diligence report to Google Sheets",
+    tags=["Export"],
+)
+async def export_gsheets(
+    engagement_id: UUID,
+    credentials_id: str,
+    db: AsyncSession = Depends(get_session),
+):
+    """
+    Create a Google Spreadsheet from a completed engagement and return its URL.
+
+    The caller must supply ``credentials_id`` (the engagement id used as the
+    vault namespace) — credentials are loaded from the vault under system key
+    ``google_sheets``.
+
+    Returns JSON: ``{"url": "https://docs.google.com/spreadsheets/d/..."}``
+    """
+    import json as _json
+
+    from app.export.gsheets import GSPREAD_AVAILABLE, create_google_sheet
+    from app.integrations.credentials import CredentialVault
+
+    if not GSPREAD_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Google Sheets export is unavailable: gspread / google-auth not installed.",
+        )
+
+    # Load the engagement
+    engagement = await db.get(Engagement, engagement_id)
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    # Load Google credentials from vault
+    vault = CredentialVault(namespace=credentials_id)
+    raw_creds = vault.get("google_sheets")
+    if not raw_creds:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No Google Sheets credentials found. "
+                "Please add a Google service account key via the Credentials panel."
+            ),
+        )
+
+    # Parse service account JSON
+    sa_json_str = raw_creds.get("service_account_json", "")
+    if not sa_json_str:
+        raise HTTPException(status_code=400, detail="service_account_json is empty in stored credentials.")
+    try:
+        service_account_info = _json.loads(sa_json_str)
+    except _json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"service_account_json is not valid JSON: {exc}") from exc
+
+    share_email = raw_creds.get("share_email") or None
+
+    # Gather engagement data (same logic as Excel endpoint)
+    pipeline_data = engagement.config.get("pipeline_data", {})
+    deliverables = (
+        pipeline_data
+        .get("delivery", {})
+        .get("finalize_delivery", {})
+        .get("deliverables", {})
+    ) or {}
+
+    research_state = pipeline_data.get("research", {})
+    source_data: dict = {}
+    for key, value in research_state.items():
+        if key.startswith("data_") and isinstance(value, dict):
+            source_data[key.replace("data_", "")] = value
+
+    # Pull findings
+    findings_result = await db.execute(
+        select(Finding)
+        .join(AgentRun)
+        .where(AgentRun.engagement_id == engagement_id)
+        .order_by(Finding.severity.desc(), Finding.created_at.asc())
+    )
+    db_findings = findings_result.scalars().all()
+    findings_dicts = [
+        {
+            "id": str(f.id),
+            "finding_type": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
+            "source_system": f.source_system,
+            "title": f.title,
+            "description": f.description,
+            "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+            "requires_human_review": f.requires_human_review,
+        }
+        for f in db_findings
+    ]
+
+    config = engagement.config or {}
+    target_company = config.get("target_company") or config.get("company_name", "Target Company")
+    pe_firm = config.get("company_name", "PE Firm")
+
+    # Run in executor (gspread is synchronous)
+    loop = asyncio.get_event_loop()
+    try:
+        sheet_url = await loop.run_in_executor(
+            None,
+            lambda: create_google_sheet(
+                deliverables=deliverables,
+                findings=findings_dicts,
+                source_data=source_data,
+                target_company=target_company,
+                pe_firm=pe_firm,
+                service_account_info=service_account_info,
+                share_email=share_email,
+            ),
+        )
+    except Exception as exc:
+        logger.exception("Google Sheets export failed for engagement %s", engagement_id)
+        raise HTTPException(status_code=500, detail=f"Google Sheets export failed: {exc}") from exc
+
+    return {"url": sheet_url}

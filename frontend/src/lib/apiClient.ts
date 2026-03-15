@@ -347,6 +347,28 @@ export const CREDENTIAL_SPECS: SystemCredentialSpec[] = [
       { key: "instance_url", label: "Oracle Cloud URL",   placeholder: "https://company.fa.em2.oraclecloud.com", secret: false, required: true },
     ],
   },
+  {
+    system_name: "google_sheets",
+    display_name: "Google Sheets",
+    category: "Export",
+    auth_type: "Service Account",
+    fields: [
+      {
+        key: "service_account_json",
+        label: "Service Account Key JSON",
+        placeholder: '{"type":"service_account","project_id":"...","private_key_id":"..."}',
+        secret: true,
+        required: true,
+      },
+      {
+        key: "share_email",
+        label: "Share sheet with (email)",
+        placeholder: "partner@firm.com",
+        secret: false,
+        required: false,
+      },
+    ],
+  },
 ];
 
 export const credentialsApi = {
