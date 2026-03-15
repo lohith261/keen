@@ -51,3 +51,54 @@ async def readiness(
         "status": "ready" if all_ok else "degraded",
         "checks": checks,
     }
+
+
+@router.get("/llm")
+async def llm_health() -> dict:
+    """LLM health check — makes a minimal Anthropic API call to verify the key is valid and the service is reachable."""
+    import anthropic
+
+    from app.config import get_settings
+
+    settings = get_settings()
+
+    if not settings.anthropic_api_key:
+        return {
+            "status": "unconfigured",
+            "llm": "error: ANTHROPIC_API_KEY not set",
+            "model": None,
+        }
+
+    try:
+        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        # Cheapest possible call: 1 input token, 1 output token
+        msg = await client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=1,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        model_used = msg.model
+        return {
+            "status": "connected",
+            "llm": "connected",
+            "model": model_used,
+        }
+    except anthropic.AuthenticationError:
+        return {
+            "status": "error",
+            "llm": "error: invalid API key",
+            "model": None,
+        }
+    except anthropic.RateLimitError:
+        # Rate-limited means the key is valid but we're throttled — treat as connected
+        return {
+            "status": "connected",
+            "llm": "connected (rate limited)",
+            "model": "claude-haiku-4-5",
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "llm": f"error: {exc}",
+            "model": None,
+        }
