@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.api.auth_deps import AuthUser, get_current_user, get_optional_user
 from app.database import async_session_factory
 from app.dependencies import get_session
 from app.models.engagement import Engagement, EngagementStatus
@@ -71,8 +72,9 @@ async def _run_orchestrator(engagement_id: UUID, redis: Any | None) -> None:
 async def create_engagement(
     payload: EngagementCreate,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
-    """Create a new due diligence engagement."""
+    """Create a new due diligence engagement (requires auth)."""
     engagement = Engagement(
         company_name=payload.company_name,
         target_company=payload.target_company,
@@ -81,6 +83,7 @@ async def create_engagement(
         engagement_type=payload.engagement_type,
         config=payload.config,
         notes=payload.notes,
+        user_id=current_user.sub,
     )
     db.add(engagement)
     await db.flush()
@@ -94,9 +97,18 @@ async def list_engagements(
     limit: int = 50,
     status_filter: EngagementStatus | None = None,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> list[Engagement]:
-    """List engagements, optionally filtered by status."""
+    """List engagements for the authenticated user."""
     query = select(Engagement).order_by(Engagement.created_at.desc())
+    # Show engagements owned by this user OR legacy rows (user_id is null)
+    from sqlalchemy import or_
+    query = query.where(
+        or_(
+            Engagement.user_id == current_user.sub,
+            Engagement.user_id.is_(None),
+        )
+    )
     if status_filter:
         query = query.where(Engagement.status == status_filter)
     query = query.offset(skip).limit(limit)
@@ -291,11 +303,15 @@ async def resume_engagement(
 async def delete_engagement(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> None:
-    """Delete an engagement and all its agent runs and findings (cascade)."""
+    """Delete an engagement (only owner or legacy rows)."""
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    # Only the owner (or admin for legacy null rows) may delete
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to delete this engagement")
     await db.delete(engagement)
 
 

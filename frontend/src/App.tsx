@@ -28,6 +28,8 @@ import Dashboard from './components/dashboard/Dashboard';
 import RequestAccessModal from './components/RequestAccessModal';
 import { useTheme } from './context/ThemeContext';
 import { useView } from './context/ViewContext';
+import { useAuth } from './context/AuthContext';
+import AuthPage from './components/auth/AuthPage';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
 import { useSystemHealth } from './hooks/useSystemHealth';
 
@@ -128,6 +130,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
   const { view, setView } = useView();
+  const { user, loading: authLoading } = useAuth();
 
   const scrollProgress = useScrollProgress();
   const mouse = useMousePosition();
@@ -162,6 +165,20 @@ function App() {
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
+
+  // Wait for auth to resolve before showing anything
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg">
+        <div className="w-1.5 h-1.5 rounded-full bg-theme-text-muted animate-pulse" />
+      </div>
+    );
+  }
+
+  // Not signed in — show auth page
+  if (!user) {
+    return <AuthPage />;
+  }
 
   if (view === 'dashboard') {
     return <Dashboard />;

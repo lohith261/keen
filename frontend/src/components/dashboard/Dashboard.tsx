@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, FlaskConical, Radio, Search, Trash2,
-  Activity, TrendingUp, BarChart2,
+  Activity, TrendingUp, BarChart2, LogOut,
 } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
 import { useView } from '../../context/ViewContext';
 import { ToastProvider } from '../ui/Toast';
+import { useAuth } from '../../context/AuthContext';
 import NewEngagementModal from './NewEngagementModal';
 import PipelineView from './PipelineView';
 import ResultsPanel from './ResultsPanel';
@@ -81,6 +82,7 @@ function StatsBar({ engagements }: { engagements: Engagement[] }) {
 export default function Dashboard() {
   const { setView } = useView();
   const { isDemoMode } = useDemoMode();
+  const { user, signOut } = useAuth();
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -217,6 +219,22 @@ export default function Dashboard() {
                   )}
                   {isDemoMode ? 'DEMO' : 'LIVE'}
                 </div>
+
+                {/* User email chip */}
+                {user?.email && (
+                  <span className="hidden md:block text-[10px] font-mono text-theme-text-muted truncate max-w-[160px]">
+                    {user.email}
+                  </span>
+                )}
+
+                {/* Sign out */}
+                <button
+                  onClick={() => signOut()}
+                  title="Sign out"
+                  className="p-1.5 rounded-lg text-theme-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
 
                 {/* New engagement button */}
                 <button

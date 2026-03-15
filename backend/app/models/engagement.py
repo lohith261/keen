@@ -43,6 +43,7 @@ class Engagement(Base):
     )
     config = Column(JSONB, default=dict, doc="Agent config — which agents/systems to use")
     notes = Column(Text, nullable=True)
+    user_id = Column(String(255), nullable=True, index=True, doc="Supabase user UUID (null = legacy)")
 
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)

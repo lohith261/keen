@@ -16,6 +16,30 @@ function isDemoMode(): boolean {
   return localStorage.getItem('keen-data-mode') !== 'live';
 }
 
+/**
+ * Read the Supabase access token from localStorage without React context.
+ * Supabase stores the session under the key:
+ *   sb-{project_ref}-auth-token
+ */
+function getAuthToken(): string | null {
+  try {
+    // Try all supabase session keys in localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { access_token?: string };
+          return parsed.access_token ?? null;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: Record<string, unknown>;
@@ -36,10 +60,15 @@ class ApiError extends Error {
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, headers = {} } = options;
 
+  const authHeaders: Record<string, string> = {};
+  const token = getAuthToken();
+  if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
   const config: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...headers,
     },
   };
