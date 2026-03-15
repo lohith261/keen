@@ -59,9 +59,9 @@ export default function RequestAccessModal({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme-border">
           <div>
-            <h2 className="text-sm font-semibold tracking-wide">REQUEST ACCESS</h2>
+            <h2 className="text-sm font-semibold tracking-wide">BOOK A DEMO</h2>
             <p className="text-[11px] font-mono text-theme-text-muted mt-0.5">
-              Join the KEEN early access programme
+              We'll reach out to schedule a 30-min live session
             </p>
           </div>
           <button
@@ -79,7 +79,7 @@ export default function RequestAccessModal({ onClose }: Props) {
             <div>
               <p className="text-sm font-semibold">You're on the list</p>
               <p className="text-[12px] text-theme-text-muted mt-1 max-w-xs">
-                We'll be in touch shortly. In the meantime, try the live demo using the Pipeline Dashboard.
+                We'll reach out within 24 hours to schedule a live walkthrough. In the meantime, explore the demo dashboard.
               </p>
             </div>
             <button
@@ -199,7 +199,7 @@ export default function RequestAccessModal({ onClose }: Props) {
                     SUBMITTING...
                   </>
                 ) : (
-                  'REQUEST ACCESS →'
+                  'SUBMIT REQUEST →'
                 )}
               </button>
             </div>
