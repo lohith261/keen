@@ -1,52 +1,57 @@
-# KEEN
+# KEEN — Op/Intelligence
 
 **Sharper Judgment. Faster Execution.**
 
-KEEN is a multi-agent operational intelligence platform designed to replicate McKinsey-grade private equity due diligence — compressing weeks of manual research into hours through autonomous orchestration across live enterprise systems.
+KEEN is a multi-agent AI system that automates the data gathering and reporting layer of private equity due diligence. Three specialised agents — Research, Analysis, and Delivery — extract data from live enterprise sources, cross-reference findings, and produce a structured PDF + Excel report delivered automatically to Slack, email, Google Drive, or SharePoint.
 
-> ⚠️ **Status:** KEEN is under active development as part of the **TinyFish Accelerator (2026)**. Performance targets below reflect design goals; benchmarks will be published as the platform matures.
+> **Status:** Early access · Built at [TinyFish Accelerator](https://www.tinyfish.ai/accelerator) (2026 cohort)
+>
+> 🌐 **Live:** [keen-sigma.vercel.app](https://keen-sigma.vercel.app) · Backend: [keen-backend.fly.dev](https://keen-backend.fly.dev/api/v1/health)
 
 ---
 
-## 📸 Screenshots
+## What's Actually Built
 
-| Hero | Performance Metrics |
-|---|---|
-| ![Hero](docs/screenshots/screenshot-hero.png) | ![Metrics](docs/screenshots/screenshot-metrics.png) |
-
-| Agent Architecture | Operational Capabilities |
-|---|---|
-| ![Agents](docs/screenshots/screenshot-agents.png) | ![Capabilities](docs/screenshots/screenshot-capabilities.png) |
-
-| Enterprise Integrations | Competitive Advantage |
-|---|---|
-| ![Integrations](docs/screenshots/screenshot-integrations.png) | ![Moat](docs/screenshots/screenshot-moat.png) |
-
-> 🌐 Live demo: [keen-sigma.vercel.app](https://keen-sigma.vercel.app)
+| Component | Status | Notes |
+|---|---|---|
+| 3-agent pipeline (Research → Analysis → Delivery) | ✅ Production | Step-based, checkpointed, resume-safe |
+| Demo mode with Acme Analytics Corp dataset | ✅ Complete | 16 fixture files, 8 baked-in discrepancies |
+| 5 REST API integrations (live) | ✅ Complete | Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase |
+| 10 browser-automation connectors | ✅ Architecture | Delegated to TinyFish API — needs `TINYFISH_API_KEY` |
+| PDF + Excel report export | ✅ Production | `/export/pdf`, `/export/excel` endpoints |
+| Distribution: Slack, Email, Google Drive, SharePoint | ✅ Production | Auto-delivered on pipeline completion |
+| AES-256-GCM credential vault | ✅ Production | Per-engagement, per-user isolated |
+| Supabase authentication (login / signup) | ✅ Production | JWT ES256, per-user data isolation |
+| Real-time WebSocket pipeline monitoring | ✅ Production | Live agent step progress in browser |
+| Multi-LLM (Claude → Gemini → Groq fallback) | ✅ Production | Never breaks if one provider is down |
+| Data appendix (charts/tables in report) | 🔲 Stub | Returns `pending_integration` |
+| Financial model sync | 🔲 Stub | Returns `pending_integration` |
+| Billing / pricing layer | 🔲 Not built | |
+| Admin dashboard | 🔲 Not built | |
 
 ---
 
 ## 🚀 Try the Demo (5 minutes)
 
-The live demo runs the full 3-agent pipeline against a pre-built dataset — no credentials or setup required.
+No credentials or account required to run the demo.
 
 **URL:** [keen-sigma.vercel.app](https://keen-sigma.vercel.app)
 
 ### Step 1 — Check system status
 
-The nav bar shows a coloured status indicator. Click it to see which checks passed (API, Database, WebSocket). A green **Operational** badge means the backend is healthy and ready.
+Click **STATUS** in the nav bar. A green **OPERATIONAL** badge means the backend, database, and LLM are healthy and ready.
 
 ### Step 2 — Confirm Demo mode is active
 
-Look for the **amber flask pill** labelled `DEMO` in the top nav. If it shows `LIVE` (green radio icon), click it once to switch back to Demo mode. Demo mode uses fixture data for the fictional company **Acme Analytics Corp** — no real credentials needed.
+Look for the **amber flask pill** labelled `DEMO` in the top nav. If it shows `LIVE`, click it once to switch back. Demo mode uses the Acme Analytics Corp fixture dataset — no credentials needed.
 
-### Step 3 — Open the Pipeline Dashboard
+### Step 3 — Open the Dashboard
 
-Click **"Open Pipeline Dashboard"** (or the Dashboard button in the nav). This opens the engagement management view.
+Click **DASHBOARD** in the nav (no login required in Demo mode). This opens the engagement management view.
 
 ### Step 4 — Create a new engagement
 
-Click **"+ New Engagement"** and fill in:
+Click **+ New Engagement** and fill in:
 
 | Field | Suggested value |
 |---|---|
@@ -59,67 +64,75 @@ Click **START PIPELINE →**. The engagement is created and the orchestrator sta
 
 ### Step 5 — Watch the pipeline run
 
-The view switches to **Pipeline** mode. You'll see three agents execute in sequence:
+Three agents execute in sequence:
 
 ```
 Research Agent  →  Analysis Agent  →  Delivery Agent
 ```
 
-Each agent shows real-time step progress via WebSocket. The Research Agent alone runs 30+ steps across 15 simulated enterprise sources.
+Each agent shows real-time step progress via WebSocket. The Research Agent processes 15 simulated sources.
 
-### Step 6 — Review the findings
+### Step 6 — Review findings
 
-Once the pipeline completes (status turns green), the view switches to **Results**. You'll see:
+Once the pipeline completes, the Results tab unlocks. You'll see findings sorted by severity, including:
 
-- **Revenue gap** — ~$1.3M discrepancy between Salesforce and NetSuite
-- **Funnel leakage** — HubSpot MQL conversion 7% vs 15–20% benchmark
-- **R&D cost mismatch** — ~$400K gap between SAP and Oracle GL
-- **Key person risk** — VP Engineering departure flagged (Feb 2026)
-- Plus 4 more baked-in discrepancies across funding, headcount, AR, and churn
+| Finding | Sources | Gap |
+|---|---|---|
+| Revenue gap | Salesforce vs NetSuite | ~$1.3M |
+| Funnel leakage | HubSpot vs Salesforce | 7% vs 15–20% benchmark |
+| R&D cost mismatch | SAP vs Oracle GL | ~$400K |
+| Funding discrepancy | Crunchbase vs SEC proxy | ~$500K |
+| Headcount mismatch | ZoomInfo / SAP / LinkedIn | 11–25 person gap |
+| SMB churn | Dynamics | 18.4% (above benchmark) |
+| Overdue AR | Oracle | 2 accounts 120+ days |
+| Key person risk | Sales Navigator | VP Engineering departed Feb 2026 |
 
-Findings are sorted by severity. Critical findings are automatically flagged for human review.
+### Step 7 — Export the report
 
----
-
-## 🎯 Design Targets
-
-| Metric | Target |
-|---|---|
-| **Time compression** | 4 weeks → ~4 hours |
-| **Cost reduction** | ~80% vs. traditional PE diligence |
-| **Data sources** | 15+ live enterprise systems |
-| **Output accuracy** | Validated findings with confidence scoring |
-
-These are architectural targets based on the scope of automation, not yet validated on live engagements. The platform is designed to eliminate the manual extraction, normalization, and cross-referencing that accounts for the majority of traditional diligence time.
+Use the **PDF** and **XLSX** buttons in the Results panel to download the executive report and financial workbook. The **SHEETS** and **DRIVE** buttons push directly to Google Sheets / Drive.
 
 ---
 
-## ✨ How It Works
+## 🤖 How It Works
 
-KEEN orchestrates three autonomous agents in sequence. Each agent hands off structured output to the next, with full checkpointing and resume support at every step.
+### Research Agent
 
-```
-Research Agent → Analysis Agent → Delivery Agent
-```
+Plans which sources to query (using Claude) based on engagement type and company profile, then authenticates and extracts from each configured source.
 
-### 1. Research Agent
-Authenticates to and extracts data from 15+ enterprise systems. Each source goes through two steps: `authenticate_{source}` then `extract_{source}`. Supported auth modes include OAuth (Salesforce, Dynamics, QuickBooks), API key (HubSpot, ZoomInfo, Crunchbase), SSO/MFA (SAP), browser automation via TinyFish (Bloomberg, PitchBook, Capital IQ), and public access (SEC EDGAR).
+**5 live REST integrations:**
 
-Uses LLM to intelligently plan which sources to prioritise based on engagement type, company profile, and industry. Falls back to all sources if LLM is unavailable.
+| System | Auth | Data Extracted |
+|---|---|---|
+| **Salesforce** | OAuth 2.0 + refresh token | CRM pipeline, deal history, contact records, activity logs |
+| **NetSuite** | OAuth 1.0 TBA (HMAC-SHA256) | Revenue data, expense records, journal entries, balance sheet |
+| **SEC EDGAR** | Public API (no auth) | 10-K/Q filings, insider transactions, proxy statements |
+| **HubSpot** | API Key | Marketing metrics, lead funnel, campaign ROI |
+| **Crunchbase** | API Key | Funding history, acquisitions, key people |
 
-### 2. Analysis Agent
-Receives the Research Agent's compiled output and performs multi-source cross-referencing, variance detection, and confidence scoring. Key analytical operations include:
+**10 browser-automation sources (via TinyFish):**
 
-- **Revenue variance detection** — compares CRM pipeline (Salesforce) vs. ERP actuals (NetSuite/SAP) and flags gaps above configurable thresholds
-- **Cost variance analysis** — cross-references expense data across accounting systems
-- **Customer metrics** — derives churn, LTV, CAC, and NRR from CRM and billing data
-- **Market positioning** — benchmarks against Bloomberg/CapIQ/PitchBook comps
-- **LLM cross-referencing** — intelligently matches entities and identifies discrepancies across sources
-- **LLM confidence scoring** — assigns reliability and impact scores to every finding
-- **Exception routing** — `critical` severity findings are automatically flagged for human review; others are auto-processed
+Bloomberg Terminal · Capital IQ · PitchBook · LinkedIn Sales Navigator · SAP Fiori · Oracle Fusion · Microsoft Dynamics · QuickBooks · ZoomInfo · Marketo
 
-### 3. Delivery Agent
-Generates board-ready output from the Analysis Agent's validated findings. Uses LLM to produce an executive summary and a full due diligence report (9 sections). Distributes via configurable channels (internal storage, SharePoint, Slack, email) and generates a full audit trail for compliance.
+These connectors send natural-language goals to the TinyFish Web Agent API, which handles navigation and extraction. Requires `TINYFISH_API_KEY`.
+
+### Analysis Agent
+
+Receives the Research Agent's compiled output and performs:
+
+- **Revenue variance detection** — CRM pipeline vs ERP actuals, flags gaps > 5%
+- **Cost variance analysis** — expense cross-referencing, flags gaps > 8%
+- **Customer metrics** — churn, LTV, CAC, NRR derived from CRM + billing data
+- **LLM cross-referencing** — Claude matches entities across sources and surfaces discrepancies
+- **Confidence scoring** — reliability and impact scores assigned to every finding
+- **Exception routing** — `critical` severity findings flagged for human review
+
+### Delivery Agent
+
+- Generates executive summary (LLM-drafted narrative)
+- Generates full 9-section due diligence report (batched, checkpoint-safe)
+- Runs PII compliance sweep before distribution
+- Distributes to configured channels (Slack / email / Google Drive / SharePoint)
+- Writes full audit trail (timestamp, source, agent step per data point)
 
 ---
 
@@ -129,26 +142,38 @@ Generates board-ready output from the Analysis Agent's validated findings. Uses 
 
 | Layer | Technology |
 |---|---|
-| **Framework** | React 18 + TypeScript |
-| **Build tool** | Vite 5 |
-| **Styling** | Tailwind CSS 3 + CSS custom properties (dark/light themes) |
-| **3D / WebGL** | Three.js — interactive particle background with custom GLSL shaders |
-| **Animations** | GSAP — scroll reveals, text reveals, parallax, count-up counters |
-| **Icons** | Lucide React |
+| Framework | React 18 + TypeScript |
+| Build | Vite 5 |
+| Styling | Tailwind CSS 3 + CSS custom properties (dark/light themes) |
+| 3D / WebGL | Three.js — interactive particle background (custom GLSL shaders) |
+| Animations | GSAP — scroll reveals, text reveals, parallax, count-up |
+| Auth | Supabase JS SDK — `onAuthStateChange`, JWT stored in localStorage |
+| Icons | Lucide React |
 
 ### Backend
 
 | Layer | Technology |
 |---|---|
-| **Framework** | FastAPI (Python 3.11+) |
-| **Database** | Supabase (managed PostgreSQL) via SQLAlchemy 2.0 async |
-| **Migrations** | Alembic |
-| **Task queue** | Celery + Redis |
-| **Real-time** | WebSocket (FastAPI native) — live agent status & progress |
-| **Auth** | Dynamic auth manager (OAuth, SSO, MFA, API key, browser/TinyFish) |
-| **Encryption** | AES-256-GCM credential vault via `cryptography` |
-| **LLM** | Claude (Anthropic) primary + Gemini (Google) automatic fallback |
-| **Testing** | pytest + pytest-asyncio |
+| Framework | FastAPI (Python 3.11+) |
+| Database | Supabase (managed PostgreSQL) via SQLAlchemy 2.0 async |
+| Migrations | Alembic (4 migrations) |
+| Checkpointing | Redis (fast, 24h TTL) + PostgreSQL (durable) |
+| Real-time | WebSocket (FastAPI native) — live agent status & progress |
+| Auth | Supabase JWT — ES256 JWKS verification, `get_current_user` FastAPI dep |
+| Encryption | AES-256-GCM credential vault (`cryptography` library) |
+| LLM | Claude (primary) → Gemini → Groq (automatic fallback chain) |
+| Browser automation | TinyFish Web Agent API (SSE streaming, natural-language goals) |
+| HTTP client | httpx (async) |
+| Testing | pytest + pytest-asyncio (20 tests) |
+
+### Deployment
+
+| Service | Platform |
+|---|---|
+| Frontend | Vercel (auto-deploy from `main`) |
+| Backend | Fly.io (rolling deploy, health checks) |
+| Database | Supabase managed PostgreSQL |
+| Cache | Redis (Fly.io managed) |
 
 ---
 
@@ -156,43 +181,67 @@ Generates board-ready output from the Analysis Agent's validated findings. Uses 
 
 ```
 keen/
-├── docs/
-│   └── screenshots/
-├── frontend/                         # React + Vite + Tailwind
+├── frontend/
 │   └── src/
-│       ├── App.tsx                   # Main application — all sections & data
-│       ├── components/               # UI components (WebGL, GSAP, scroll, theme)
-│       ├── context/ThemeContext.tsx  # Dark/light theme state
-│       ├── hooks/                    # Scroll & mouse hooks
-│       ├── lib/                      # API + Supabase clients
-│       └── shaders/background.ts    # GLSL shaders for WebGL background
+│       ├── App.tsx                       # Landing page — all sections & data
+│       ├── main.tsx                      # Root — AuthProvider, ThemeProvider
+│       ├── components/
+│       │   ├── auth/
+│       │   │   ├── AuthModal.tsx         # Inline sign-in / sign-up modal
+│       │   │   └── AuthPage.tsx          # Standalone auth page (fallback)
+│       │   ├── dashboard/
+│       │   │   ├── Dashboard.tsx         # Engagement list + stats bar
+│       │   │   ├── PipelineView.tsx      # Real-time agent progress + WS
+│       │   │   ├── ResultsPanel.tsx      # Findings + export buttons
+│       │   │   ├── NewEngagementModal.tsx
+│       │   │   └── CredentialsModal.tsx  # Per-source credential entry
+│       │   ├── ui/
+│       │   │   └── Toast.tsx             # Toast notification system
+│       │   ├── RequestAccessModal.tsx    # "Book a Demo" form
+│       │   ├── WebGLBackground.tsx       # Three.js particle background
+│       │   └── ...scroll, parallax, GSAP components
+│       ├── context/
+│       │   ├── AuthContext.tsx           # Supabase session + signIn/signUp/signOut
+│       │   ├── ThemeContext.tsx
+│       │   ├── DemoModeContext.tsx
+│       │   └── ViewContext.tsx
+│       ├── hooks/
+│       │   ├── useScrollProgress.ts
+│       │   └── useSystemHealth.ts        # Health check polling
+│       └── lib/
+│           └── apiClient.ts              # Typed API client + credential specs
 │
-├── backend/
-│   └── app/
-│       ├── main.py                   # FastAPI entry point
-│       ├── config.py                 # Pydantic settings
-│       ├── database.py               # Async SQLAlchemy engine
-│       ├── models/                   # ORM models (6 tables)
-│       ├── schemas/                  # Pydantic schemas
-│       ├── api/                      # REST endpoints (/api/v1)
-│       ├── websocket/                # Real-time agent events
-│       ├── agents/
-│       │   ├── base.py               # Abstract agent + checkpointing
-│       │   ├── orchestrator.py       # Research → Analysis → Delivery pipeline
-│       │   ├── research.py           # Data extraction (15+ sources)
-│       │   ├── analysis.py           # Cross-referencing & variance detection
-│       │   └── delivery.py           # Report generation & distribution
-│       ├── llm/
-│       │   ├── client.py             # Multi-provider client (Claude → Gemini fallback)
-│       │   ├── prompts.py            # All LLM system + user prompt templates
-│       │   └── exceptions.py         # LLMError, LLMUnavailableError, LLMParseError
-│       ├── integrations/
-│       │   ├── demo/                 # Fixture connectors for all 15 sources (demo mode)
-│       │   └── live/                 # Live enterprise connectors (in development)
-│       ├── auth/                     # Auth manager + AES-256-GCM credential vault
-│       └── services/                 # Business logic
-│
-└── README.md
+└── backend/
+    └── app/
+        ├── main.py                       # FastAPI entry point, CORS, routers
+        ├── config.py                     # Pydantic settings (env vars)
+        ├── database.py                   # Async SQLAlchemy engine
+        ├── models/                       # ORM models (6 tables)
+        ├── schemas/                      # Pydantic schemas
+        ├── api/
+        │   ├── engagements.py            # Core CRUD + orchestration endpoints
+        │   ├── health.py                 # /health, /health/ready, /health/llm
+        │   ├── leads.py                  # Demo request / book-a-demo capture
+        │   └── auth_deps.py              # JWT verification, get_current_user
+        ├── websocket/                    # Real-time agent event broadcasting
+        ├── agents/
+        │   ├── base.py                   # BaseAgent + step execution + checkpointing
+        │   ├── orchestrator.py           # Research → Analysis → Delivery pipeline
+        │   ├── research.py               # Data extraction (15 sources, demo + live)
+        │   ├── analysis.py               # Cross-referencing & variance detection
+        │   └── delivery.py               # Report generation & distribution
+        ├── llm/
+        │   ├── client.py                 # Claude → Gemini → Groq fallback chain
+        │   ├── prompts.py                # All prompt templates
+        │   └── exceptions.py
+        ├── integrations/
+        │   ├── demo/                     # 16 JSON fixture files (Acme Analytics Corp)
+        │   ├── live/                     # Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase
+        │   ├── browser/                  # TinyFish connector base + 10 goal builders
+        │   └── distribution/             # Slack, Email, Google Drive, SharePoint
+        └── auth/
+            ├── vault.py                  # AES-256-GCM credential encryption
+            └── manager.py                # Auth dispatch (OAuth, API key, TinyFish)
 ```
 
 ---
@@ -201,113 +250,146 @@ keen/
 
 All three agents extend `BaseAgent`, which provides:
 
-- **Step-based execution** — each agent defines an ordered list of named steps via `define_steps()`. Steps are executed sequentially by the base `run()` loop.
-- **Checkpointing** — state is persisted to Redis (fast, 24h TTL) and PostgreSQL (durable) every 90 seconds. On resume, the agent picks up from the next uncompleted step.
-- **Pause & resume** — `stop()` signals the agent to checkpoint and halt after the current step. The orchestrator respects pause signals across the full pipeline.
-- **Structured findings** — steps can emit `Finding` records (with type, severity, source system, and a `requires_human_review` flag) that are persisted to the DB and streamed via WebSocket.
-- **Real-time progress** — every step transition and status change emits an event via the `on_progress` callback, which the WebSocket layer broadcasts to connected clients.
+- **Step-based execution** — each agent defines an ordered list of named steps. Steps execute sequentially and emit structured findings.
+- **Checkpointing** — state persisted to Redis (fast, 24h TTL) and PostgreSQL (durable) every 90 seconds. Resume picks up from the next uncompleted step.
+- **Pause & resume** — `stop()` signals the agent to checkpoint after the current step. The orchestrator propagates the signal across the pipeline.
+- **Structured findings** — steps emit `Finding` records (type, severity, source, `requires_human_review` flag) persisted to DB and streamed via WebSocket.
+- **Real-time progress** — every step transition emits an event via the `on_progress` callback, broadcast to connected clients over WebSocket.
+
+---
+
+## 🔐 Authentication & Security
+
+### User Auth (Supabase)
+
+- Sign up / sign in via Supabase JS SDK
+- Backend verifies JWT using JWKS endpoint (`/auth/v1/.well-known/jwks.json`), ES256 keys
+- `get_current_user` FastAPI dependency — 401 on missing/invalid token
+- Per-user data isolation: engagements stamped with `user_id`, filtered on every list query
+
+### Credential Vault
+
+- API keys and OAuth tokens encrypted with AES-256-GCM before storage
+- Encryption key loaded from `CREDENTIAL_ENCRYPTION_KEY` env var (stable across deploys)
+- Per-engagement scope — credentials never cross engagement or user boundaries
+
+### Data Privacy
+
+- No training on customer data
+- Full audit trail per engagement (timestamp, source, agent step per data point)
+- PII compliance sweep run by Delivery Agent before any distribution
 
 ---
 
 ## 🤖 LLM Integration
 
-KEEN uses a **multi-provider LLM client** with automatic failover. Claude (Anthropic) is the primary model; Gemini (Google) activates automatically if Claude is unavailable for any reason — rate limits, quota exhaustion, API key expiry, or service outage.
+Multi-provider fallback chain — the pipeline never breaks if one provider is unavailable:
 
 ```
-Request → Claude (primary) → Gemini (fallback) → hardcoded stub
+Request → Claude (primary) → Gemini (fallback) → Groq (fallback) → deterministic stub
 ```
-
-Configure whichever keys you have — both is recommended, one is sufficient:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...   # Claude (primary)
-GEMINI_API_KEY=AIza...          # Gemini (fallback)
-```
-
-### LLM-powered steps
 
 | Agent | Step | LLM Role |
 |---|---|---|
-| Research | `plan_extraction` | Prioritise and sequence data sources based on engagement context |
-| Analysis | `cross_reference_sources` | Match entities and surface discrepancies across CRM, ERP, and market data |
-| Analysis | `score_findings` | Assign reliability and impact scores to each finding |
-| Delivery | `generate_executive_summary` | Synthesise findings into a one-page board narrative |
-| Delivery | `generate_detailed_report` | Produce the full 9-section due diligence report (batched, checkpoint-safe) |
-
-All LLM steps include **idempotency checks** (safe to retry/resume) and **graceful fallbacks** — the pipeline never breaks if LLM is unavailable; it returns placeholder output and flags for human review.
+| Research | `plan_extraction` | Prioritise data sources for this engagement |
+| Analysis | `cross_reference_sources` | Match entities, surface discrepancies |
+| Analysis | `score_findings` | Assign reliability and impact scores |
+| Delivery | `generate_executive_summary` | Board-ready one-page narrative |
+| Delivery | `generate_detailed_report` | Full 9-section DD report (batched, checkpointed) |
 
 ---
 
 ## 🧪 Demo Mode vs Live Mode
 
-The navbar includes a **DEMO / LIVE toggle** so you can test the full pipeline end-to-end without real client credentials.
-
 | | Demo Mode | Live Mode |
 |---|---|---|
-| **Toggle appearance** | Amber flask pill | Green pulsing radio pill |
-| **Data source** | JSON fixture files (`integrations/demo/`) | Live enterprise connectors |
-| **Credentials required** | None | OAuth / API keys per source |
-| **Persistence** | `localStorage` | `localStorage` |
-| **Pipeline behaviour** | `config.demo_mode: true` injected into engagement | `config.demo_mode: false` |
-
-### Demo dataset — Acme Analytics Corp
-
-The demo fixtures represent a fictional **$24.2M ARR B2B SaaS platform**. Intentional discrepancies are baked in to exercise the full analysis pipeline:
-
-| Discrepancy | Sources | Gap |
-|---|---|---|
-| Revenue gap | Salesforce vs NetSuite | ~$1.3M |
-| Funnel leakage | HubSpot MQLs vs Salesforce opps | 7% vs 15–20% benchmark |
-| R&D cost mismatch | SAP vs Oracle GL | ~$400K |
-| Funding discrepancy | Crunchbase vs SEC proxy | $500K |
-| Headcount mismatch | ZoomInfo / SAP / LinkedIn | 11–25 person gap |
-| SMB churn | Dynamics | 18.4% |
-| Overdue AR | Oracle | 2 accounts 120+ days |
-| Key person risk | Sales Navigator | VP Engineering departed Feb 2026 |
+| Toggle | Amber flask pill `DEMO` | Green pulsing pill `LIVE` |
+| Data | JSON fixture files (Acme Analytics Corp) | Live enterprise connectors |
+| Credentials required | None | OAuth / API keys per source |
+| Pipeline config | `demo_mode: true` | `demo_mode: false` |
+| TinyFish calls | Fixture data returned | Real browser automation |
 
 ---
 
-## 🌐 Enterprise Integrations
+## 🌐 API Reference
 
-KEEN connects to 15+ enterprise systems for live data extraction:
-
-| System | Category | Auth | Data Extracted |
+| Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| Salesforce | CRM | OAuth | Pipeline, deal history, contacts |
-| Microsoft Dynamics | CRM | OAuth | Sales pipeline, revenue forecast |
-| NetSuite | ERP | Token | Revenue, expenses, journal entries |
-| SAP | ERP | SSO | Financial statements, cost centers |
-| Oracle | ERP | Username/Password | GL entries, AR/AP aging |
-| QuickBooks | Accounting | OAuth | P&L, balance sheet, cash flow |
-| HubSpot | Marketing | API Key | Funnel metrics, campaign ROI |
-| Marketo | Marketing | API Key | Lead scoring, attribution |
-| Bloomberg | Market Data | Browser (TinyFish) | Comps, benchmarks |
-| Capital IQ | Market Data | Browser (TinyFish) | Credit analysis, ownership |
-| PitchBook | Market Data | Browser (TinyFish) | Deal comps, valuations |
-| SEC EDGAR | Regulatory | Public | 10-K/Q filings, insider transactions |
-| LinkedIn Sales Nav | Intelligence | Browser (TinyFish) | Org chart, hiring trends |
-| ZoomInfo | Intelligence | API Key | Employee trends, tech stack |
-| Crunchbase | Intelligence | API Key | Funding history, acquisitions |
-
-Sources without APIs are accessed via **TinyFish browser automation**, which handles authenticated UI sessions the same way a human analyst would.
+| `GET` | `/api/v1/health` | None | Service health |
+| `GET` | `/api/v1/health/ready` | None | DB + Redis readiness |
+| `GET` | `/api/v1/health/llm` | None | LLM provider status |
+| `POST` | `/api/v1/leads` | None | Book-a-demo form capture |
+| `POST` | `/api/v1/engagements` | JWT | Create engagement |
+| `GET` | `/api/v1/engagements` | JWT | List user's engagements |
+| `GET` | `/api/v1/engagements/{id}` | JWT | Get engagement + agent runs |
+| `DELETE` | `/api/v1/engagements/{id}` | JWT | Delete engagement |
+| `POST` | `/api/v1/engagements/{id}/start` | JWT | Start orchestration |
+| `POST` | `/api/v1/engagements/{id}/pause` | JWT | Pause + checkpoint |
+| `POST` | `/api/v1/engagements/{id}/resume` | JWT | Resume from checkpoint |
+| `GET` | `/api/v1/engagements/{id}/findings` | JWT | Get all findings |
+| `GET` | `/api/v1/engagements/{id}/export/pdf` | JWT | Download PDF report |
+| `GET` | `/api/v1/engagements/{id}/export/excel` | JWT | Download Excel workbook |
+| `GET` | `/api/v1/engagements/{id}/export/sheets` | JWT | Push to Google Sheets |
+| `GET` | `/api/v1/engagements/{id}/export/drive` | JWT | Upload to Google Drive |
+| `WS` | `/ws/agent-status` | None | Real-time agent events |
 
 ---
 
-## 🚀 Getting Started
+## ⚙️ Environment Variables
+
+### Required (backend)
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (`postgresql+asyncpg://...`) |
+| `REDIS_URL` | Redis connection string |
+| `SECRET_KEY` | App secret key |
+| `CREDENTIAL_ENCRYPTION_KEY` | 32-byte base64 AES-256 key for credential vault |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anonymous (public) key |
+| `CORS_ORIGINS` | Comma-separated allowed origins |
+
+### LLM Keys (at least one required)
+
+| Variable | Provider | Role |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Claude | Primary LLM |
+| `GEMINI_API_KEY` | Gemini | First fallback |
+| `OPENAI_API_KEY` | GPT-4 | Second fallback |
+| `GROQ_API_KEY` | Groq | Third fallback |
+
+### Integration Keys (optional — only needed for live mode)
+
+| Variable | Used For |
+|---|---|
+| `TINYFISH_API_KEY` | Browser automation (Bloomberg, CapIQ, PitchBook, SAP, Oracle, Dynamics, Sales Navigator, ZoomInfo, QuickBooks, Marketo) |
+
+### Required (frontend)
+
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Backend base URL (e.g. `https://keen-backend.fly.dev`) |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
+
+---
+
+## 🛠️ Local Development
 
 ### Prerequisites
 
-- **Node.js** ≥ 18, **npm** ≥ 9
-- **Python** ≥ 3.11
-- **Redis** (for agent checkpointing)
-- **Supabase** project (managed PostgreSQL)
+- Node.js ≥ 18, npm ≥ 9
+- Python ≥ 3.11
+- Redis
+- Supabase project (free tier works)
 
 ### Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev          # → http://localhost:5173
+cp .env.example .env.local    # add VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+npm run dev                    # → http://localhost:5173
 ```
 
 ### Backend
@@ -321,14 +403,21 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 cp .env.example .env
-# Fill in Supabase URL, keys, Redis URL, encryption key, and at least one LLM key
+# Fill in: DATABASE_URL, REDIS_URL, SECRET_KEY, CREDENTIAL_ENCRYPTION_KEY,
+#          SUPABASE_URL, SUPABASE_ANON_KEY, at least one LLM key
 
 alembic upgrade head
 
 uvicorn app.main:app --reload --port 8000
 ```
 
-The Vite dev server automatically proxies `/api/*` and `/ws/*` to the backend at `localhost:8000`.
+Vite proxies `/api/*` and `/ws/*` to `localhost:8000` automatically.
+
+### Generate a CREDENTIAL_ENCRYPTION_KEY
+
+```bash
+python3 -c "import base64, os; print(base64.b64encode(os.urandom(32)).decode())"
+```
 
 ### Other Commands
 
@@ -338,76 +427,38 @@ npm run build        # Production build
 npm run lint         # ESLint
 
 # Backend
-pytest tests/ -v     # Run test suite (20 tests, ~0.5s)
-ruff check app/      # Lint Python code
+pytest tests/ -v     # 20 tests, ~0.5s
+ruff check app/      # Python lint
 ```
-
----
-
-## 🔌 API Reference
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/health` | Service health check |
-| `GET` | `/api/v1/health/ready` | Readiness check (DB + Redis) |
-| `POST` | `/api/v1/leads` | Submit "Request Access" form |
-| `POST` | `/api/v1/engagements` | Create new engagement |
-| `GET` | `/api/v1/engagements/{id}` | Get engagement with agent runs |
-| `POST` | `/api/v1/engagements/{id}/start` | Start agent orchestration |
-| `POST` | `/api/v1/engagements/{id}/pause` | Pause & checkpoint agents |
-| `POST` | `/api/v1/engagements/{id}/resume` | Resume from checkpoint |
-| `GET` | `/api/v1/engagements/{id}/findings` | Get all findings |
-| `GET` | `/api/v1/agents/{run_id}` | Get agent run status |
-| `WS` | `/ws/agent-status` | Real-time agent events |
-
----
-
-## ⚙️ Environment Variables
-
-| Variable | Description |
-|---|---|
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
-| `DATABASE_URL` | PostgreSQL connection string (`postgresql+asyncpg://...`) |
-| `REDIS_URL` | Redis connection string |
-| `SECRET_KEY` | JWT signing key |
-| `CREDENTIAL_ENCRYPTION_KEY` | 32-byte base64 key for AES-256-GCM vault |
-| `ANTHROPIC_API_KEY` | Claude API key — primary LLM provider |
-| `GEMINI_API_KEY` | Gemini API key — automatic fallback LLM provider |
-| `TINYFISH_API_KEY` | TinyFish browser automation key (for UI-only sources) |
-
----
-
-## 🧪 Testing
-
-```bash
-cd backend
-source .venv/bin/activate
-pytest tests/ -v
-```
-
-20 tests covering health checks, lead capture, engagement lifecycle, and agent orchestration — all running against in-memory SQLite in ~0.5s.
-
----
-
-## 🎨 Theming
-
-KEEN supports **dark** and **light** themes via the sun/moon toggle in the nav bar. Themes use CSS custom properties in `frontend/src/index.css`, managed through React context in `ThemeContext.tsx`.
 
 ---
 
 ## 📦 Deployment
+
+### Frontend → Vercel
 
 ```bash
 cd frontend
 npm run build        # → frontend/dist/
 ```
 
-Deploy the frontend to any static host (Vercel, Netlify, Cloudflare Pages). The backend runs as a standalone FastAPI service alongside Redis and a Supabase-connected PostgreSQL instance.
+Connect the repo to Vercel. Set `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in Vercel environment variables.
+
+### Backend → Fly.io
+
+```bash
+cd backend
+flyctl deploy --strategy rolling
+```
+
+Set all backend secrets via:
+
+```bash
+flyctl secrets set ANTHROPIC_API_KEY=sk-ant-... TINYFISH_API_KEY=sk-tinyfish-... ...
+```
 
 ---
 
 ## 📋 License
 
-© 2026 KEEN — Backed by TinyFish Accelerator
+© 2026 KEEN — Backed by [TinyFish Accelerator](https://www.tinyfish.ai/accelerator)
