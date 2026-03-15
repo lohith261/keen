@@ -12,6 +12,8 @@ import {
   GitBranch,
   ChevronDown,
   LayoutDashboard,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import WebGLBackground from './components/WebGLBackground';
 import ScrollReveal from './components/ScrollReveal';
@@ -29,7 +31,7 @@ import RequestAccessModal from './components/RequestAccessModal';
 import { useTheme } from './context/ThemeContext';
 import { useView } from './context/ViewContext';
 import { useAuth } from './context/AuthContext';
-import AuthPage from './components/auth/AuthPage';
+import AuthModal from './components/auth/AuthModal';
 import { useScrollProgress, useMousePosition } from './hooks/useScrollProgress';
 import { useSystemHealth } from './hooks/useSystemHealth';
 
@@ -128,9 +130,23 @@ function App() {
   const [requestAccessOpen, setRequestAccessOpen] = useState(false);
   const { status: systemStatus, checks, loading: healthLoading, lastChecked, recheck } = useSystemHealth();
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
   const { theme } = useTheme();
   const { view, setView } = useView();
-  const { user, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
+
+  const openDashboard = () => {
+    if (user) {
+      setView('dashboard');
+    } else {
+      setAuthModalTab('signin');
+      setAuthModalOpen(true);
+    }
+  };
+
+  const openSignIn = () => { setAuthModalTab('signin'); setAuthModalOpen(true); };
+  const openSignUp = () => { setAuthModalTab('signup'); setAuthModalOpen(true); };
 
   const scrollProgress = useScrollProgress();
   const mouse = useMousePosition();
@@ -141,6 +157,15 @@ function App() {
       setIsVisible(true);
     });
   }, []);
+
+  // Guard: if view flips to dashboard but no user (e.g. session expired), fall back gracefully
+  useEffect(() => {
+    if (view === 'dashboard' && !authLoading && !user) {
+      setView('landing');
+      setAuthModalTab('signin');
+      setAuthModalOpen(true);
+    }
+  }, [view, user, authLoading, setView]);
 
   useEffect(() => {
     const updateTimestamp = () => {
@@ -166,8 +191,8 @@ function App() {
     };
   }, []);
 
-  // Wait for auth to resolve before showing anything
-  if (authLoading) {
+  // If the user tries to go to dashboard while auth is loading, wait
+  if (view === 'dashboard' && authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-bg">
         <div className="w-1.5 h-1.5 rounded-full bg-theme-text-muted animate-pulse" />
@@ -175,12 +200,7 @@ function App() {
     );
   }
 
-  // Not signed in — show auth page
-  if (!user) {
-    return <AuthPage />;
-  }
-
-  if (view === 'dashboard') {
+  if (view === 'dashboard' && user) {
     return <Dashboard />;
   }
 
@@ -294,7 +314,7 @@ function App() {
               </div>
               <DemoModeToggle />
               <button
-                onClick={() => setView('dashboard')}
+                onClick={openDashboard}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px]
                            font-mono font-semibold backdrop-blur-sm transition-all duration-300 tracking-wider
                            border-theme-border bg-theme-border/30 text-theme-text-muted
@@ -304,6 +324,50 @@ function App() {
                 <LayoutDashboard className="w-3 h-3 flex-shrink-0" />
                 <span className="hidden sm:inline">DASHBOARD</span>
               </button>
+
+              {/* Auth controls */}
+              {!authLoading && (
+                user ? (
+                  <div className="flex items-center gap-2">
+                    <span className="hidden md:block text-[10px] font-mono text-theme-text-muted max-w-[120px] truncate">
+                      {user.email}
+                    </span>
+                    <button
+                      onClick={() => signOut()}
+                      title="Sign out"
+                      className="flex items-center gap-1 px-2 py-1 rounded-full border text-[10px]
+                                 font-mono font-semibold transition-all duration-200
+                                 border-theme-border text-theme-text-muted
+                                 hover:border-red-500/50 hover:text-red-400"
+                    >
+                      <LogOut className="w-3 h-3" />
+                      <span className="hidden sm:inline">OUT</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={openSignIn}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px]
+                                 font-mono font-semibold transition-all duration-200
+                                 border-theme-border bg-transparent text-theme-text-muted
+                                 hover:border-theme-text/40 hover:text-theme-text"
+                    >
+                      <LogIn className="w-3 h-3" />
+                      <span>SIGN IN</span>
+                    </button>
+                    <button
+                      onClick={openSignUp}
+                      className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px]
+                                 font-mono font-semibold transition-all duration-200
+                                 bg-orange-600 hover:bg-orange-500 text-white border border-orange-600"
+                    >
+                      <span>SIGN UP</span>
+                    </button>
+                  </div>
+                )
+              )}
+
               <ThemeToggle />
             </div>
           </div>
@@ -737,6 +801,18 @@ function App() {
       {/* Request Access Modal */}
       {requestAccessOpen && (
         <RequestAccessModal onClose={() => setRequestAccessOpen(false)} />
+      )}
+
+      {/* Auth Modal */}
+      {authModalOpen && (
+        <AuthModal
+          initialTab={authModalTab}
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={() => {
+            setAuthModalOpen(false);
+            setView('dashboard');
+          }}
+        />
       )}
     </div>
   );
