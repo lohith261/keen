@@ -229,7 +229,7 @@ function App() {
   const { theme } = useTheme();
   const { view, setView } = useView();
   const { user, signOut, loading: authLoading } = useAuth();
-  const { setMode } = useDemoMode();
+  const { setMode, isDemoMode } = useDemoMode();
 
   const tryDemo = () => {
     setMode('demo');
@@ -257,12 +257,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (view === 'dashboard' && !authLoading && !user) {
+    if (view === 'dashboard' && !authLoading && !user && !isDemoMode) {
       setView('landing');
       setAuthModalTab('signin');
       setAuthModalOpen(true);
     }
-  }, [view, user, authLoading, setView]);
+  }, [view, user, authLoading, isDemoMode, setView]);
 
   useEffect(() => {
     const updateTimestamp = () => {
@@ -281,7 +281,7 @@ function App() {
     };
   }, []);
 
-  if (view === 'dashboard' && authLoading) {
+  if (view === 'dashboard' && authLoading && !isDemoMode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-bg">
         <div className="w-1.5 h-1.5 rounded-full bg-theme-text-muted animate-pulse" />
@@ -289,7 +289,7 @@ function App() {
     );
   }
 
-  if (view === 'dashboard' && user) {
+  if (view === 'dashboard' && (user || isDemoMode)) {
     return <Dashboard />;
   }
 
