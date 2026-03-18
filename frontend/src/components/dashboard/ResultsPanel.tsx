@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import {
   AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
   Loader2, RefreshCw, Eye, EyeOff, FileText, TrendingUp, Download,
-  FileSpreadsheet, HardDrive,
+  FileSpreadsheet, HardDrive, LayoutList, ClipboardList,
 } from 'lucide-react';
 import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
@@ -239,12 +239,168 @@ function SeverityGroup({
   );
 }
 
+// ─── Deal Brief ────────────────────────────────────────────────────────────────
+function DealBrief({
+  engagement,
+  findings,
+}: {
+  engagement: Engagement;
+  findings: Finding[];
+}) {
+  const execSummary = findings.find((f) => f.finding_type === 'executive_summary');
+  const regular = findings.filter((f) => f.finding_type !== 'executive_summary');
+  const criticals = regular.filter((f) => f.severity === 'critical');
+  const warnings  = regular.filter((f) => f.severity === 'warning');
+  const infos     = regular.filter((f) => f.severity === 'info');
+
+  const data = (execSummary?.data ?? {}) as Record<string, unknown>;
+  const rec = (data.recommendation as string) ?? '';
+  const rationale = (data.rationale as string) ?? execSummary?.description ?? '';
+  const keyFindings = (data.key_findings as string[]) ?? [];
+  const recCfg = REC_CONFIG[rec] ?? REC_CONFIG['proceed_with_caution'];
+
+  const topCriticals = criticals.slice(0, 5);
+  const topWarnings  = warnings.slice(0, 3);
+
+  return (
+    <div className="space-y-4 print:text-black">
+      {/* Header */}
+      <div className="border border-theme-border rounded-xl px-5 py-4 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-widest mb-1">Deal Brief</p>
+          <h2 className="text-base font-bold leading-tight">{engagement.company_name}</h2>
+          {engagement.pe_firm && (
+            <p className="text-[11px] font-mono text-theme-text-muted mt-0.5">{engagement.pe_firm}</p>
+          )}
+          {engagement.deal_size && (
+            <p className="text-[11px] font-mono text-theme-text-muted">{engagement.deal_size}</p>
+          )}
+          <p className="text-[10px] font-mono text-theme-text-muted/60 mt-1">
+            {engagement.completed_at
+              ? `Analysis completed ${new Date(engagement.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+              : 'KEEN Due Diligence Platform'}
+            {' · '}{regular.length} findings
+          </p>
+        </div>
+        {execSummary && (
+          <div className={`flex-shrink-0 px-3 py-2 rounded-lg border text-center ${recCfg.bg} ${recCfg.border}`}>
+            <p className="text-[9px] font-mono text-theme-text-muted mb-1">RECOMMENDATION</p>
+            <p className={`text-xs font-bold ${recCfg.color}`}>{recCfg.label}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Severity summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="border border-red-500/30 bg-red-500/8 rounded-xl px-4 py-3 text-center">
+          <p className="text-2xl font-bold text-red-400">{criticals.length}</p>
+          <p className="text-[10px] font-mono text-red-400/70 mt-0.5">CRITICAL</p>
+        </div>
+        <div className="border border-amber-500/30 bg-amber-500/8 rounded-xl px-4 py-3 text-center">
+          <p className="text-2xl font-bold text-amber-400">{warnings.length}</p>
+          <p className="text-[10px] font-mono text-amber-400/70 mt-0.5">WARNING</p>
+        </div>
+        <div className="border border-blue-500/30 bg-blue-500/8 rounded-xl px-4 py-3 text-center">
+          <p className="text-2xl font-bold text-blue-400">{infos.length}</p>
+          <p className="text-[10px] font-mono text-blue-400/70 mt-0.5">INFO</p>
+        </div>
+      </div>
+
+      {/* Rationale */}
+      {rationale && (
+        <div className="border border-theme-border rounded-xl px-5 py-4 space-y-2">
+          <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider">Executive Rationale</p>
+          <Prose>{rationale}</Prose>
+        </div>
+      )}
+
+      {/* Key findings from exec summary */}
+      {keyFindings.length > 0 && (
+        <div className="border border-theme-border rounded-xl px-5 py-4 space-y-2">
+          <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider mb-2">Key Findings</p>
+          <ul className="space-y-1.5">
+            {keyFindings.map((f, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <TrendingUp className="w-3 h-3 text-theme-text-muted flex-shrink-0 mt-0.5" />
+                <span className="text-[11px] text-theme-text leading-relaxed">{f}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Top criticals */}
+      {topCriticals.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider px-1">
+            Critical Issues ({criticals.length})
+          </p>
+          {topCriticals.map((f) => (
+            <div key={f.id} className="border border-red-500/30 bg-red-500/8 rounded-xl px-4 py-3 flex items-start gap-3">
+              <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-theme-text leading-snug">{f.title}</p>
+                {f.source_system && (
+                  <p className="text-[10px] font-mono text-theme-text-muted mt-0.5">
+                    {f.source_system.replace(/_/g, ' → ').toUpperCase()}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+          {criticals.length > 5 && (
+            <p className="text-[10px] font-mono text-theme-text-muted/60 px-1">
+              +{criticals.length - 5} more critical issues — see full findings
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Top warnings */}
+      {topWarnings.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider px-1">
+            Key Warnings ({warnings.length})
+          </p>
+          {topWarnings.map((f) => (
+            <div key={f.id} className="border border-amber-500/30 bg-amber-500/8 rounded-xl px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-theme-text leading-snug">{f.title}</p>
+                {f.source_system && (
+                  <p className="text-[10px] font-mono text-theme-text-muted mt-0.5">
+                    {f.source_system.replace(/_/g, ' → ').toUpperCase()}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+          {warnings.length > 3 && (
+            <p className="text-[10px] font-mono text-theme-text-muted/60 px-1">
+              +{warnings.length - 3} more warnings — see full findings
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Footer note */}
+      <div className="border border-dashed border-theme-border rounded-xl px-4 py-3">
+        <p className="text-[10px] font-mono text-theme-text-muted/60 text-center">
+          Generated by KEEN · AI-assisted due diligence · For internal use only
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Results Panel ────────────────────────────────────────────────────────
 export default function ResultsPanel({ engagement }: Props) {
   const { addToast } = useToast();
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showReviewOnly, setShowReviewOnly] = useState(false);
+  const [briefView, setBriefView] = useState(false);
   const [sheetsLoading, setSheetsLoading] = useState(false);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
   const [driveLoading, setDriveLoading] = useState(false);
@@ -406,18 +562,43 @@ export default function ResultsPanel({ engagement }: Props) {
         </div>
 
         {/* Filter + refresh + export row */}
-        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-theme-border">
-          <button
-            onClick={() => setShowReviewOnly((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono rounded-lg border transition-colors ${
-              showReviewOnly
-                ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
-                : 'border-theme-border text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30'
-            }`}
-          >
-            {showReviewOnly ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-            NEEDS REVIEW ({reviewCount})
-          </button>
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-theme-border flex-wrap">
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border border-theme-border overflow-hidden text-[10px] font-mono flex-shrink-0">
+            <button
+              onClick={() => setBriefView(false)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                !briefView
+                  ? 'bg-theme-border/50 text-theme-text'
+                  : 'text-theme-text-muted hover:text-theme-text hover:bg-theme-border/20'
+              }`}
+            >
+              <LayoutList className="w-3 h-3" /> FINDINGS
+            </button>
+            <button
+              onClick={() => setBriefView(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 border-l border-theme-border transition-colors ${
+                briefView
+                  ? 'bg-theme-border/50 text-theme-text'
+                  : 'text-theme-text-muted hover:text-theme-text hover:bg-theme-border/20'
+              }`}
+            >
+              <ClipboardList className="w-3 h-3" /> BRIEF
+            </button>
+          </div>
+          {!briefView && (
+            <button
+              onClick={() => setShowReviewOnly((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono rounded-lg border transition-colors ${
+                showReviewOnly
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                  : 'border-theme-border text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30'
+              }`}
+            >
+              {showReviewOnly ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+              NEEDS REVIEW ({reviewCount})
+            </button>
+          )}
           <button
             onClick={fetchFindings}
             className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border border-theme-border rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30 transition-colors"
@@ -480,25 +661,31 @@ export default function ResultsPanel({ engagement }: Props) {
         </div>
       </div>
 
-      {/* Executive Summary — pinned at top if present */}
-      {execSummaryFinding && (
-        <ExecutiveSummaryCard finding={execSummaryFinding} />
-      )}
-
-      {regularFindings.length === 0 ? (
-        <div className="border border-dashed border-theme-border rounded-xl py-16 text-center space-y-2">
-          <Info className="w-8 h-8 text-theme-text-muted mx-auto" />
-          <p className="text-sm font-semibold">No findings recorded</p>
-          <p className="text-xs text-theme-text-muted font-mono">
-            The pipeline completed but produced no findings
-          </p>
-        </div>
+      {briefView ? (
+        <DealBrief engagement={engagement} findings={findings} />
       ) : (
-        <div className="space-y-3">
-          <SeverityGroup severity="critical" findings={criticals} defaultOpen />
-          <SeverityGroup severity="warning"  findings={warnings}  defaultOpen />
-          <SeverityGroup severity="info"     findings={infos} />
-        </div>
+        <>
+          {/* Executive Summary — pinned at top if present */}
+          {execSummaryFinding && (
+            <ExecutiveSummaryCard finding={execSummaryFinding} />
+          )}
+
+          {regularFindings.length === 0 ? (
+            <div className="border border-dashed border-theme-border rounded-xl py-16 text-center space-y-2">
+              <Info className="w-8 h-8 text-theme-text-muted mx-auto" />
+              <p className="text-sm font-semibold">No findings recorded</p>
+              <p className="text-xs text-theme-text-muted font-mono">
+                The pipeline completed but produced no findings
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <SeverityGroup severity="critical" findings={criticals} defaultOpen />
+              <SeverityGroup severity="warning"  findings={warnings}  defaultOpen />
+              <SeverityGroup severity="info"     findings={infos} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

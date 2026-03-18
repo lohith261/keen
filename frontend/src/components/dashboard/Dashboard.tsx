@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, FlaskConical, Radio, Search, Trash2,
-  Activity, TrendingUp, BarChart2, LogOut, FileText,
+  Activity, TrendingUp, BarChart2, LogOut, FileText, Filter,
 } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
@@ -91,6 +91,8 @@ export default function Dashboard() {
   const [dashView, setDashView] = useState<DashView>('list');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const autoStarted = useRef(false);
 
   useEffect(() => {
@@ -305,6 +307,40 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Search + status filter */}
+              {!loading && engagements.length > 0 && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative flex-1 min-w-48">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-theme-text-muted pointer-events-none" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search engagements…"
+                      className="w-full pl-8 pr-3 py-2 bg-transparent border border-theme-border rounded-lg
+                                 text-xs font-mono placeholder:text-theme-text-muted/50
+                                 focus:outline-none focus:border-theme-text-muted transition-colors"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Filter className="w-3.5 h-3.5 text-theme-text-muted mr-1" />
+                    {(['all', 'running', 'completed', 'draft', 'failed'] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className={`px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                          statusFilter === s
+                            ? 'bg-theme-text text-theme-bg font-semibold'
+                            : 'text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30'
+                        }`}
+                      >
+                        {s.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Skeleton while loading */}
               {loading && (
                 <div className="space-y-2">
@@ -336,7 +372,14 @@ export default function Dashboard() {
               {/* Engagement list */}
               {!loading && engagements.length > 0 && (
                 <div className="space-y-2">
-                  {engagements.map((e) => {
+                  {engagements
+                    .filter((e) => {
+                      const matchSearch = !search || e.company_name.toLowerCase().includes(search.toLowerCase()) ||
+                        (e.pe_firm ?? '').toLowerCase().includes(search.toLowerCase());
+                      const matchStatus = statusFilter === 'all' || e.status === statusFilter;
+                      return matchSearch && matchStatus;
+                    })
+                    .map((e) => {
                     const cfg = STATUS_CONFIG[e.status] ?? STATUS_CONFIG.draft;
                     const isDemo = e.config?.demo_mode as boolean | undefined;
                     const isConfirming = confirmDeleteId === e.id;
