@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Search, BarChart3, FileText, CheckCircle2, Clock, XCircle,
-  AlertTriangle, Info, Loader2, PauseCircle, Terminal, KeyRound,
+  AlertTriangle, Info, Loader2, PauseCircle, Terminal, KeyRound, RotateCcw,
 } from 'lucide-react';
 import { connectAgentStatus, engagementsApi, type Engagement } from '../../lib/apiClient';
 import CredentialsModal from './CredentialsModal';
@@ -300,6 +300,23 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
   const handleResume = async () => {
     try { await engagementsApi.resume(engagement.id); setOverallStatus('running'); } catch {}
   };
+  const [restarting, setRestarting] = useState(false);
+  const handleRestart = async () => {
+    setRestarting(true);
+    try {
+      const fresh = await engagementsApi.restart(engagement.id);
+      onEngagementUpdate(fresh);
+      setOverallStatus('running');
+      setFindings([]);
+      setGlobalLog(STARTUP_LOG.map((e) => ({ ...e, timestamp: now() })));
+      setAgents({
+        research: { status: 'queued', progress_pct: 0, current_step_name: '', activity: '', step_log: [] },
+        analysis: { status: 'queued', progress_pct: 0, current_step_name: '', activity: '', step_log: [] },
+        delivery: { status: 'queued', progress_pct: 0, current_step_name: '', activity: '', step_log: [] },
+      });
+    } catch { /* silent */ }
+    setRestarting(false);
+  };
 
   const [showCredentials, setShowCredentials] = useState(false);
 
@@ -365,6 +382,20 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
               className="px-3 py-1.5 text-[10px] font-mono border border-green-500/40 text-green-400
                          rounded-lg hover:bg-green-500/10 transition-colors">
               RESUME
+            </button>
+          )}
+          {(isDone || isFailed) && (
+            <button
+              onClick={handleRestart}
+              disabled={restarting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono
+                         border border-blue-500/40 text-blue-400 rounded-lg
+                         hover:bg-blue-500/10 transition-colors disabled:opacity-50"
+            >
+              {restarting
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <RotateCcw className="w-3 h-3" />}
+              {restarting ? 'RESTARTING…' : 'RE-RUN'}
             </button>
           )}
         </div>

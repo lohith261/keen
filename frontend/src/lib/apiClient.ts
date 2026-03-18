@@ -213,6 +213,9 @@ export const engagementsApi = {
   resume: (id: string) =>
     request<Engagement>(`/engagements/${id}/resume`, { method: 'POST' }),
 
+  restart: (id: string) =>
+    request<Engagement>(`/engagements/${id}/restart`, { method: 'POST' }),
+
   delete: (id: string) =>
     request<void>(`/engagements/${id}`, { method: 'DELETE' }),
 };

@@ -299,6 +299,71 @@ async def resume_engagement(
     return engagement
 
 
+@router.post("/{engagement_id}/restart", response_model=EngagementWithRuns)
+async def restart_engagement(
+    engagement_id: UUID,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+) -> Engagement:
+    """Reset a completed or failed engagement back to draft and re-run the full pipeline."""
+    result = await db.execute(
+        select(Engagement)
+        .options(selectinload(Engagement.agent_runs))
+        .where(Engagement.id == engagement_id)
+    )
+    engagement = result.scalar_one_or_none()
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.status == EngagementStatus.RUNNING:
+        raise HTTPException(status_code=400, detail="Engagement is already running")
+
+    # Delete old agent runs and findings so we start clean
+    for run in list(engagement.agent_runs):
+        await db.delete(run)
+    findings_result = await db.execute(
+        select(Finding).where(Finding.engagement_id == engagement_id)
+    )
+    for finding in findings_result.scalars().all():
+        await db.delete(finding)
+
+    # Reset engagement state
+    engagement.status = EngagementStatus.DRAFT
+    engagement.started_at = None
+    engagement.completed_at = None
+    await db.flush()
+
+    # Create fresh agent runs
+    agent_types_to_run = engagement.config.get("agents", ["research", "analysis", "delivery"])
+    for agent_type_str in agent_types_to_run:
+        try:
+            agent_type = AgentType(agent_type_str)
+        except ValueError:
+            continue
+        db.add(AgentRun(
+            engagement_id=engagement.id,
+            agent_type=agent_type,
+            status=AgentRunStatus.QUEUED,
+        ))
+
+    engagement.status = EngagementStatus.RUNNING
+    engagement.started_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    db.expire_all()
+    result = await db.execute(
+        select(Engagement)
+        .options(selectinload(Engagement.agent_runs))
+        .where(Engagement.id == engagement_id)
+    )
+    engagement = result.scalar_one_or_none()
+
+    redis = getattr(request.app.state, "redis", None)
+    background_tasks.add_task(_run_orchestrator, engagement.id, redis)
+
+    return engagement
+
+
 @router.delete("/{engagement_id}", status_code=204)
 async def delete_engagement(
     engagement_id: UUID,
