@@ -50,21 +50,26 @@ export default function DocumentsPanel({ engagementId, readOnly = false }: Props
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploadError(null);
-    const file = files[0];
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setUploadError(`File exceeds ${MAX_MB} MB limit`);
+
+    const fileArray = Array.from(files);
+    const oversized = fileArray.find((f) => f.size > MAX_MB * 1024 * 1024);
+    if (oversized) {
+      setUploadError(`"${oversized.name}" exceeds ${MAX_MB} MB limit`);
       return;
     }
+
     setUploading(true);
-    try {
-      const doc = await documentsApi.upload(engagementId, file);
-      setDocs((prev) => [doc, ...prev]);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Upload failed';
-      setUploadError(msg);
-    } finally {
-      setUploading(false);
+    const errors: string[] = [];
+    for (const file of fileArray) {
+      try {
+        const doc = await documentsApi.upload(engagementId, file);
+        setDocs((prev) => [doc, ...prev]);
+      } catch (err: unknown) {
+        errors.push(`${file.name}: ${err instanceof Error ? err.message : 'failed'}`);
+      }
     }
+    if (errors.length > 0) setUploadError(errors.join(' · '));
+    setUploading(false);
   };
 
   const handleDelete = async (docId: string) => {
@@ -115,6 +120,7 @@ export default function DocumentsPanel({ engagementId, readOnly = false }: Props
             ref={inputRef}
             type="file"
             accept={ACCEPTED}
+            multiple
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
@@ -127,7 +133,7 @@ export default function DocumentsPanel({ engagementId, readOnly = false }: Props
             <div className="flex flex-col items-center gap-2">
               <Upload className="w-6 h-6 text-theme-text-muted" />
               <p className="text-xs font-mono text-theme-text-muted">
-                Drop file here or <span className="underline">click to browse</span>
+                Drop files here or <span className="underline">click to browse</span>
               </p>
               <p className="text-[10px] font-mono text-theme-text-muted/60">
                 PDF · Excel · PowerPoint · Word · CSV · TXT · max {MAX_MB} MB

@@ -109,9 +109,10 @@ export default function Dashboard() {
     (async () => {
       try {
         const created = await engagementsApi.create({
-          company_name: 'Acme Analytics Corp',
+          company_name: 'Zendesk Inc',
+          target_company: 'Zendesk Inc',
           pe_firm: 'Summit Capital Partners',
-          deal_size: '$120M Series C',
+          deal_size: '$10.2B',
           config: { engagement_type: 'full_diligence' },
         });
         setEngagements([created]);
