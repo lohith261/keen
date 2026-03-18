@@ -37,7 +37,7 @@ interface Props {
 
 const AGENT_META = [
   { type: 'research', label: 'Research Agent', Icon: Search, color: 'blue',
-    description: 'Extracting data from 15+ enterprise sources' },
+    description: 'Extracting data from CRM, ERP, market and document sources' },
   { type: 'analysis', label: 'Analysis Agent', Icon: BarChart3, color: 'purple',
     description: 'Cross-referencing sources & scoring findings' },
   { type: 'delivery', label: 'Delivery Agent', Icon: FileText, color: 'green',

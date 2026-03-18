@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import {
   AlertTriangle, XCircle, Info, ChevronDown, ChevronRight,
   Loader2, RefreshCw, Eye, EyeOff, FileText, TrendingUp, Download,
@@ -7,6 +8,28 @@ import {
 import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
 import { useToast } from '../ui/Toast';
+
+/** Lightweight styled wrapper for inline markdown in findings. */
+function Prose({ children }: { children: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <p className="text-[11px] text-theme-text leading-relaxed mb-1 last:mb-0">{children}</p>,
+        strong: ({ children }) => <strong className="font-semibold text-theme-text">{children}</strong>,
+        em: ({ children }) => <em className="italic text-theme-text-muted">{children}</em>,
+        ul: ({ children }) => <ul className="list-disc list-inside space-y-0.5 my-1">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal list-inside space-y-0.5 my-1">{children}</ol>,
+        li: ({ children }) => <li className="text-[11px] text-theme-text leading-relaxed">{children}</li>,
+        h3: ({ children }) => <h3 className="text-[11px] font-semibold text-theme-text mt-2 mb-0.5">{children}</h3>,
+        h4: ({ children }) => <h4 className="text-[11px] font-medium text-theme-text-muted mt-1.5 mb-0.5">{children}</h4>,
+        code: ({ children }) => <code className="text-[10px] font-mono bg-theme-border/40 px-1 rounded">{children}</code>,
+        blockquote: ({ children }) => <blockquote className="border-l-2 border-theme-border pl-2 my-1 text-theme-text-muted">{children}</blockquote>,
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  );
+}
 
 const BACKEND_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -90,7 +113,7 @@ function ExecutiveSummaryCard({ finding }: { finding: Finding }) {
           {riskAssessment && (
             <div>
               <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider mb-1">Risk Assessment</p>
-              <p className="text-[11px] text-theme-text leading-relaxed">{riskAssessment}</p>
+              <Prose>{riskAssessment}</Prose>
             </div>
           )}
 
@@ -111,7 +134,7 @@ function ExecutiveSummaryCard({ finding }: { finding: Finding }) {
           {rationale && (
             <div>
               <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-wider mb-1">Recommendation Rationale</p>
-              <p className="text-[11px] text-theme-text leading-relaxed">{rationale}</p>
+              <Prose>{rationale}</Prose>
             </div>
           )}
         </div>
@@ -158,7 +181,7 @@ function FindingCard({ finding }: { finding: Finding }) {
 
       {expanded && finding.description && (
         <div className="px-4 py-3 border-t border-theme-border bg-theme-bg/40 space-y-2">
-          <p className="text-[11px] text-theme-text leading-relaxed">{finding.description}</p>
+          <Prose>{finding.description}</Prose>
           <div className="flex flex-wrap gap-2 pt-1">
             <span className={`inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full border ${cfg.badge}`}>
               <Icon className="w-2.5 h-2.5" /> {cfg.label}
