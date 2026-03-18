@@ -41,7 +41,6 @@ import ScrollProgressBar from './components/ScrollProgressBar';
 import TextReveal from './components/TextReveal';
 import MagneticElement from './components/MagneticElement';
 import ThemeToggle from './components/ThemeToggle';
-import DemoModeToggle from './components/DemoModeToggle';
 import Loader from './components/Loader';
 import RequestAccessModal from './components/RequestAccessModal';
 import { useTheme } from './context/ThemeContext';
@@ -351,8 +350,6 @@ function App() {
                   </>
                 )}
               </div>
-
-<DemoModeToggle />
 
               <button
                 onClick={openDashboard}
