@@ -3,6 +3,21 @@
 Gaps identified by critical evaluation against McKinsey/BCG/Bain DD methodology.
 These represent what separates KEEN from a true institutional-grade DD platform.
 
+## Partially Built (committed but not wired up)
+
+The following files were scaffolded and committed — models and services exist but are not yet connected to the router, migrations, or frontend:
+
+| File | Covers |
+|---|---|
+| `backend/app/models/primary_research.py` | P4-1 customer interview / channel check model |
+| `backend/app/models/external_record.py` | P5 court/patent/UCC/bank statement record model |
+| `backend/app/models/legal_finding.py` | P7-2 contract clause finding model |
+| `backend/app/models/technical_dd.py` | P8-1 GitHub repo analysis report model |
+| `backend/app/services/primary_research_service.py` | P4 theme extraction + sentiment + summary |
+| `backend/app/services/verification_service.py` | P5-7 confidence decay + source independence scoring |
+
+Next step: wire these into router.py, create migration 007, add relationships to engagement.py, build API endpoints and frontend panels.
+
 ---
 
 ## P4 — Commercial DD (Primary Research)
