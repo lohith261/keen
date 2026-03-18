@@ -405,6 +405,51 @@ export const CREDENTIAL_SPECS: SystemCredentialSpec[] = [
       },
     ],
   },
+  // ── VDR ──────────────────────────────────────────────
+  {
+    system_name: "datasite",
+    display_name: "Datasite VDR",
+    category: "VDR",
+    auth_type: "OAuth 2.0 (Client Credentials)",
+    fields: [
+      { key: "partner_id",     label: "Partner ID",     placeholder: "ds-partner-...", secret: false, required: true },
+      { key: "partner_secret", label: "Partner Secret", placeholder: "",               secret: true,  required: true },
+      { key: "project_id",     label: "Project ID",     placeholder: "proj-12345",     secret: false, required: true },
+      { key: "folder_path",    label: "Folder Path (optional)", placeholder: "/Due Diligence", secret: false, required: false },
+    ],
+  },
+  {
+    system_name: "intralinks",
+    display_name: "Intralinks VDR",
+    category: "VDR",
+    auth_type: "OAuth 2.0 (Resource Owner)",
+    fields: [
+      { key: "username",     label: "Intralinks Email",    placeholder: "user@firm.com", secret: false, required: true },
+      { key: "password",     label: "Intralinks Password", placeholder: "",              secret: true,  required: true },
+      { key: "workspace_id", label: "Workspace ID",        placeholder: "ws-12345",      secret: false, required: true },
+      { key: "folder_id",    label: "Root Folder ID (optional)", placeholder: "fld-67890", secret: false, required: false },
+    ],
+  },
+  // ── Expert Call Transcripts ───────────────────────────
+  {
+    system_name: "tegus",
+    display_name: "Tegus",
+    category: "Expert Transcripts",
+    auth_type: "API Key",
+    fields: [
+      { key: "api_key", label: "API Key", placeholder: "teg_live_...", secret: true, required: true },
+    ],
+  },
+  {
+    system_name: "third_bridge",
+    display_name: "Third Bridge",
+    category: "Expert Transcripts",
+    auth_type: "OAuth 2.0 (Client Credentials)",
+    fields: [
+      { key: "client_id",     label: "Client ID",     placeholder: "tb-client-...", secret: false, required: true },
+      { key: "client_secret", label: "Client Secret", placeholder: "",              secret: true,  required: true },
+    ],
+  },
 ];
 
 export const credentialsApi = {
@@ -456,6 +501,141 @@ export const documentsApi = {
 
   delete: (engagementId: string, documentId: string) =>
     request<void>(`/engagements/${engagementId}/documents/${documentId}`, { method: 'DELETE' }),
+};
+
+// ── Monitoring endpoints ────────────────────────────────
+
+export interface MonitoringRun {
+  id: string;
+  schedule_id: string;
+  engagement_id: string;
+  status: string;
+  deltas: Array<{
+    metric: string;
+    baseline: number;
+    current: number;
+    delta_abs: number;
+    delta_pct: number;
+    severity: 'info' | 'warning' | 'critical';
+  }> | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface MonitoringSchedule {
+  id: string;
+  engagement_id: string;
+  name: string;
+  frequency: string;
+  cron_expression: string | null;
+  enabled: boolean;
+  sources: string[] | null;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+  recent_runs: MonitoringRun[];
+}
+
+export const monitoringApi = {
+  list: (engagementId: string) =>
+    request<MonitoringSchedule[]>(`/engagements/${engagementId}/monitoring`),
+
+  get: (engagementId: string, scheduleId: string) =>
+    request<MonitoringSchedule>(`/engagements/${engagementId}/monitoring/${scheduleId}`),
+
+  create: (engagementId: string, body: {
+    name: string;
+    frequency?: string;
+    cron_expression?: string;
+    sources?: string[];
+    baseline_snapshot?: Record<string, number>;
+  }) =>
+    request<MonitoringSchedule>(`/engagements/${engagementId}/monitoring`, {
+      method: 'POST',
+      body: body as unknown as Record<string, unknown>,
+    }),
+
+  update: (engagementId: string, scheduleId: string, body: {
+    name?: string;
+    frequency?: string;
+    enabled?: boolean;
+    sources?: string[];
+  }) =>
+    request<MonitoringSchedule>(`/engagements/${engagementId}/monitoring/${scheduleId}`, {
+      method: 'PATCH',
+      body: body as unknown as Record<string, unknown>,
+    }),
+
+  delete: (engagementId: string, scheduleId: string) =>
+    request<void>(`/engagements/${engagementId}/monitoring/${scheduleId}`, { method: 'DELETE' }),
+
+  triggerRun: (engagementId: string, scheduleId: string, currentMetrics: Record<string, number> = {}) =>
+    request<MonitoringRun>(`/engagements/${engagementId}/monitoring/${scheduleId}/run`, {
+      method: 'POST',
+      body: { current_metrics: currentMetrics } as unknown as Record<string, unknown>,
+    }),
+
+  listRuns: (engagementId: string, scheduleId: string) =>
+    request<MonitoringRun[]>(`/engagements/${engagementId}/monitoring/${scheduleId}/runs`),
+};
+
+// ── Transcripts endpoints ───────────────────────────────
+
+export interface ExpertTranscript {
+  id: string;
+  engagement_id: string;
+  source: string;
+  external_id: string | null;
+  title: string;
+  expert_name: string | null;
+  expert_role: string | null;
+  call_date: string | null;
+  company_name: string | null;
+  sentiment: string | null;
+  key_themes: string[] | null;
+  extracted_insights: string | null;
+  file_size_bytes: number | null;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+}
+
+export const transcriptsApi = {
+  list: (engagementId: string) =>
+    request<ExpertTranscript[]>(`/engagements/${engagementId}/transcripts`),
+
+  upload: async (engagementId: string, file: File): Promise<ExpertTranscript> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const resp = await fetch(`${API_BASE}/engagements/${engagementId}/transcripts`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new ApiError(resp.status, err.detail || 'Upload failed');
+    }
+    return resp.json();
+  },
+
+  fetch: (engagementId: string, body: {
+    source: 'tegus' | 'third_bridge';
+    company_name: string;
+    max_transcripts?: number;
+  }) =>
+    request<ExpertTranscript[]>(`/engagements/${engagementId}/transcripts/fetch`, {
+      method: 'POST',
+      body: body as unknown as Record<string, unknown>,
+    }),
+
+  delete: (engagementId: string, transcriptId: string) =>
+    request<void>(`/engagements/${engagementId}/transcripts/${transcriptId}`, { method: 'DELETE' }),
 };
 
 // ── WebSocket ───────────────────────────────────────────

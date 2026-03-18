@@ -59,6 +59,8 @@ class Engagement(Base):
     agent_runs = relationship("AgentRun", back_populates="engagement", cascade="all, delete-orphan")
     credentials = relationship("Credential", back_populates="engagement", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="engagement", cascade="all, delete-orphan")
+    transcripts = relationship("ExpertTranscript", back_populates="engagement", cascade="all, delete-orphan")
+    monitoring_schedules = relationship("MonitoringSchedule", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Engagement {self.id} company={self.company_name!r} status={self.status}>"

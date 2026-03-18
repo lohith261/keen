@@ -28,6 +28,10 @@ KEEN is a multi-agent AI system that automates the data gathering and reporting 
 | SEC EDGAR company autocomplete | ✅ Production | Debounced live lookup in New Engagement modal |
 | Engagement search + status filter | ✅ Production | Client-side filter on company name / PE firm + status chips |
 | Deal Brief one-pager view | ✅ Production | Compact summary tab in Results panel — recommendation + severity counts + top criticals |
+| Virtual Data Room (VDR) integration | ✅ Production | Datasite + Intralinks OAuth — bulk ingest data room without manual upload |
+| Expert call transcripts | ✅ Production | Tegus + Third Bridge API + manual upload; keyword sentiment; per-engagement library |
+| Deal benchmarking | ✅ Production | PitchBook (via TinyFish) + Crunchbase comps; EV/Revenue, ARR growth, NRR, churn vs median/P25/P75 |
+| Portfolio monitoring | ✅ Production | Post-acquisition KPI schedules; delta alerts (warning ≥10%, critical ≥25%); monthly/quarterly/manual triggers |
 | Data appendix (charts/tables in report) | 🔲 Stub | Returns `pending_integration` |
 | Financial model sync | 🔲 Stub | Returns `pending_integration` |
 | Billing / pricing layer | 🔲 Not built | |
@@ -171,7 +175,7 @@ Receives the Research Agent's compiled output and performs:
 |---|---|
 | Framework | FastAPI (Python 3.11+) |
 | Database | Supabase (managed PostgreSQL) via SQLAlchemy 2.0 async |
-| Migrations | Alembic (5 migrations) |
+| Migrations | Alembic (6 migrations) |
 | Checkpointing | Redis (fast, 24h TTL) + PostgreSQL (durable) |
 | Real-time | WebSocket (FastAPI native) — live agent status & progress |
 | Auth | Supabase JWT — ES256 JWKS verification, `get_current_user` FastAPI dep |
@@ -206,10 +210,13 @@ keen/
 │       │   │   ├── AuthModal.tsx         # Inline sign-in / sign-up modal
 │       │   │   └── AuthPage.tsx          # Standalone auth page (fallback)
 │       │   ├── dashboard/
-│       │   │   ├── Dashboard.tsx         # Engagement list + search/filter + stats bar
+│       │   │   ├── Dashboard.tsx         # Engagement list + search/filter + stats bar + tab routing
 │       │   │   ├── PipelineView.tsx      # Real-time agent progress + WS
 │       │   │   ├── ResultsPanel.tsx      # Findings + Deal Brief + export buttons
 │       │   │   ├── DocumentsPanel.tsx    # Document upload, drag-and-drop, status
+│       │   │   ├── TranscriptsPanel.tsx  # Expert call transcripts library + Tegus/Third Bridge fetch
+│       │   │   ├── BenchmarkPanel.tsx    # Deal benchmarking vs PitchBook comps
+│       │   │   ├── PortfolioPanel.tsx    # Post-acquisition KPI monitoring schedules
 │       │   │   ├── NewEngagementModal.tsx # Create engagement + EDGAR autocomplete
 │       │   │   └── CredentialsModal.tsx  # Per-source credential entry
 │       │   ├── ui/
@@ -238,11 +245,14 @@ keen/
         ├── api/
         │   ├── engagements.py            # Core CRUD + orchestration endpoints
         │   ├── documents.py              # File upload, list, delete endpoints
+        │   ├── transcripts.py            # Expert call transcript upload + Tegus/Third Bridge fetch
+        │   ├── monitoring.py             # Portfolio monitoring schedules + delta runs
         │   ├── health.py                 # /health, /health/ready, /health/llm
         │   ├── leads.py                  # Demo request / book-a-demo capture
         │   └── auth_deps.py              # JWT verification, get_current_user
         ├── services/
-        │   └── document_processor.py     # pdfplumber / python-pptx / openpyxl extraction
+        │   ├── document_processor.py     # pdfplumber / python-pptx / openpyxl extraction
+        │   └── monitoring_service.py     # Delta computation + severity thresholds
         ├── websocket/                    # Real-time agent event broadcasting
         ├── agents/
         │   ├── base.py                   # BaseAgent + step execution + checkpointing
@@ -256,7 +266,10 @@ keen/
         │   └── exceptions.py
         ├── integrations/
         │   ├── demo/                     # 16 JSON fixture files (Zendesk Inc)
-        │   ├── live/                     # Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase
+        │   ├── live/                     # Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase + BenchmarkAggregator
+        │   ├── vdr/                      # Datasite + Intralinks OAuth VDR connectors
+        │   ├── tegus/                    # Tegus expert transcript API client
+        │   ├── third_bridge/             # Third Bridge OAuth transcript client
         │   ├── browser/                  # TinyFish connector base + goal builders
         │   └── distribution/             # Slack, Email, Google Drive, SharePoint
         └── auth/
@@ -355,6 +368,16 @@ Request → Claude (primary) → Gemini (fallback) → Groq (fallback) → deter
 | `GET` | `/api/v1/engagements/{id}/export/excel` | JWT | Download Excel workbook |
 | `GET` | `/api/v1/engagements/{id}/export/sheets` | JWT | Push to Google Sheets |
 | `GET` | `/api/v1/engagements/{id}/export/drive` | JWT | Upload to Google Drive |
+| `GET` | `/api/v1/engagements/{id}/transcripts` | JWT | List expert transcripts |
+| `POST` | `/api/v1/engagements/{id}/transcripts` | JWT | Upload transcript (TXT/PDF) |
+| `POST` | `/api/v1/engagements/{id}/transcripts/fetch` | JWT | Fetch from Tegus or Third Bridge |
+| `DELETE` | `/api/v1/engagements/{id}/transcripts/{tid}` | JWT | Delete transcript |
+| `GET` | `/api/v1/engagements/{id}/monitoring` | JWT | List monitoring schedules |
+| `POST` | `/api/v1/engagements/{id}/monitoring` | JWT | Create monitoring schedule |
+| `PATCH` | `/api/v1/engagements/{id}/monitoring/{sid}` | JWT | Update schedule (enable/disable, frequency) |
+| `DELETE` | `/api/v1/engagements/{id}/monitoring/{sid}` | JWT | Delete schedule |
+| `POST` | `/api/v1/engagements/{id}/monitoring/{sid}/run` | JWT | Trigger immediate delta run |
+| `GET` | `/api/v1/engagements/{id}/monitoring/{sid}/runs` | JWT | List monitoring run history |
 | `WS` | `/ws/agent-status` | None | Real-time agent events |
 
 ---
