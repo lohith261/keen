@@ -315,8 +315,10 @@ async def restart_engagement(
     engagement = result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
-    if engagement.status == EngagementStatus.RUNNING:
-        raise HTTPException(status_code=400, detail="Engagement is already running")
+    # Allow force-restart even from RUNNING (e.g. after a server restart left the
+    # engagement stuck in RUNNING with no active background task).
+    # We simply proceed — old AgentRuns are deleted below, which implicitly
+    # cancels any in-progress work for the stopped process.
 
     # Delete old agent runs — findings cascade via agent_run_id FK
     for run in list(engagement.agent_runs):

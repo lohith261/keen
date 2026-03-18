@@ -208,11 +208,40 @@ class BaseAgent(abc.ABC):
             except Exception:
                 logger.exception(f"[{self.agent_type}] Checkpoint failed")
 
+    @staticmethod
+    def _serializable_state(state: dict) -> dict:
+        """
+        Return a JSON-safe copy of *state*.
+
+        Keys whose values are not JSON-serialisable (e.g. live connector
+        objects) are dropped — they cannot be meaningfully restored from a
+        checkpoint anyway and will be re-created when the step re-runs.
+        Keys prefixed with '_connector_' are always dropped for this reason.
+        """
+        import json
+
+        safe: dict = {}
+        for k, v in state.items():
+            # Connector objects are never serialisable — skip them explicitly.
+            if isinstance(k, str) and k.startswith("_connector_"):
+                continue
+            try:
+                json.dumps(v)
+                safe[k] = v
+            except (TypeError, ValueError):
+                # Non-serialisable value — store a placeholder so the key is
+                # preserved in the checkpoint index without breaking the dump.
+                safe[k] = f"<non-serialisable: {type(v).__name__}>"
+        return safe
+
     async def _save_checkpoint(self, step_index: int) -> None:
         """Persist current state to DB (and Redis if available)."""
+        import json
+
+        safe_state = self._serializable_state(self.state)
         checkpoint_data = {
             "step_index": step_index,
-            "state": self.state,
+            "state": safe_state,
             "agent_type": self.agent_type,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -220,7 +249,6 @@ class BaseAgent(abc.ABC):
         # Save to Redis for fast access
         if self.redis:
             key = f"checkpoint:{self.agent_run_id}"
-            import json
             await self.redis.set(key, json.dumps(checkpoint_data), ex=86400)  # 24h TTL
 
         # Save to PostgreSQL for durability

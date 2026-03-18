@@ -384,7 +384,7 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
               RESUME
             </button>
           )}
-          {(isDone || isFailed) && (
+          {(isDone || isFailed || isActive) && (
             <button
               onClick={handleRestart}
               disabled={restarting}
@@ -395,7 +395,7 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
               {restarting
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <RotateCcw className="w-3 h-3" />}
-              {restarting ? 'RESTARTING…' : 'RE-RUN'}
+              {restarting ? 'RESTARTING…' : isActive ? 'FORCE RE-RUN' : 'RE-RUN'}
             </button>
           )}
         </div>
