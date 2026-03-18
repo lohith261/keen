@@ -318,14 +318,9 @@ async def restart_engagement(
     if engagement.status == EngagementStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Engagement is already running")
 
-    # Delete old agent runs and findings so we start clean
+    # Delete old agent runs — findings cascade via agent_run_id FK
     for run in list(engagement.agent_runs):
         await db.delete(run)
-    findings_result = await db.execute(
-        select(Finding).where(Finding.engagement_id == engagement_id)
-    )
-    for finding in findings_result.scalars().all():
-        await db.delete(finding)
 
     # Reset engagement state
     engagement.status = EngagementStatus.DRAFT
