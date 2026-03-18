@@ -32,6 +32,10 @@ KEEN is a multi-agent AI system that automates the data gathering and reporting 
 | Expert call transcripts | ✅ Production | Tegus + Third Bridge API + manual upload; keyword sentiment; per-engagement library |
 | Deal benchmarking | ✅ Production | PitchBook (via TinyFish) + Crunchbase comps; EV/Revenue, ARR growth, NRR, churn vs median/P25/P75 |
 | Portfolio monitoring | ✅ Production | Post-acquisition KPI schedules; delta alerts (warning ≥10%, critical ≥25%); monthly/quarterly/manual triggers |
+| Commercial DD — customer interviews, channel checks, win/loss, market sizing | ✅ Production | Structured records, auto sentiment + theme extraction, summary bar, per-engagement library |
+| External verification — court records, patents, bank statements | ✅ Production | CourtListener REST API, USPTO patent search, bank statement PDF parser, confidence + source-independence scoring |
+| Legal DD — contract clause scanner | ✅ Production | Regex NLP across 5 clause types (CoC, IP, non-compete, litigation, regulatory); risk scoring; review tracking |
+| Technical DD — GitHub repo analysis | ✅ Production | Contributor count, bus factor, commit velocity, language breakdown, health score (0–100), security vuln scan |
 | Data appendix (charts/tables in report) | 🔲 Stub | Returns `pending_integration` |
 | Financial model sync | 🔲 Stub | Returns `pending_integration` |
 | Billing / pricing layer | 🔲 Not built | |

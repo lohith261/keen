@@ -17,8 +17,11 @@ import DocumentsPanel from './DocumentsPanel';
 import TranscriptsPanel from './TranscriptsPanel';
 import BenchmarkPanel from './BenchmarkPanel';
 import PortfolioPanel from './PortfolioPanel';
+import CommercialDDPanel from './CommercialDDPanel';
+import ExternalVerificationPanel from './ExternalVerificationPanel';
+import TechnicalDDPanel from './TechnicalDDPanel';
 
-type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring';
+type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring' | 'commercial-dd' | 'external-verification' | 'technical-dd';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   draft:     { label: 'Draft',     color: 'text-theme-text-muted', Icon: Clock },
@@ -293,6 +296,24 @@ export default function Dashboard() {
                         <span className="text-cyan-400">Monitoring</span>
                       </>
                     )}
+                    {dashView === 'commercial-dd' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-blue-400">Commercial DD</span>
+                      </>
+                    )}
+                    {dashView === 'external-verification' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-amber-400">Verification</span>
+                      </>
+                    )}
+                    {dashView === 'technical-dd' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-purple-400">Tech DD</span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -546,7 +567,7 @@ export default function Dashboard() {
           )}
 
           {/* ── Pipeline / Results / Documents / Transcripts / Benchmarks / Monitoring view ── */}
-          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring'] as DashView[]).includes(dashView) && selected && (
+          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring', 'commercial-dd', 'external-verification', 'technical-dd'] as DashView[]).includes(dashView) && selected && (
             <div className="space-y-4">
               {/* Back + tab switcher */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -629,6 +650,39 @@ export default function Dashboard() {
                     <Activity className="w-3 h-3" />
                     MONITORING
                   </button>
+                  <button
+                    onClick={() => setDashView('commercial-dd')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'commercial-dd'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    INTERVIEWS
+                  </button>
+                  <button
+                    onClick={() => setDashView('external-verification')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'external-verification'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <Search className="w-3 h-3" />
+                    VERIFY
+                  </button>
+                  <button
+                    onClick={() => setDashView('technical-dd')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'technical-dd'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <BarChart2 className="w-3 h-3" />
+                    TECH DD
+                  </button>
                 </div>
               </div>
 
@@ -659,6 +713,24 @@ export default function Dashboard() {
               )}
               {dashView === 'monitoring' && (
                 <PortfolioPanel
+                  engagementId={selected.id}
+                  companyName={selected.target_company ?? selected.company_name}
+                />
+              )}
+              {dashView === 'commercial-dd' && (
+                <CommercialDDPanel
+                  engagementId={selected.id}
+                  companyName={selected.target_company ?? selected.company_name}
+                />
+              )}
+              {dashView === 'external-verification' && (
+                <ExternalVerificationPanel
+                  engagementId={selected.id}
+                  companyName={selected.target_company ?? selected.company_name}
+                />
+              )}
+              {dashView === 'technical-dd' && (
+                <TechnicalDDPanel
                   engagementId={selected.id}
                   companyName={selected.target_company ?? selected.company_name}
                 />

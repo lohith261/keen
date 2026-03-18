@@ -638,6 +638,188 @@ export const transcriptsApi = {
     request<void>(`/engagements/${engagementId}/transcripts/${transcriptId}`, { method: 'DELETE' }),
 };
 
+// ── Primary Research (Commercial DD) ──────────────────────────────────────
+
+export interface PrimaryResearchRecord {
+  id: string;
+  engagement_id: string;
+  type: 'customer_interview' | 'channel_check' | 'win_loss' | 'market_sizing';
+  company_name: string;
+  contact_name: string | null;
+  contact_role: string | null;
+  interview_date: string | null;
+  notes: string | null;
+  sentiment: string | null;
+  key_themes: string[];
+  action_items: string[];
+  status: string;
+  created_at: string;
+}
+
+export interface ResearchSummary {
+  total: number;
+  by_type: Record<string, number>;
+  sentiment_distribution: Record<string, number>;
+  top_themes: string[];
+  companies_covered: string[];
+}
+
+export const primaryResearchApi = {
+  list: (engagementId: string, type?: string) => {
+    const q = type ? `?type=${type}` : '';
+    return request<PrimaryResearchRecord[]>(`/engagements/${engagementId}/primary-research${q}`);
+  },
+  create: (engagementId: string, body: Partial<PrimaryResearchRecord>) =>
+    request<PrimaryResearchRecord>(`/engagements/${engagementId}/primary-research`, {
+      method: 'POST',
+      body: body as Record<string, unknown>,
+    }),
+  summary: (engagementId: string) =>
+    request<ResearchSummary>(`/engagements/${engagementId}/primary-research/summary`),
+  update: (engagementId: string, recordId: string, body: Partial<PrimaryResearchRecord>) =>
+    request<PrimaryResearchRecord>(`/engagements/${engagementId}/primary-research/${recordId}`, {
+      method: 'PATCH',
+      body: body as Record<string, unknown>,
+    }),
+  delete: (engagementId: string, recordId: string) =>
+    request<void>(`/engagements/${engagementId}/primary-research/${recordId}`, { method: 'DELETE' }),
+};
+
+// ── External Records (Verification) ───────────────────────────────────────
+
+export interface ExternalRecord {
+  id: string;
+  engagement_id: string;
+  source: 'courtlistener' | 'uspto' | 'ucc' | 'bank_statement';
+  record_type: string;
+  external_id: string | null;
+  title: string;
+  description: string | null;
+  url: string | null;
+  risk_level: string;
+  raw_data: Record<string, unknown>;
+  corroborates_finding: string | null;
+  created_at: string;
+}
+
+export interface ConfidenceResult {
+  overall_confidence: number;
+  source_independence: number;
+  per_finding: Record<string, number>;
+}
+
+export const externalRecordsApi = {
+  list: (engagementId: string) =>
+    request<ExternalRecord[]>(`/engagements/${engagementId}/external-records`),
+  fetchCourt: (engagementId: string, companyName: string, maxResults = 10) =>
+    request<ExternalRecord[]>(`/engagements/${engagementId}/external-records/fetch/court`, {
+      method: 'POST',
+      body: { company_name: companyName, max_results: maxResults },
+    }),
+  fetchPatents: (engagementId: string, companyName: string, maxResults = 10) =>
+    request<ExternalRecord[]>(`/engagements/${engagementId}/external-records/fetch/patents`, {
+      method: 'POST',
+      body: { company_name: companyName, max_results: maxResults },
+    }),
+  uploadBankStatement: async (engagementId: string, file: File): Promise<ExternalRecord> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const resp = await fetch(`${API_BASE}/engagements/${engagementId}/external-records/upload/bank-statement`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new ApiError(resp.status, err.detail || 'Upload failed');
+    }
+    return resp.json();
+  },
+  delete: (engagementId: string, recordId: string) =>
+    request<void>(`/engagements/${engagementId}/external-records/${recordId}`, { method: 'DELETE' }),
+  confidence: (engagementId: string) =>
+    request<ConfidenceResult>(`/engagements/${engagementId}/external-records/confidence`),
+};
+
+// ── Legal Findings (Contract Analysis) ────────────────────────────────────
+
+export interface LegalFinding {
+  id: string;
+  engagement_id: string;
+  document_id: string | null;
+  clause_type: string;
+  text_excerpt: string;
+  risk_level: string;
+  requires_review: boolean;
+  reviewed: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface LegalRiskSummary {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  unreviewed: number;
+}
+
+export const legalFindingsApi = {
+  list: (engagementId: string, params?: { clause_type?: string; requires_review?: boolean }) => {
+    const q = new URLSearchParams();
+    if (params?.clause_type) q.set('clause_type', params.clause_type);
+    if (params?.requires_review !== undefined) q.set('requires_review', String(params.requires_review));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return request<LegalFinding[]>(`/engagements/${engagementId}/legal-findings${qs}`);
+  },
+  analyzeAll: (engagementId: string) =>
+    request<LegalFinding[]>(`/engagements/${engagementId}/legal-findings/analyze-all`, { method: 'POST' }),
+  update: (engagementId: string, findingId: string, body: Partial<LegalFinding>) =>
+    request<LegalFinding>(`/engagements/${engagementId}/legal-findings/${findingId}`, {
+      method: 'PATCH',
+      body: body as Record<string, unknown>,
+    }),
+  delete: (engagementId: string, findingId: string) =>
+    request<void>(`/engagements/${engagementId}/legal-findings/${findingId}`, { method: 'DELETE' }),
+  riskSummary: (engagementId: string) =>
+    request<LegalRiskSummary>(`/engagements/${engagementId}/legal-findings/risk-summary`),
+};
+
+// ── Technical DD (GitHub Analysis) ────────────────────────────────────────
+
+export interface TechnicalDDReport {
+  id: string;
+  engagement_id: string;
+  repo_url: string | null;
+  language_stats: Record<string, number>;
+  contributor_count: number | null;
+  bus_factor: number | null;
+  commit_velocity: number | null;
+  open_issues_count: number | null;
+  security_vulnerabilities: unknown[];
+  dependency_risks: unknown[];
+  health_score: number | null;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+}
+
+export const technicalDDApi = {
+  list: (engagementId: string) =>
+    request<TechnicalDDReport[]>(`/engagements/${engagementId}/technical-dd`),
+  create: (engagementId: string, repoUrl: string, githubToken?: string) =>
+    request<TechnicalDDReport>(`/engagements/${engagementId}/technical-dd`, {
+      method: 'POST',
+      body: { repo_url: repoUrl, github_token: githubToken },
+    }),
+  delete: (engagementId: string, reportId: string) =>
+    request<void>(`/engagements/${engagementId}/technical-dd/${reportId}`, { method: 'DELETE' }),
+};
+
 // ── WebSocket ───────────────────────────────────────────
 
 export function connectAgentStatus(
