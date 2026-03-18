@@ -9,8 +9,25 @@ import type { Engagement, Finding } from '../../lib/apiClient';
 import { findingsApi } from '../../lib/apiClient';
 import { useToast } from '../ui/Toast';
 
+/** Safely coerce any value to a renderable string. */
+function toStr(val: unknown): string {
+  if (val == null) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (Array.isArray(val)) return val.map(toStr).join(', ');
+  if (typeof val === 'object') {
+    const v = val as Record<string, unknown>;
+    // Try common text fields before falling back to JSON
+    return (
+      (v.title as string) ?? (v.description as string) ?? (v.text as string) ?? JSON.stringify(val)
+    );
+  }
+  return String(val);
+}
+
 /** Lightweight styled wrapper for inline markdown in findings. */
-function Prose({ children }: { children: string }) {
+function Prose({ children }: { children: unknown }) {
+  const text = toStr(children);
   return (
     <ReactMarkdown
       components={{
@@ -26,7 +43,7 @@ function Prose({ children }: { children: string }) {
         blockquote: ({ children }) => <blockquote className="border-l-2 border-theme-border pl-2 my-1 text-theme-text-muted">{children}</blockquote>,
       }}
     >
-      {children}
+      {text}
     </ReactMarkdown>
   );
 }
@@ -79,9 +96,9 @@ function ExecutiveSummaryCard({ finding }: { finding: Finding }) {
   const data = (finding.data ?? {}) as Record<string, unknown>;
   const rec = (data.recommendation as string) ?? '';
   const recCfg = REC_CONFIG[rec] ?? REC_CONFIG['proceed_with_caution'];
-  const keyFindings = (data.key_findings as string[]) ?? [];
-  const riskAssessment = (data.risk_assessment as string) ?? '';
-  const rationale = (data.rationale as string) ?? finding.description ?? '';
+  const keyFindings = ((data.key_findings as unknown[]) ?? []).map(toStr);
+  const riskAssessment = toStr(data.risk_assessment ?? '');
+  const rationale = toStr(data.rationale ?? finding.description ?? '');
   const reportSections = (data.report_sections as number) ?? 0;
 
   return (
@@ -254,9 +271,9 @@ function DealBrief({
   const infos     = regular.filter((f) => f.severity === 'info');
 
   const data = (execSummary?.data ?? {}) as Record<string, unknown>;
-  const rec = (data.recommendation as string) ?? '';
-  const rationale = (data.rationale as string) ?? execSummary?.description ?? '';
-  const keyFindings = (data.key_findings as string[]) ?? [];
+  const rec = toStr(data.recommendation ?? '');
+  const rationale = toStr(data.rationale ?? execSummary?.description ?? '');
+  const keyFindings = ((data.key_findings as unknown[]) ?? []).map(toStr);
   const recCfg = REC_CONFIG[rec] ?? REC_CONFIG['proceed_with_caution'];
 
   const topCriticals = criticals.slice(0, 5);

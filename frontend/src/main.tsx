@@ -7,10 +7,12 @@ import { AuthProvider } from './context/AuthContext';
 import App from './App.tsx';
 import Dashboard from './components/dashboard/Dashboard.tsx';
 import { ProtectedRoute } from './components/ProtectedRoute.tsx';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <ErrorBoundary>
     <BrowserRouter>
       <ThemeProvider>
         <DemoModeProvider>
@@ -36,5 +38,6 @@ createRoot(document.getElementById('root')!).render(
         </DemoModeProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>
 );
