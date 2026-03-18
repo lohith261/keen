@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
-  PauseCircle, FlaskConical, Radio, Search, Trash2,
+  PauseCircle, Search, Trash2,
   Activity, TrendingUp, BarChart2, LogOut, FileText, Filter,
   MessageSquare, LineChart,
 } from 'lucide-react';
@@ -316,23 +316,6 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
-
-                {/* Demo/Live badge */}
-                <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]
-                               font-mono font-semibold border ${
-                    isDemoMode
-                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-400'
-                      : 'border-green-500/40 bg-green-500/10 text-green-400'
-                  }`}
-                >
-                  {isDemoMode ? (
-                    <FlaskConical className="w-3 h-3" />
-                  ) : (
-                    <Radio className="w-3 h-3 animate-pulse" />
-                  )}
-                  {isDemoMode ? 'DEMO' : 'LIVE'}
-                </div>
 
                 {/* User email chip */}
                 {user?.email && (
