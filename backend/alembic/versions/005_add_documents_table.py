@@ -41,9 +41,9 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index("ix_documents_engagement_id", "documents", ["engagement_id"])
-    op.create_index("ix_documents_status", "documents", ["status"])
-    op.create_index("ix_documents_user_id", "documents", ["user_id"])
+    # Indexes are created via index=True on columns above.
+    # Use IF NOT EXISTS to be idempotent in case the table was partially created.
+    op.execute("CREATE INDEX IF NOT EXISTS ix_documents_status ON documents (status)")
 
 
 def downgrade() -> None:
