@@ -444,6 +444,15 @@ class ResearchAgent(BaseAgent):
                 source = key.replace("data_", "")
                 compiled[source] = value
 
+        # Include uploaded documents as an additional data source
+        uploaded_documents = self.state.get("pipeline_config", {}).get("uploaded_documents", [])
+        if uploaded_documents:
+            compiled["uploaded_documents"] = uploaded_documents
+            logger.info(
+                "Compiled %d uploaded document(s) into research output",
+                len(uploaded_documents),
+            )
+
         return StepResult(
             success=True,
             data={
@@ -451,5 +460,6 @@ class ResearchAgent(BaseAgent):
                 "total_sources": len(compiled),
                 "raw_data": compiled,
             },
-            message=f"Compiled data from {len(compiled)} sources",
+            message=f"Compiled data from {len(compiled)} sources"
+            + (f" including {len(uploaded_documents)} uploaded document(s)" if uploaded_documents else ""),
         )

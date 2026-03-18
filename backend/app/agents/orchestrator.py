@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.engagement import Engagement, EngagementStatus
 from app.models.agent_run import AgentRun, AgentRunStatus, AgentType
+from app.models.document import Document
 from app.agents.research import ResearchAgent
 from app.agents.analysis import AnalysisAgent
 from app.agents.delivery import DeliveryAgent
@@ -75,6 +76,28 @@ class AgentOrchestrator:
 
         config = engagement.config or {}
 
+        # Load uploaded documents and inject as context for Research agent
+        docs_result = await self.db.execute(
+            select(Document)
+            .where(Document.engagement_id == self.engagement_id)
+            .where(Document.status == "ready")
+            .order_by(Document.created_at)
+        )
+        uploaded_documents = [
+            {
+                "filename": doc.filename,
+                "file_type": doc.file_type,
+                "page_count": doc.page_count,
+                "extracted_text": doc.extracted_text or "",
+            }
+            for doc in docs_result.scalars().all()
+        ]
+        if uploaded_documents:
+            logger.info(
+                "Injecting %d uploaded document(s) into pipeline for engagement %s",
+                len(uploaded_documents), self.engagement_id,
+            )
+
         # Build a map of agent type → agent run
         runs_by_type: dict[AgentType, AgentRun] = {
             run.agent_type: run for run in engagement.agent_runs
@@ -134,6 +157,7 @@ class AgentOrchestrator:
                 "pipeline_data": pipeline_data,
                 "company_name": engagement.company_name,
                 "target_company": engagement.target_company or engagement.company_name,
+                "uploaded_documents": uploaded_documents,
             }
 
             # Execute the agent
