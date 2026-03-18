@@ -15,15 +15,23 @@ KEEN is a multi-agent AI system that automates the data gathering and reporting 
 | Component | Status | Notes |
 |---|---|---|
 | 3-agent pipeline (Research → Analysis → Delivery) | ✅ Production | Step-based, checkpointed, resume-safe |
-| Demo mode with Acme Analytics Corp dataset | ✅ Complete | 16 fixture files, 8 baked-in discrepancies |
+| Demo mode with Zendesk Inc fixture dataset | ✅ Complete | Auto-starts on first dashboard load, 16 fixture files, 8 baked-in discrepancies |
 | 5 REST API integrations (live) | ✅ Complete | Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase |
-| 10 browser-automation connectors | ✅ Architecture | Delegated to TinyFish API — needs `TINYFISH_API_KEY` |
+| Browser-automation connectors (via TinyFish) | ✅ Architecture | Delegated to TinyFish API — needs `TINYFISH_API_KEY` |
 | PDF + Excel report export | ✅ Production | `/export/pdf`, `/export/excel` endpoints |
 | Distribution: Slack, Email, Google Drive, SharePoint | ✅ Production | Auto-delivered on pipeline completion |
+| Document ingestion pipeline | ✅ Production | PDF, Excel, PowerPoint, Word, CSV upload — text extracted and included in analysis |
 | AES-256-GCM credential vault | ✅ Production | Per-engagement, per-user isolated |
 | Supabase authentication (login / signup) | ✅ Production | JWT ES256, per-user data isolation |
 | Real-time WebSocket pipeline monitoring | ✅ Production | Live agent step progress in browser |
 | Multi-LLM (Claude → Gemini → Groq fallback) | ✅ Production | Never breaks if one provider is down |
+| SEC EDGAR company autocomplete | ✅ Production | Debounced live lookup in New Engagement modal |
+| Engagement search + status filter | ✅ Production | Client-side filter on company name / PE firm + status chips |
+| Deal Brief one-pager view | ✅ Production | Compact summary tab in Results panel — recommendation + severity counts + top criticals |
+| Virtual Data Room (VDR) integration | ✅ Production | Datasite + Intralinks OAuth — bulk ingest data room without manual upload |
+| Expert call transcripts | ✅ Production | Tegus + Third Bridge API + manual upload; keyword sentiment; per-engagement library |
+| Deal benchmarking | ✅ Production | PitchBook (via TinyFish) + Crunchbase comps; EV/Revenue, ARR growth, NRR, churn vs median/P25/P75 |
+| Portfolio monitoring | ✅ Production | Post-acquisition KPI schedules; delta alerts (warning ≥10%, critical ≥25%); monthly/quarterly/manual triggers |
 | Data appendix (charts/tables in report) | 🔲 Stub | Returns `pending_integration` |
 | Financial model sync | 🔲 Stub | Returns `pending_integration` |
 | Billing / pricing layer | 🔲 Not built | |
@@ -43,26 +51,13 @@ Click **STATUS** in the nav bar. A green **OPERATIONAL** badge means the backend
 
 ### Step 2 — Confirm Demo mode is active
 
-Look for the **amber flask pill** labelled `DEMO` in the top nav. If it shows `LIVE`, click it once to switch back. Demo mode uses the Acme Analytics Corp fixture dataset — no credentials needed.
+Look for the **amber flask pill** labelled `DEMO` in the top nav. If it shows `LIVE`, click it once to switch back. Demo mode uses the Zendesk Inc fixture dataset — no credentials needed.
 
 ### Step 3 — Open the Dashboard
 
-Click **DASHBOARD** in the nav (no login required in Demo mode). This opens the engagement management view.
+Click **DASHBOARD** in the nav (no login required in Demo mode). The dashboard auto-creates a Zendesk Inc engagement on first load and starts the pipeline immediately.
 
-### Step 4 — Create a new engagement
-
-Click **+ New Engagement** and fill in:
-
-| Field | Suggested value |
-|---|---|
-| **Target Company** | `Acme Analytics Corp` |
-| **PE Firm** | `Accel Partners` (optional) |
-| **Deal Size** | `$50M` (optional) |
-| **Engagement Type** | `Full Due Diligence` |
-
-Click **START PIPELINE →**. The engagement is created and the orchestrator starts immediately.
-
-### Step 5 — Watch the pipeline run
+### Step 4 — Watch the pipeline run
 
 Three agents execute in sequence:
 
@@ -70,11 +65,28 @@ Three agents execute in sequence:
 Research Agent  →  Analysis Agent  →  Delivery Agent
 ```
 
-Each agent shows real-time step progress via WebSocket. The Research Agent processes 15 simulated sources.
+Each agent shows real-time step progress via WebSocket. The Research Agent processes simulated CRM, ERP, market, and document sources.
 
-### Step 6 — Review findings
+### Step 5 — Create your own engagement (optional)
 
-Once the pipeline completes, the Results tab unlocks. You'll see findings sorted by severity, including:
+Click **+ New Engagement** and start typing a company name. The modal fetches live suggestions from SEC EDGAR as you type. Fill in:
+
+| Field | Suggested value |
+|---|---|
+| **Target Company** | Start typing — EDGAR autocomplete appears |
+| **PE Firm** | Your firm name (optional) |
+| **Deal Size** | e.g. `$50M` (optional) |
+| **Engagement Type** | `Full Due Diligence` |
+
+Click **START PIPELINE →**. The engagement is created and the orchestrator starts immediately.
+
+### Step 6 — Upload documents
+
+Once an engagement is open, click the **DOCUMENTS** tab. Drag and drop PDF, Excel, PowerPoint, Word, or CSV files — they are extracted and injected into the analysis pipeline.
+
+### Step 7 — Review findings
+
+Once the pipeline completes, click the **RESULTS** tab. Findings are sorted by severity:
 
 | Finding | Sources | Gap |
 |---|---|---|
@@ -87,7 +99,9 @@ Once the pipeline completes, the Results tab unlocks. You'll see findings sorted
 | Overdue AR | Oracle | 2 accounts 120+ days |
 | Key person risk | Sales Navigator | VP Engineering departed Feb 2026 |
 
-### Step 7 — Export the report
+Toggle **BRIEF** in the top bar for a compact one-page Deal Brief — recommendation badge, severity counts, and top criticals — useful for sending to a partner before a full review.
+
+### Step 8 — Export the report
 
 Use the **PDF** and **XLSX** buttons in the Results panel to download the executive report and financial workbook. The **SHEETS** and **DRIVE** buttons push directly to Google Sheets / Drive.
 
@@ -109,11 +123,15 @@ Plans which sources to query (using Claude) based on engagement type and company
 | **HubSpot** | API Key | Marketing metrics, lead funnel, campaign ROI |
 | **Crunchbase** | API Key | Funding history, acquisitions, key people |
 
-**10 browser-automation sources (via TinyFish):**
+**Browser-automation sources (via TinyFish):**
 
 Bloomberg Terminal · Capital IQ · PitchBook · LinkedIn Sales Navigator · SAP Fiori · Oracle Fusion · Microsoft Dynamics · QuickBooks · ZoomInfo · Marketo
 
 These connectors send natural-language goals to the TinyFish Web Agent API, which handles navigation and extraction. Requires `TINYFISH_API_KEY`.
+
+**Document ingestion:**
+
+Uploaded documents (PDF, Excel, PowerPoint, Word, CSV) are text-extracted using `pdfplumber`, `python-pptx`, and `openpyxl`, then injected as a source into the Research Agent output.
 
 ### Analysis Agent
 
@@ -146,9 +164,10 @@ Receives the Research Agent's compiled output and performs:
 | Build | Vite 5 |
 | Styling | Tailwind CSS 3 + CSS custom properties (dark/light themes) |
 | 3D / WebGL | Three.js — interactive particle background (custom GLSL shaders) |
-| Animations | GSAP — scroll reveals, text reveals, parallax, count-up |
+| Animations | GSAP — scroll reveals, text parallax, count-up |
 | Auth | Supabase JS SDK — `onAuthStateChange`, JWT stored in localStorage |
 | Icons | Lucide React |
+| Markdown | react-markdown — structured finding descriptions and executive summaries |
 
 ### Backend
 
@@ -156,12 +175,13 @@ Receives the Research Agent's compiled output and performs:
 |---|---|
 | Framework | FastAPI (Python 3.11+) |
 | Database | Supabase (managed PostgreSQL) via SQLAlchemy 2.0 async |
-| Migrations | Alembic (4 migrations) |
+| Migrations | Alembic (6 migrations) |
 | Checkpointing | Redis (fast, 24h TTL) + PostgreSQL (durable) |
 | Real-time | WebSocket (FastAPI native) — live agent status & progress |
 | Auth | Supabase JWT — ES256 JWKS verification, `get_current_user` FastAPI dep |
 | Encryption | AES-256-GCM credential vault (`cryptography` library) |
 | LLM | Claude (primary) → Gemini → Groq (automatic fallback chain) |
+| Document parsing | pdfplumber (PDF) · python-pptx (PowerPoint) · openpyxl (Excel) |
 | Browser automation | TinyFish Web Agent API (SSE streaming, natural-language goals) |
 | HTTP client | httpx (async) |
 | Testing | pytest + pytest-asyncio (20 tests) |
@@ -190,10 +210,14 @@ keen/
 │       │   │   ├── AuthModal.tsx         # Inline sign-in / sign-up modal
 │       │   │   └── AuthPage.tsx          # Standalone auth page (fallback)
 │       │   ├── dashboard/
-│       │   │   ├── Dashboard.tsx         # Engagement list + stats bar
+│       │   │   ├── Dashboard.tsx         # Engagement list + search/filter + stats bar + tab routing
 │       │   │   ├── PipelineView.tsx      # Real-time agent progress + WS
-│       │   │   ├── ResultsPanel.tsx      # Findings + export buttons
-│       │   │   ├── NewEngagementModal.tsx
+│       │   │   ├── ResultsPanel.tsx      # Findings + Deal Brief + export buttons
+│       │   │   ├── DocumentsPanel.tsx    # Document upload, drag-and-drop, status
+│       │   │   ├── TranscriptsPanel.tsx  # Expert call transcripts library + Tegus/Third Bridge fetch
+│       │   │   ├── BenchmarkPanel.tsx    # Deal benchmarking vs PitchBook comps
+│       │   │   ├── PortfolioPanel.tsx    # Post-acquisition KPI monitoring schedules
+│       │   │   ├── NewEngagementModal.tsx # Create engagement + EDGAR autocomplete
 │       │   │   └── CredentialsModal.tsx  # Per-source credential entry
 │       │   ├── ui/
 │       │   │   └── Toast.tsx             # Toast notification system
@@ -216,18 +240,24 @@ keen/
         ├── main.py                       # FastAPI entry point, CORS, routers
         ├── config.py                     # Pydantic settings (env vars)
         ├── database.py                   # Async SQLAlchemy engine
-        ├── models/                       # ORM models (6 tables)
+        ├── models/                       # ORM models (7 tables incl. documents)
         ├── schemas/                      # Pydantic schemas
         ├── api/
         │   ├── engagements.py            # Core CRUD + orchestration endpoints
+        │   ├── documents.py              # File upload, list, delete endpoints
+        │   ├── transcripts.py            # Expert call transcript upload + Tegus/Third Bridge fetch
+        │   ├── monitoring.py             # Portfolio monitoring schedules + delta runs
         │   ├── health.py                 # /health, /health/ready, /health/llm
         │   ├── leads.py                  # Demo request / book-a-demo capture
         │   └── auth_deps.py              # JWT verification, get_current_user
+        ├── services/
+        │   ├── document_processor.py     # pdfplumber / python-pptx / openpyxl extraction
+        │   └── monitoring_service.py     # Delta computation + severity thresholds
         ├── websocket/                    # Real-time agent event broadcasting
         ├── agents/
         │   ├── base.py                   # BaseAgent + step execution + checkpointing
         │   ├── orchestrator.py           # Research → Analysis → Delivery pipeline
-        │   ├── research.py               # Data extraction (15 sources, demo + live)
+        │   ├── research.py               # Data extraction (demo + live + documents)
         │   ├── analysis.py               # Cross-referencing & variance detection
         │   └── delivery.py               # Report generation & distribution
         ├── llm/
@@ -235,9 +265,12 @@ keen/
         │   ├── prompts.py                # All prompt templates
         │   └── exceptions.py
         ├── integrations/
-        │   ├── demo/                     # 16 JSON fixture files (Acme Analytics Corp)
-        │   ├── live/                     # Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase
-        │   ├── browser/                  # TinyFish connector base + 10 goal builders
+        │   ├── demo/                     # 16 JSON fixture files (Zendesk Inc)
+        │   ├── live/                     # Salesforce, NetSuite, SEC EDGAR, HubSpot, Crunchbase + BenchmarkAggregator
+        │   ├── vdr/                      # Datasite + Intralinks OAuth VDR connectors
+        │   ├── tegus/                    # Tegus expert transcript API client
+        │   ├── third_bridge/             # Third Bridge OAuth transcript client
+        │   ├── browser/                  # TinyFish connector base + goal builders
         │   └── distribution/             # Slack, Email, Google Drive, SharePoint
         └── auth/
             ├── vault.py                  # AES-256-GCM credential encryption
@@ -304,10 +337,11 @@ Request → Claude (primary) → Gemini (fallback) → Groq (fallback) → deter
 | | Demo Mode | Live Mode |
 |---|---|---|
 | Toggle | Amber flask pill `DEMO` | Green pulsing pill `LIVE` |
-| Data | JSON fixture files (Acme Analytics Corp) | Live enterprise connectors |
+| Data | JSON fixture files (Zendesk Inc) | Live enterprise connectors |
 | Credentials required | None | OAuth / API keys per source |
 | Pipeline config | `demo_mode: true` | `demo_mode: false` |
 | TinyFish calls | Fixture data returned | Real browser automation |
+| Auto-start | Creates Zendesk engagement on first load | Manual — click + New Engagement |
 
 ---
 
@@ -327,10 +361,23 @@ Request → Claude (primary) → Gemini (fallback) → Groq (fallback) → deter
 | `POST` | `/api/v1/engagements/{id}/pause` | JWT | Pause + checkpoint |
 | `POST` | `/api/v1/engagements/{id}/resume` | JWT | Resume from checkpoint |
 | `GET` | `/api/v1/engagements/{id}/findings` | JWT | Get all findings |
+| `GET` | `/api/v1/engagements/{id}/documents` | JWT | List uploaded documents |
+| `POST` | `/api/v1/engagements/{id}/documents` | JWT | Upload document (multipart) |
+| `DELETE` | `/api/v1/engagements/{id}/documents/{doc_id}` | JWT | Delete document |
 | `GET` | `/api/v1/engagements/{id}/export/pdf` | JWT | Download PDF report |
 | `GET` | `/api/v1/engagements/{id}/export/excel` | JWT | Download Excel workbook |
 | `GET` | `/api/v1/engagements/{id}/export/sheets` | JWT | Push to Google Sheets |
 | `GET` | `/api/v1/engagements/{id}/export/drive` | JWT | Upload to Google Drive |
+| `GET` | `/api/v1/engagements/{id}/transcripts` | JWT | List expert transcripts |
+| `POST` | `/api/v1/engagements/{id}/transcripts` | JWT | Upload transcript (TXT/PDF) |
+| `POST` | `/api/v1/engagements/{id}/transcripts/fetch` | JWT | Fetch from Tegus or Third Bridge |
+| `DELETE` | `/api/v1/engagements/{id}/transcripts/{tid}` | JWT | Delete transcript |
+| `GET` | `/api/v1/engagements/{id}/monitoring` | JWT | List monitoring schedules |
+| `POST` | `/api/v1/engagements/{id}/monitoring` | JWT | Create monitoring schedule |
+| `PATCH` | `/api/v1/engagements/{id}/monitoring/{sid}` | JWT | Update schedule (enable/disable, frequency) |
+| `DELETE` | `/api/v1/engagements/{id}/monitoring/{sid}` | JWT | Delete schedule |
+| `POST` | `/api/v1/engagements/{id}/monitoring/{sid}/run` | JWT | Trigger immediate delta run |
+| `GET` | `/api/v1/engagements/{id}/monitoring/{sid}/runs` | JWT | List monitoring run history |
 | `WS` | `/ws/agent-status` | None | Real-time agent events |
 
 ---
@@ -427,7 +474,7 @@ npm run build        # Production build
 npm run lint         # ESLint
 
 # Backend
-pytest tests/ -v     # 20 tests, ~0.5s
+pytest tests/ -v     # Run test suite
 ruff check app/      # Python lint
 ```
 

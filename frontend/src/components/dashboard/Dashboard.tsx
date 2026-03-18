@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, FlaskConical, Radio, Search, Trash2,
-  Activity, TrendingUp, BarChart2, LogOut, FileText,
+  Activity, TrendingUp, BarChart2, LogOut, FileText, Filter,
+  MessageSquare, LineChart,
 } from 'lucide-react';
-import { engagementsApi, type Engagement } from '../../lib/apiClient';
+import { engagementsApi, findingsApi, type Engagement, type Finding } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
 import { ToastProvider } from '../ui/Toast';
 import { useAuth } from '../../context/AuthContext';
@@ -13,8 +14,11 @@ import NewEngagementModal from './NewEngagementModal';
 import PipelineView from './PipelineView';
 import ResultsPanel from './ResultsPanel';
 import DocumentsPanel from './DocumentsPanel';
+import TranscriptsPanel from './TranscriptsPanel';
+import BenchmarkPanel from './BenchmarkPanel';
+import PortfolioPanel from './PortfolioPanel';
 
-type DashView = 'list' | 'pipeline' | 'results' | 'documents';
+type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   draft:     { label: 'Draft',     color: 'text-theme-text-muted', Icon: Clock },
@@ -79,6 +83,40 @@ function StatsBar({ engagements }: { engagements: Engagement[] }) {
   );
 }
 
+// ── BenchmarkPanel wrapper — pulls benchmark finding from engagement findings ──
+function BenchmarkPanelWrapper({ engagement }: { engagement: Engagement }) {
+  const [benchmarkData, setBenchmarkData] = useState<Record<string, unknown> | null>(null);
+  const [comparisons, setComparisons] = useState<unknown[]>([]);
+  const [loadingBench, setLoadingBench] = useState(true);
+
+  useEffect(() => {
+    findingsApi.list(engagement.id).then((findings: Finding[]) => {
+      const bf = findings.find((f) => f.finding_type === 'benchmark_comparison');
+      if (bf?.data) {
+        setBenchmarkData((bf.data.benchmark_data as Record<string, unknown>) ?? null);
+        setComparisons((bf.data.comparisons as unknown[]) ?? []);
+      }
+    }).catch(() => {}).finally(() => setLoadingBench(false));
+  }, [engagement.id]);
+
+  if (loadingBench) {
+    return (
+      <div className="flex items-center justify-center py-16 text-theme-text-muted text-xs font-mono">
+        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+        Loading benchmark data…
+      </div>
+    );
+  }
+
+  return (
+    <BenchmarkPanel
+      benchmarkData={benchmarkData as Parameters<typeof BenchmarkPanel>[0]['benchmarkData']}
+      comparisons={comparisons as Parameters<typeof BenchmarkPanel>[0]['comparisons']}
+      companyName={engagement.target_company ?? engagement.company_name}
+    />
+  );
+}
+
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -91,6 +129,8 @@ export default function Dashboard() {
   const [dashView, setDashView] = useState<DashView>('list');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const autoStarted = useRef(false);
 
   useEffect(() => {
@@ -235,6 +275,24 @@ export default function Dashboard() {
                         <span className="text-blue-400">Documents</span>
                       </>
                     )}
+                    {dashView === 'transcripts' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-purple-400">Transcripts</span>
+                      </>
+                    )}
+                    {dashView === 'benchmarks' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-amber-400">Benchmarks</span>
+                      </>
+                    )}
+                    {dashView === 'monitoring' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-cyan-400">Monitoring</span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -305,6 +363,40 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Search + status filter */}
+              {!loading && engagements.length > 0 && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative flex-1 min-w-48">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-theme-text-muted pointer-events-none" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search engagements…"
+                      className="w-full pl-8 pr-3 py-2 bg-transparent border border-theme-border rounded-lg
+                                 text-xs font-mono placeholder:text-theme-text-muted/50
+                                 focus:outline-none focus:border-theme-text-muted transition-colors"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Filter className="w-3.5 h-3.5 text-theme-text-muted mr-1" />
+                    {(['all', 'running', 'completed', 'draft', 'failed'] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className={`px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                          statusFilter === s
+                            ? 'bg-theme-text text-theme-bg font-semibold'
+                            : 'text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30'
+                        }`}
+                      >
+                        {s.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Skeleton while loading */}
               {loading && (
                 <div className="space-y-2">
@@ -336,7 +428,14 @@ export default function Dashboard() {
               {/* Engagement list */}
               {!loading && engagements.length > 0 && (
                 <div className="space-y-2">
-                  {engagements.map((e) => {
+                  {engagements
+                    .filter((e) => {
+                      const matchSearch = !search || e.company_name.toLowerCase().includes(search.toLowerCase()) ||
+                        (e.pe_firm ?? '').toLowerCase().includes(search.toLowerCase());
+                      const matchStatus = statusFilter === 'all' || e.status === statusFilter;
+                      return matchSearch && matchStatus;
+                    })
+                    .map((e) => {
                     const cfg = STATUS_CONFIG[e.status] ?? STATUS_CONFIG.draft;
                     const isDemo = e.config?.demo_mode as boolean | undefined;
                     const isConfirming = confirmDeleteId === e.id;
@@ -446,21 +545,21 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ── Pipeline / Results / Documents view ── */}
-          {(dashView === 'pipeline' || dashView === 'results' || dashView === 'documents') && selected && (
+          {/* ── Pipeline / Results / Documents / Transcripts / Benchmarks / Monitoring view ── */}
+          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring'] as DashView[]).includes(dashView) && selected && (
             <div className="space-y-4">
               {/* Back + tab switcher */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setDashView('list')}
                   className="flex items-center gap-1.5 text-[11px] font-mono text-theme-text-muted
-                             hover:text-theme-text transition-colors"
+                             hover:text-theme-text transition-colors mr-2"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  ALL ENGAGEMENTS
+                  ALL
                 </button>
 
-                <div className="flex items-center gap-1 border border-theme-border rounded-lg p-0.5">
+                <div className="flex items-center gap-1 border border-theme-border rounded-lg p-0.5 flex-wrap">
                   <button
                     onClick={() => setDashView('pipeline')}
                     className={`px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
@@ -495,7 +594,40 @@ export default function Dashboard() {
                     }`}
                   >
                     <FileText className="w-3 h-3" />
-                    DOCUMENTS
+                    DOCS
+                  </button>
+                  <button
+                    onClick={() => setDashView('transcripts')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'transcripts'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    TRANSCRIPTS
+                  </button>
+                  <button
+                    onClick={() => setDashView('benchmarks')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'benchmarks'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <LineChart className="w-3 h-3" />
+                    BENCHMARKS
+                  </button>
+                  <button
+                    onClick={() => setDashView('monitoring')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'monitoring'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <Activity className="w-3 h-3" />
+                    MONITORING
                   </button>
                 </div>
               </div>
@@ -513,6 +645,22 @@ export default function Dashboard() {
                 <DocumentsPanel
                   engagementId={selected.id}
                   readOnly={selected.status !== 'draft'}
+                />
+              )}
+              {dashView === 'transcripts' && (
+                <TranscriptsPanel
+                  engagementId={selected.id}
+                  companyName={selected.target_company ?? selected.company_name}
+                  readOnly={false}
+                />
+              )}
+              {dashView === 'benchmarks' && (
+                <BenchmarkPanelWrapper engagement={selected} />
+              )}
+              {dashView === 'monitoring' && (
+                <PortfolioPanel
+                  engagementId={selected.id}
+                  companyName={selected.target_company ?? selected.company_name}
                 />
               )}
             </div>

@@ -1,7 +1,33 @@
-import { useState } from 'react';
-import { X, FlaskConical, Radio, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, FlaskConical, Radio, Loader2, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
+
+interface EdgarHit {
+  entity_name: string;
+  file_date: string;
+}
+
+async function searchEdgar(query: string): Promise<string[]> {
+  if (query.length < 2) return [];
+  try {
+    const url = `https://efts.sec.gov/LATEST/search-index?entity=${encodeURIComponent(query)}&forms=10-K`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return [];
+    const data = await res.json() as { hits?: { hits?: { _source?: EdgarHit }[] } };
+    const hits = data?.hits?.hits ?? [];
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const h of hits) {
+      const name = h._source?.entity_name;
+      if (name && !seen.has(name)) { seen.add(name); names.push(name); }
+      if (names.length >= 6) break;
+    }
+    return names;
+  } catch {
+    return [];
+  }
+}
 
 interface Props {
   onClose: () => void;
@@ -24,6 +50,10 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
     engagement_type: 'full_diligence',
     notes: '',
   });
+  const [edgarSuggestions, setEdgarSuggestions] = useState<string[]>([]);
+  const [edgarLoading, setEdgarLoading] = useState(false);
+  const edgarTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressEdgar = useRef(false);
   const [distribution, setDistribution] = useState({
     slack_webhook_url: '',
     email_recipients: '',
@@ -36,6 +66,21 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
   const [showDistribution, setShowDistribution] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Debounced SEC EDGAR company lookup
+  useEffect(() => {
+    if (suppressEdgar.current) { suppressEdgar.current = false; return; }
+    if (edgarTimer.current) clearTimeout(edgarTimer.current);
+    const q = form.company_name.trim();
+    if (q.length < 2) { setEdgarSuggestions([]); return; }
+    edgarTimer.current = setTimeout(async () => {
+      setEdgarLoading(true);
+      const names = await searchEdgar(q);
+      setEdgarSuggestions(names);
+      setEdgarLoading(false);
+    }, 350);
+    return () => { if (edgarTimer.current) clearTimeout(edgarTimer.current); };
+  }, [form.company_name]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,20 +171,47 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          <div>
+          <div className="relative">
             <label className="block text-[11px] font-mono text-theme-text-muted mb-1.5 uppercase tracking-wider">
               Target Company *
             </label>
-            <input
-              type="text"
-              required
-              value={form.company_name}
-              onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
-              placeholder="e.g. Zendesk Inc."
-              className="w-full px-3 py-2 bg-transparent border border-theme-border rounded-lg text-sm
-                         placeholder:text-theme-text-muted/50 focus:outline-none focus:border-theme-text-muted
-                         transition-colors"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={form.company_name}
+                onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
+                onBlur={() => setTimeout(() => setEdgarSuggestions([]), 150)}
+                placeholder="e.g. Zendesk Inc."
+                className="w-full px-3 py-2 bg-transparent border border-theme-border rounded-lg text-sm
+                           placeholder:text-theme-text-muted/50 focus:outline-none focus:border-theme-text-muted
+                           transition-colors pr-8"
+              />
+              {edgarLoading && (
+                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-theme-text-muted" />
+              )}
+            </div>
+            {edgarSuggestions.length > 0 && (
+              <div className="absolute z-10 left-0 right-0 mt-1 border border-theme-border bg-theme-bg rounded-lg shadow-xl overflow-hidden">
+                {edgarSuggestions.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      suppressEdgar.current = true;
+                      setForm((f) => ({ ...f, company_name: name }));
+                      setEdgarSuggestions([]);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs hover:bg-theme-border/40 transition-colors"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-theme-text-muted flex-shrink-0" />
+                    <span>{name}</span>
+                    <span className="ml-auto text-[10px] font-mono text-theme-text-muted/60">SEC EDGAR</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
