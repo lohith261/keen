@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, FlaskConical, Radio, Search, Trash2,
-  Activity, TrendingUp, BarChart2, LogOut,
+  Activity, TrendingUp, BarChart2, LogOut, FileText,
 } from 'lucide-react';
 import { engagementsApi, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
@@ -12,8 +12,9 @@ import { useAuth } from '../../context/AuthContext';
 import NewEngagementModal from './NewEngagementModal';
 import PipelineView from './PipelineView';
 import ResultsPanel from './ResultsPanel';
+import DocumentsPanel from './DocumentsPanel';
 
-type DashView = 'list' | 'pipeline' | 'results';
+type DashView = 'list' | 'pipeline' | 'results' | 'documents';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   draft:     { label: 'Draft',     color: 'text-theme-text-muted', Icon: Clock },
@@ -90,6 +91,7 @@ export default function Dashboard() {
   const [dashView, setDashView] = useState<DashView>('list');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const autoStarted = useRef(false);
 
   useEffect(() => {
     engagementsApi
@@ -98,6 +100,32 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Self-running demo: auto-create + auto-start when demo-mode user has no engagements
+  useEffect(() => {
+    if (!isDemoMode || loading || engagements.length > 0 || autoStarted.current) return;
+    autoStarted.current = true;
+
+    (async () => {
+      try {
+        const created = await engagementsApi.create({
+          company_name: 'Acme Analytics Corp',
+          pe_firm: 'Summit Capital Partners',
+          deal_size: '$120M Series C',
+          config: { engagement_type: 'full_diligence' },
+        });
+        setEngagements([created]);
+        setSelected(created);
+        setDashView('pipeline');
+        await engagementsApi.start(created.id);
+        const started = await engagementsApi.get(created.id);
+        setSelected(started);
+        setEngagements([started]);
+      } catch {
+        // auto-start failed — show empty list
+      }
+    })();
+  }, [isDemoMode, loading, engagements.length]);
 
   // Poll running engagement every 5s to pick up status changes
   useEffect(() => {
@@ -198,6 +226,12 @@ export default function Dashboard() {
                       <>
                         <span>/</span>
                         <span className="text-green-400">Results</span>
+                      </>
+                    )}
+                    {dashView === 'documents' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-blue-400">Documents</span>
                       </>
                     )}
                   </div>
@@ -411,8 +445,8 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ── Pipeline / Results view ── */}
-          {(dashView === 'pipeline' || dashView === 'results') && selected && (
+          {/* ── Pipeline / Results / Documents view ── */}
+          {(dashView === 'pipeline' || dashView === 'results' || dashView === 'documents') && selected && (
             <div className="space-y-4">
               {/* Back + tab switcher */}
               <div className="flex items-center gap-4">
@@ -425,19 +459,18 @@ export default function Dashboard() {
                   ALL ENGAGEMENTS
                 </button>
 
-                {/* Tab bar — available as soon as the engagement has started */}
-                {canShowResults && (
-                  <div className="flex items-center gap-1 border border-theme-border rounded-lg p-0.5">
-                    <button
-                      onClick={() => setDashView('pipeline')}
-                      className={`px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
-                        dashView === 'pipeline'
-                          ? 'bg-theme-text text-theme-bg font-semibold'
-                          : 'text-theme-text-muted hover:text-theme-text'
-                      }`}
-                    >
-                      PIPELINE
-                    </button>
+                <div className="flex items-center gap-1 border border-theme-border rounded-lg p-0.5">
+                  <button
+                    onClick={() => setDashView('pipeline')}
+                    className={`px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'pipeline'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    PIPELINE
+                  </button>
+                  {canShowResults && (
                     <button
                       onClick={() => setDashView('results')}
                       className={`flex items-center gap-1.5 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
@@ -447,13 +480,23 @@ export default function Dashboard() {
                       }`}
                     >
                       RESULTS
-                      {/* Live pulse dot when pipeline still running */}
                       {selected.status === 'running' && (
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       )}
                     </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    onClick={() => setDashView('documents')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'documents'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <FileText className="w-3 h-3" />
+                    DOCUMENTS
+                  </button>
+                </div>
               </div>
 
               {dashView === 'pipeline' && (
@@ -464,6 +507,12 @@ export default function Dashboard() {
               )}
               {dashView === 'results' && (
                 <ResultsPanel engagement={selected} />
+              )}
+              {dashView === 'documents' && (
+                <DocumentsPanel
+                  engagementId={selected.id}
+                  readOnly={selected.status !== 'draft'}
+                />
               )}
             </div>
           )}

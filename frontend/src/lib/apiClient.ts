@@ -421,6 +421,43 @@ export const credentialsApi = {
     request<void>(`/credentials/${engagementId}/${systemName}`, { method: 'DELETE' }),
 };
 
+// ── Document endpoints ──────────────────────────────────
+
+export interface DocumentRecord {
+  id: string;
+  engagement_id: string;
+  filename: string;
+  file_type: string;
+  file_size_bytes: number;
+  page_count?: number;
+  status: 'processing' | 'ready' | 'error';
+  error_message?: string;
+  has_text: boolean;
+  created_at: string;
+}
+
+export const documentsApi = {
+  list: (engagementId: string) =>
+    request<DocumentRecord[]>(`/engagements/${engagementId}/documents`),
+
+  upload: async (engagementId: string, file: File): Promise<DocumentRecord> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const resp = await fetch(`${API_BASE}/engagements/${engagementId}/documents`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new ApiError(resp.status, err.detail || 'Upload failed');
+    }
+    return resp.json();
+  },
+
+  delete: (engagementId: string, documentId: string) =>
+    request<void>(`/engagements/${engagementId}/documents/${documentId}`, { method: 'DELETE' }),
+};
+
 // ── WebSocket ───────────────────────────────────────────
 
 export function connectAgentStatus(
