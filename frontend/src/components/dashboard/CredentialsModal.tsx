@@ -85,13 +85,29 @@ export default function CredentialsModal({ engagementId, onClose }: Props) {
       const creds: Record<string, string> = {
         ...values,
       };
-      await credentialsApi.store(engagementId, selected.system_name, creds);
+      await credentialsApi.store(engagementId, selected.system_name, selected.auth_type, creds);
       setSaveSuccess(true);
       setConfiguredSystems((prev) => new Set([...prev, selected.system_name]));
       setValues({});
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save credentials');
+      let msg = 'Failed to save credentials';
+      if (err instanceof Error) {
+        // FastAPI 422 detail is an array of validation error objects — flatten to readable text
+        try {
+          const parsed = JSON.parse(err.message);
+          if (Array.isArray(parsed)) {
+            msg = parsed.map((e: { msg?: string; loc?: string[] }) =>
+              [e.loc?.slice(-1)[0], e.msg].filter(Boolean).join(': ')
+            ).join('; ');
+          } else {
+            msg = err.message;
+          }
+        } catch {
+          msg = err.message;
+        }
+      }
+      setSaveError(msg);
     } finally {
       setSaving(false);
     }

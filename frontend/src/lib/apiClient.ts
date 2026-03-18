@@ -81,7 +81,18 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, error.detail || 'Unknown error');
+    // FastAPI 422 returns detail as an array of validation error objects
+    let detail: string;
+    if (Array.isArray(error.detail)) {
+      detail = error.detail
+        .map((e: { msg?: string; loc?: string[] }) =>
+          [e.loc?.slice(-1)[0], e.msg].filter(Boolean).join(': ')
+        )
+        .join('; ');
+    } else {
+      detail = String(error.detail || 'Unknown error');
+    }
+    throw new ApiError(response.status, detail);
   }
 
   return response.json();
@@ -452,15 +463,41 @@ export const CREDENTIAL_SPECS: SystemCredentialSpec[] = [
   },
 ];
 
+/** Map the UI auth_type label to the backend credential_type enum. */
+function authTypeToCredType(authType: string): string {
+  const a = authType.toLowerCase();
+  if (a.includes('oauth')) return 'oauth';
+  if (a === 'api key') return 'api_key';
+  if (a.includes('token')) return 'token';
+  if (a === 'browser login') return 'username_password';
+  if (a === 'service account') return 'api_key';
+  return 'api_key';
+}
+
 export const credentialsApi = {
-  store: (engagementId: string, systemName: string, credentials: Record<string, string>) =>
-    request<{ message: string; credential_id: string }>(
+  store: (
+    engagementId: string,
+    systemName: string,
+    authType: string,
+    credentialData: Record<string, string>,
+  ) =>
+    request<{ id: string; system_name: string; credential_type: string; created_at: string }>(
       `/credentials/${engagementId}/${systemName}`,
-      { method: 'POST', body: { credentials } as unknown as Record<string, unknown> },
+      {
+        method: 'POST',
+        body: {
+          credential_type: authTypeToCredType(authType),
+          credential_data: credentialData,
+        } as unknown as Record<string, unknown>,
+      },
     ),
 
-  list: (engagementId: string) =>
-    request<{ systems: string[] }>(`/credentials/${engagementId}`),
+  list: async (engagementId: string): Promise<{ systems: string[] }> => {
+    const res = await request<{ systems: Array<{ system_name: string }>; total: number }>(
+      `/credentials/${engagementId}`,
+    );
+    return { systems: res.systems.map((s) => s.system_name) };
+  },
 
   remove: (engagementId: string, systemName: string) =>
     request<void>(`/credentials/${engagementId}/${systemName}`, { method: 'DELETE' }),
