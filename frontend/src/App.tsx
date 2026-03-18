@@ -216,7 +216,6 @@ const securityPoints = [
 
 function App() {
   const [activeAgent, setActiveAgent] = useState(0);
-  const [timestamp, setTimestamp] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [navSolid, setNavSolid] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -267,18 +266,11 @@ function App() {
   }, [location.state]);
 
   useEffect(() => {
-    const updateTimestamp = () => {
-      const now = new Date();
-      setTimestamp(now.toISOString().split('T')[0].replace(/-/g, '.'));
-    };
-    updateTimestamp();
-    const timestampInterval = setInterval(updateTimestamp, 1000);
     const agentInterval = setInterval(() => setActiveAgent(p => (p + 1) % 3), 4000);
     const onScroll = () => setNavSolid(window.scrollY > 80);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       clearInterval(agentInterval);
-      clearInterval(timestampInterval);
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
@@ -360,8 +352,7 @@ function App() {
                 )}
               </div>
 
-              <div className="text-[10px] md:text-xs font-mono text-theme-text-muted">{timestamp}</div>
-              <DemoModeToggle />
+<DemoModeToggle />
 
               <button
                 onClick={openDashboard}
