@@ -61,6 +61,10 @@ class Engagement(Base):
     documents = relationship("Document", back_populates="engagement", cascade="all, delete-orphan")
     transcripts = relationship("ExpertTranscript", back_populates="engagement", cascade="all, delete-orphan")
     monitoring_schedules = relationship("MonitoringSchedule", cascade="all, delete-orphan")
+    primary_research_records = relationship("PrimaryResearch", back_populates="engagement", cascade="all, delete-orphan")
+    external_records = relationship("ExternalRecord", back_populates="engagement", cascade="all, delete-orphan")
+    legal_findings = relationship("LegalFinding", back_populates="engagement", cascade="all, delete-orphan")
+    technical_dd_reports = relationship("TechnicalDDReport", back_populates="engagement", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Engagement {self.id} company={self.company_name!r} status={self.status}>"

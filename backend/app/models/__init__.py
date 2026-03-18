@@ -7,6 +7,10 @@ from app.models.credential import Credential
 from app.models.document import Document
 from app.models.finding import Finding
 from app.models.lead import Lead
+from app.models.primary_research import PrimaryResearch
+from app.models.external_record import ExternalRecord
+from app.models.legal_finding import LegalFinding
+from app.models.technical_dd import TechnicalDDReport
 
 __all__ = [
     "Engagement",
@@ -16,4 +20,8 @@ __all__ = [
     "Document",
     "Finding",
     "Lead",
+    "PrimaryResearch",
+    "ExternalRecord",
+    "LegalFinding",
+    "TechnicalDDReport",
 ]
