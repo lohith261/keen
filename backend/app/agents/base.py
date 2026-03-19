@@ -174,8 +174,10 @@ class BaseAgent(abc.ABC):
                 for finding_data in result.findings:
                     await self._create_finding(finding_data)
 
-                # Report step completion
-                await self._report_progress(i, step_name, "completed")
+                # Report step completion — include the backend message so the
+                # frontend can display exactly what was done rather than a
+                # generic step-name translation.
+                await self._report_progress(i, step_name, "completed", message=result.message)
 
             # All steps complete
             await self._update_run_status(AgentRunStatus.COMPLETED)
@@ -329,8 +331,19 @@ class BaseAgent(abc.ABC):
                 "error": error,
             })
 
-    async def _report_progress(self, step: int, step_name: str, stage: str) -> None:
-        """Emit a progress event."""
+    async def _report_progress(
+        self,
+        step: int,
+        step_name: str,
+        stage: str,
+        message: str = "",
+    ) -> None:
+        """Emit a progress event.
+
+        The optional *message* is the human-readable description of what the
+        step actually did (from StepResult.message).  The frontend prefers this
+        over its own static step-name translations when present.
+        """
         if self.on_progress:
             await self.on_progress("progress", {
                 "agent_run_id": str(self.agent_run_id),
@@ -340,6 +353,22 @@ class BaseAgent(abc.ABC):
                 "step_name": step_name,
                 "stage": stage,
                 "progress_pct": (step / self.total_steps * 100) if self.total_steps > 0 else 0,
+                "message": message,
+            })
+
+    async def _report_sub_progress(self, message: str) -> None:
+        """Emit an intra-step log event for mid-step visibility.
+
+        Unlike _report_progress(), this emits a lightweight 'log' event that
+        does not affect the step counter or progress bar — it just appends a
+        descriptive line to the pipeline log so users can see exactly what the
+        agent is doing *right now* (e.g. which field or API it is querying).
+        """
+        if self.on_progress:
+            await self.on_progress("log", {
+                "agent_run_id": str(self.agent_run_id),
+                "agent_type": self.agent_type,
+                "message": message,
             })
 
     # ── Findings ─────────────────────────────────────────

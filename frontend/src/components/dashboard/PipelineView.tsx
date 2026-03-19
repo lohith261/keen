@@ -17,7 +17,7 @@ interface AgentState {
 
 interface LogEntry {
   id: string;
-  type: 'init' | 'step_start' | 'step_done' | 'finding' | 'agent_start' | 'agent_done' | 'error' | 'browser_stream';
+  type: 'init' | 'step_start' | 'step_done' | 'finding' | 'agent_start' | 'agent_done' | 'error' | 'browser_stream' | 'log';
   message: string;
   timestamp: string;
   agent?: string;
@@ -81,41 +81,55 @@ const TINYFISH_SOURCES = new Set([
   'quickbooks', 'zoominfo', 'marketo', 'dynamics', 'sap', 'oracle',
 ]);
 
-/** Map raw snake_case step names to human-readable activity strings */
-function stepToActivity(step: string, agent: string): string {
+/**
+ * Map raw snake_case step names to human-readable activity strings.
+ * Used as a FALLBACK only — the backend now sends a descriptive `message`
+ * field on completed progress events which the frontend prefers over this.
+ */
+function stepToActivity(step: string, _agent: string): string {
   if (!step) return '';
   const s = step.toLowerCase();
 
-  // Research steps
-  if (s === 'plan_extraction') return 'Planning extraction strategy with LLM...';
+  // ── Research steps ──────────────────────────────────────────────────────────
+  if (s === 'plan_extraction') return 'Planning data extraction strategy with LLM...';
   if (s.startsWith('authenticate_')) {
     const src = s.replace('authenticate_', '').replace(/_/g, ' ');
-    return `Authenticating to ${src}...`;
+    return `Connecting to ${src}...`;
   }
   if (s.startsWith('extract_')) {
     const src = s.replace('extract_', '').replace(/_/g, ' ');
-    return `Extracting data from ${src}...`;
+    return `Querying ${src}...`;
   }
-  if (s === 'validate_extractions') return 'Validating extracted data across all sources...';
-  if (s === 'compile_results') return 'Compiling research output...';
+  if (s === 'validate_extractions') return 'Validating extracted datasets across all sources...';
+  if (s === 'compile_results') return 'Compiling research output → Analysis Agent...';
 
-  // Analysis steps
-  if (s === 'load_research_data') return 'Loading research data into analysis engine...';
-  if (s === 'cross_reference_sources') return 'Cross-referencing data across all sources with LLM...';
-  if (s === 'detect_variances') return 'Detecting revenue, cost, and headcount variances...';
-  if (s === 'score_findings') return 'Scoring findings by severity and confidence...';
+  // ── Analysis steps ─────────────────────────────────────────────────────────
+  if (s === 'ingest_research_data') return 'Ingesting Research Agent datasets...';
+  if (s === 'normalize_data') return 'Normalizing schemas across sources...';
+  if (s === 'cross_reference_sources') return 'Cross-referencing CRM vs ERP vs market data with LLM...';
+  if (s === 'detect_revenue_variances') return 'Detecting revenue variances (SAP vs NetSuite)...';
+  if (s === 'detect_cost_variances') return 'Detecting cost variances (SAP vs Oracle GL)...';
+  if (s === 'analyze_customer_metrics') return 'Analyzing customer metrics (churn, AR aging, HubSpot funnel)...';
+  if (s === 'analyze_market_position') return 'Analyzing market position (headcount, leadership, Bloomberg peers)...';
+  if (s === 'financial_model_sync') return 'Syncing financial model against extracted P&L and ARR data...';
   if (s === 'route_exceptions') return 'Routing critical findings for human review...';
-  if (s === 'compile_analysis') return 'Compiling analysis report...';
+  if (s === 'score_findings') return 'Scoring findings by severity and confidence...';
+  if (s === 'compile_analysis') return 'Compiling analysis → Delivery Agent...';
 
-  // Delivery steps
-  if (s === 'load_analysis') return 'Loading analysis findings...';
+  // ── Delivery steps ─────────────────────────────────────────────────────────
+  if (s === 'ingest_analysis') return 'Ingesting analysis findings...';
   if (s === 'generate_executive_summary') return 'Generating executive summary with LLM...';
-  if (s === 'generate_detailed_report') return 'Generating full 9-section due diligence report...';
-  if (s === 'format_output') return 'Formatting board-ready output...';
-  if (s === 'distribute') return 'Distributing report via configured channels...';
-  if (s === 'create_audit_trail') return 'Creating compliance audit trail...';
+  if (s === 'generate_detailed_report') return 'Generating 9-section due diligence report...';
+  if (s === 'generate_data_appendix') return 'Building data appendix and chart tables...';
+  if (s === 'compliance_review') return 'Running compliance & PII scan on deliverables...';
+  if (s.startsWith('distribute_')) {
+    const ch = s.replace('distribute_', '');
+    return `Distributing via ${ch}...`;
+  }
+  if (s === 'generate_audit_trail') return 'Generating compliance audit trail...';
+  if (s === 'finalize_delivery') return 'Finalising deliverables...';
 
-  // Fallback
+  // ── Fallback ────────────────────────────────────────────────────────────────
   return step.replace(/_/g, ' ');
 }
 
@@ -153,6 +167,7 @@ function logColor(type: LogEntry['type']): string {
     case 'finding':        return 'text-amber-400';
     case 'error':          return 'text-red-400';
     case 'browser_stream': return 'text-cyan-400';
+    case 'log':            return 'text-sky-300';
     default:               return 'text-theme-text-muted';
   }
 }
@@ -167,6 +182,7 @@ function logPrefix(type: LogEntry['type']): string {
     case 'finding':        return '  ⚑';
     case 'error':          return '  ✗';
     case 'browser_stream': return '  🐟';
+    case 'log':            return '    →';
     default:               return '›';
   }
 }
@@ -223,10 +239,13 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
 
       if (event === 'progress') {
         const agentType = data.agent_type as string;
-        const stepName  = (data.step_name as string) ?? '';
-        const pct       = (data.progress_pct as number) ?? 0;
-        const stage     = data.stage as string;
-        const activity  = stepToActivity(stepName, agentType);
+        const stepName      = (data.step_name as string) ?? '';
+        const pct           = (data.progress_pct as number) ?? 0;
+        const stage         = data.stage as string;
+        // Prefer the backend-provided message (specific, real-time) over the
+        // static frontend fallback translation.
+        const backendMsg    = (data.message as string) ?? '';
+        const activity      = backendMsg || stepToActivity(stepName, agentType);
 
         setAgents((prev) => {
           if (!prev[agentType]) return prev;
@@ -246,7 +265,10 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           appendLog({ type: 'step_start', message: stepToActivity(stepName, agentType), agent: agentType });
         }
         if (stage === 'completed' && stepName) {
-          appendLog({ type: 'step_done', message: stepToActivity(stepName, agentType).replace(/\.\.\.$/, ' — done'), agent: agentType });
+          // Use backend message on completion (has the real outcome), strip
+          // trailing "..." from fallback strings for a clean "done" appearance.
+          const doneMsg = backendMsg || stepToActivity(stepName, agentType).replace(/\.\.\.$/, '');
+          appendLog({ type: 'step_done', message: doneMsg, agent: agentType });
           // Clear the browser stream panel when a TinyFish extraction step completes
           if (stepName.toLowerCase().startsWith('extract_')) {
             setBrowserStream(null);
@@ -302,6 +324,16 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           ...prev,
         ]);
         appendLog({ type: 'finding', message: `Finding: ${title}${source ? ` [${source}]` : ''}` });
+      }
+
+      // ── Intra-step sub-progress log lines ────────────────────────────────────
+      // Emitted by _report_sub_progress() in base.py — shows exactly what field
+      // or API endpoint is being queried mid-step (e.g. per extraction type).
+      if (event === 'log') {
+        const msg = (data.message as string) ?? '';
+        if (msg) {
+          appendLog({ type: 'log', message: msg, agent: (data.agent_type as string) ?? undefined });
+        }
       }
 
       // ── TinyFish live browser streaming URL ──────────────────────────────────

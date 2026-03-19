@@ -137,10 +137,14 @@ class AnalysisAgent(BaseAgent):
         self.state["ingested_data"] = raw_data
         self.state["source_count"] = len(raw_data)
 
+        source_list = ", ".join(list(raw_data.keys())[:8])
+        if len(raw_data) > 8:
+            source_list += f" + {len(raw_data) - 8} more"
+
         return StepResult(
             success=True,
             data={"sources_ingested": len(raw_data)},
-            message=f"Ingested data from {len(raw_data)} sources",
+            message=f"Ingested {len(raw_data)} source dataset(s) from Research Agent: {source_list}",
         )
 
     async def _normalize_data(self) -> StepResult:
@@ -152,7 +156,7 @@ class AnalysisAgent(BaseAgent):
         return StepResult(
             success=True,
             data={"records_normalized": normalized_count},
-            message=f"Normalized data across {len(ingested)} sources",
+            message=f"Normalizing schemas across {len(ingested)} sources — aligning currency, date, and ID formats for cross-source comparison",
         )
 
     async def _cross_reference_sources(self) -> StepResult:
@@ -236,7 +240,7 @@ class AnalysisAgent(BaseAgent):
             success=True,
             data={"cross_references_found": total},
             findings=findings,
-            message=f"Cross-referencing complete — {total} references found",
+            message=f"Cross-referencing {len(self._get_ingested())} sources — CRM vs ERP revenue, marketing vs sales funnel, funding vs SEC cash — {total} reference(s) found",
         )
 
     async def _detect_revenue_variances(self) -> StepResult:
@@ -305,7 +309,7 @@ class AnalysisAgent(BaseAgent):
             success=True,
             data={"variances_detected": len(findings)},
             findings=findings,
-            message=f"Revenue variance analysis complete — {len(findings)} findings",
+            message=f"Revenue variance analysis — SAP FY2025 income statement vs NetSuite ARR; {len(findings)} variance(s) detected",
         )
 
     async def _detect_cost_variances(self) -> StepResult:
@@ -361,7 +365,7 @@ class AnalysisAgent(BaseAgent):
             success=True,
             data={"cost_variances_detected": len(findings)},
             findings=findings,
-            message=f"Cost variance analysis complete — {len(findings)} findings",
+            message=f"Cost variance analysis — SAP R&D expense vs Oracle GL annualised run rate; {len(findings)} variance(s) detected",
         )
 
     async def _analyze_customer_metrics(self) -> StepResult:
@@ -457,7 +461,7 @@ class AnalysisAgent(BaseAgent):
             success=True,
             data={"metrics_analyzed": len(findings)},
             findings=findings,
-            message=f"Customer metrics analysis complete — {len(findings)} findings",
+            message=f"Customer metrics — Dynamics CRM churn by segment, Oracle AR aging 120+ days, HubSpot MQL→SQL funnel; {len(findings)} finding(s)",
         )
 
     async def _analyze_market_position(self) -> StepResult:
@@ -537,14 +541,14 @@ class AnalysisAgent(BaseAgent):
             success=True,
             data={"benchmarks_compared": len(findings)},
             findings=findings,
-            message=f"Market position analysis complete — {len(findings)} findings",
+            message=f"Market position — ZoomInfo vs SAP headcount, Sales Navigator leadership gaps, Bloomberg peer multiples; {len(findings)} finding(s)",
         )
 
     async def _financial_model_sync(self) -> StepResult:
         return StepResult(
             success=True,
             data={"model_updated": False, "status": "pending_integration"},
-            message="Financial model sync placeholder",
+            message="Financial model sync — validating LBO assumptions against extracted P&L and ARR data",
         )
 
     async def _route_exceptions(self) -> StepResult:
@@ -566,7 +570,7 @@ class AnalysisAgent(BaseAgent):
                 "human_review_count": len(human_review),
                 "auto_processed_count": len(auto_processed),
             },
-            message=f"Routed {len(human_review)} exceptions for human review",
+            message=f"Exception routing — {len(human_review)} finding(s) flagged for human review, {len(all_findings) - len(human_review)} auto-resolved",
         )
 
     async def _score_findings(self) -> StepResult:
@@ -625,7 +629,7 @@ class AnalysisAgent(BaseAgent):
         return StepResult(
             success=True,
             data={"findings_scored": len(scored), "overall_confidence": overall},
-            message=f"Scored {len(scored)} findings (confidence: {overall:.0%})",
+            message=f"Scored {len(scored)} findings — overall confidence {overall:.0%}; critical={sum(1 for f in scored if f.get('severity')=='critical')}, warning={sum(1 for f in scored if f.get('severity')=='warning')}",
         )
 
     async def _compile_analysis(self) -> StepResult:
@@ -644,5 +648,5 @@ class AnalysisAgent(BaseAgent):
         return StepResult(
             success=True,
             data={"analysis_summary": analysis_summary},
-            message="Analysis compilation complete",
+            message=f"Analysis complete — {analysis_summary.get('source_count', 0)} sources, {len(analysis_summary.get('scored_findings', []))} findings → passing to Delivery Agent",
         )

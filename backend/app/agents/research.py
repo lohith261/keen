@@ -147,6 +147,91 @@ DATA_SOURCES = {
 }
 
 
+# ── Extraction field descriptions ─────────────────────────────────────────────
+# Human-readable description of exactly what each (source, extraction_type)
+# pair fetches. Used to build descriptive pipeline log messages so users can
+# see what the agent is looking for in real time rather than a generic
+# "extracting data from X" placeholder.
+
+EXTRACTION_DETAIL: dict[tuple[str, str], str] = {
+    # Salesforce
+    ("salesforce", "pipeline_data"):    "open opportunities, deal stages, owner info, close dates",
+    ("salesforce", "deal_history"):     "closed-won deals last 12 months, amounts, stage history",
+    ("salesforce", "contact_records"):  "CRM contacts, titles, account mappings",
+    ("salesforce", "activity_logs"):    "tasks & calls last 90 days",
+    # NetSuite
+    ("netsuite", "revenue_data"):       "customer invoices & credits since 2023, ARR contributions",
+    ("netsuite", "expense_records"):    "vendor bills & expense reports since 2023",
+    ("netsuite", "journal_entries"):    "GL journal entries since 2023",
+    ("netsuite", "balance_sheet"):      "bank, AR, AP, fixed assets, equity account balances",
+    # SAP
+    ("sap", "financial_statements"):    "income statement, balance sheet, headcount by department",
+    ("sap", "cost_centers"):            "cost center hierarchy and allocations",
+    ("sap", "purchase_orders"):         "open and closed purchase orders",
+    # Oracle
+    ("oracle", "gl_entries"):           "Q4 GL entries by account, R&D and engineering costs",
+    ("oracle", "ar_aging"):             "AR aging buckets 30/60/90/120+ days, collection status",
+    ("oracle", "ap_aging"):             "AP aging by vendor",
+    # QuickBooks
+    ("quickbooks", "profit_loss"):      "P&L by month and category",
+    ("quickbooks", "balance_sheet"):    "assets, liabilities, equity snapshot",
+    ("quickbooks", "cash_flow"):        "operating, investing, financing cash flows",
+    # HubSpot
+    ("hubspot", "marketing_metrics"):   "contact lifecycle stages, MQL/SQL counts, conversion rates",
+    ("hubspot", "lead_funnel"):         "deal pipeline stages, counts, total values, win probability",
+    ("hubspot", "campaign_roi"):        "email campaign open rates, click rates, revenue attribution",
+    # Bloomberg Terminal
+    ("bloomberg", "market_comps"):      "peer ticker, market cap, EV, EV/Revenue multiple, Rule of 40",
+    ("bloomberg", "industry_benchmarks"): "median revenue growth, gross margin, NRR, CAC payback by segment",
+    ("bloomberg", "competitor_financials"): "competitor revenue, growth, last valuation, EV/Revenue multiple",
+    # SEC EDGAR
+    ("sec_edgar", "10k_filings"):       "annual 10-K — CIK lookup + XBRL financials",
+    ("sec_edgar", "10q_filings"):       "quarterly 10-Q — CIK lookup + interim financials",
+    ("sec_edgar", "insider_transactions"): "Form 4 insider buy/sell transactions",
+    ("sec_edgar", "proxy_statements"):  "DEF 14A proxy — board composition, exec compensation",
+    # PitchBook
+    ("pitchbook", "deal_comps"):        "comparable deal valuations, entry multiples, hold periods",
+    ("pitchbook", "valuation_multiples"): "EV/EBITDA, EV/Revenue, P/E comps by sector",
+    ("pitchbook", "fund_performance"):  "fund IRR, MOIC, DPI benchmarks",
+    # Capital IQ
+    ("capiq", "credit_analysis"):       "credit ratings, debt covenants, leverage ratios",
+    ("capiq", "peer_comparison"):       "peer revenue multiples, margin benchmarks",
+    ("capiq", "ownership_structure"):   "cap table, institutional holders, insider ownership",
+    # ZoomInfo
+    ("zoominfo", "org_chart"):          "leadership hierarchy, titles, departments, reporting lines",
+    ("zoominfo", "employee_count_trends"): "headcount by quarter, YoY growth, department breakdown",
+    ("zoominfo", "tech_stack"):         "CRM/ERP/marketing tools, vendor, confidence score",
+    # Crunchbase
+    ("crunchbase", "funding_history"):  "all funding rounds, amounts, lead investors, valuations",
+    ("crunchbase", "acquisitions"):     "acquiree/acquirer records, prices, dates",
+    ("crunchbase", "key_people"):       "founders, current team, titles, tenure",
+    # LinkedIn Sales Navigator
+    ("sales_navigator", "decision_makers"): "C-suite, VPs, Directors — titles, LinkedIn URLs, activity",
+    ("sales_navigator", "company_updates"):  "LinkedIn posts last 6 months — launches, partnerships, hiring",
+    ("sales_navigator", "hiring_trends"):    "headcount growth, open roles by dept, recent hires/departures",
+    # Microsoft Dynamics
+    ("dynamics", "sales_pipeline"):     "pipeline stages, opportunity counts, forecast amounts",
+    ("dynamics", "customer_segments"):  "SMB/Mid/Enterprise segments, ARR, churn rates",
+    ("dynamics", "revenue_forecast"):   "12-month forecast by segment and product line",
+    # Marketo
+    ("marketo", "lead_scoring"):        "lead score distribution, high-intent signals",
+    ("marketo", "email_metrics"):       "open rates, click-through rates, unsubscribe rates by campaign",
+    ("marketo", "attribution_data"):    "first-touch and multi-touch attribution by channel",
+}
+
+# Auth type labels for human-readable log messages
+_AUTH_TYPE_LABEL: dict[str, str] = {
+    "oauth":             "OAuth 2.0",
+    "token":             "token-based auth",
+    "api_key":           "API key",
+    "browser":           "TinyFish browser session",
+    "sso":               "SSO",
+    "username_password": "username/password",
+    "public":            "public API (no auth required)",
+    "demo":              "demo fixture data",
+}
+
+
 class ResearchAgent(BaseAgent):
     """
     Autonomous data extraction agent.
@@ -253,10 +338,14 @@ class ResearchAgent(BaseAgent):
 
         self.state["extraction_plan"] = sources_planned
 
+        source_names = ", ".join(s.get("name", s.get("source", "")) for s in sources_planned[:6])
+        if len(sources_planned) > 6:
+            source_names += f" + {len(sources_planned) - 6} more"
+
         return StepResult(
             success=True,
             data={"sources_planned": len(sources_planned), "plan": sources_planned},
-            message=f"Extraction planned for {len(sources_planned)} data sources",
+            message=f"LLM extraction plan: {len(sources_planned)} sources selected — {source_names}",
         )
 
     async def _authenticate_source(self, source: str) -> StepResult:
@@ -323,10 +412,14 @@ class ResearchAgent(BaseAgent):
             "demo_mode": demo_mode,
         }
 
+        effective_auth = "demo" if demo_mode else auth_type
+        auth_label = _AUTH_TYPE_LABEL.get(effective_auth, effective_auth)
+        prefix = "[DEMO] " if demo_mode else ""
+
         return StepResult(
             success=True,
             data={"source": source, "auth_type": auth_type, "status": "authenticated", "demo_mode": demo_mode},
-            message=f"Authenticated to {source_info.get('name', source)}" + (" (demo)" if demo_mode else ""),
+            message=f"{prefix}Connected to {source_info.get('name', source)} via {auth_label}",
         )
 
     async def _extract_source(self, source: str) -> StepResult:
@@ -343,6 +436,7 @@ class ResearchAgent(BaseAgent):
         extracted_data: dict = {}
         findings: list = []
         total_records = 0
+        source_name = source_info.get("name", source)
 
         if demo_mode:
             # Reuse the connector created during authenticate, or create fresh
@@ -352,6 +446,12 @@ class ResearchAgent(BaseAgent):
                 await connector.authenticate({})
 
             for extraction_type in extractions:
+                # Emit a descriptive sub-progress log line before each extraction
+                detail = EXTRACTION_DETAIL.get((source, extraction_type), "")
+                detail_str = f" ({detail})" if detail else ""
+                await self._report_sub_progress(
+                    f"{source_name}: fetching {extraction_type}{detail_str}"
+                )
                 records = await connector.extract({"type": extraction_type})
                 extracted_data[extraction_type] = records
                 total_records += len(records)
@@ -361,6 +461,12 @@ class ResearchAgent(BaseAgent):
             live_connector: BaseConnector | None = self.state.get(f"_connector_{source}")
             if live_connector:
                 for extraction_type in extractions:
+                    # Emit a descriptive sub-progress log line before each extraction
+                    detail = EXTRACTION_DETAIL.get((source, extraction_type), "")
+                    detail_str = f" ({detail})" if detail else ""
+                    await self._report_sub_progress(
+                        f"{source_name}: fetching {extraction_type}{detail_str}"
+                    )
                     try:
                         records = await live_connector.extract({"type": extraction_type})
                         extracted_data[extraction_type] = records
@@ -395,8 +501,15 @@ class ResearchAgent(BaseAgent):
             "Extracted %d datasets (%d records) from %s",
             len(extractions),
             total_records,
-            source_info.get("name", source),
+            source_name,
         )
+
+        # Build a concise summary for the step-done log line
+        extraction_parts = []
+        for et in extractions:
+            detail = EXTRACTION_DETAIL.get((source, et), "")
+            extraction_parts.append(f"{et}" + (f" ({detail})" if detail else ""))
+        extraction_summary = "; ".join(extraction_parts)
 
         return StepResult(
             success=True,
@@ -408,7 +521,9 @@ class ResearchAgent(BaseAgent):
                 "demo_mode": demo_mode,
             },
             findings=findings,
-            message=f"Extracted {len(extractions)} datasets ({total_records} records) from {source_info.get('name', source)}",
+            message=(
+                f"{source_name}: pulled {extraction_summary} — {total_records} records"
+            ),
         )
 
     async def _validate_extractions(self) -> StepResult:
@@ -441,7 +556,10 @@ class ResearchAgent(BaseAgent):
                 "sources_missing": list(missing_data),
             },
             findings=findings,
-            message=f"Validated {len(sources_with_data)} sources, {len(missing_data)} missing",
+            message=(
+                f"Validated {len(sources_with_data)} source dataset(s)"
+                + (f" — {len(missing_data)} source(s) returned no data: {', '.join(missing_data)}" if missing_data else " — all sources have data")
+            ),
         )
 
     async def _compile_results(self) -> StepResult:
@@ -469,6 +587,9 @@ class ResearchAgent(BaseAgent):
                 "total_sources": len(compiled),
                 "raw_data": compiled,
             },
-            message=f"Compiled data from {len(compiled)} sources"
-            + (f" including {len(uploaded_documents)} uploaded document(s)" if uploaded_documents else ""),
+            message=(
+                f"Research complete — compiled {len(compiled)} source dataset(s)"
+                + (f" + {len(uploaded_documents)} uploaded document(s)" if uploaded_documents else "")
+                + f" → passing to Analysis Agent"
+            ),
         )

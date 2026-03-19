@@ -101,7 +101,7 @@ class DeliveryAgent(BaseAgent):
         return StepResult(
             success=True,
             data={"analysis_ingested": True},
-            message="Analysis data ingested",
+            message=f"Ingested analysis output — {len(analysis_summary.get('scored_findings', []))} scored findings, {analysis_summary.get('source_count', 0)} sources reviewed",
         )
 
     async def _generate_executive_summary(self) -> StepResult:
@@ -166,7 +166,7 @@ class DeliveryAgent(BaseAgent):
                 "summary_generated": True,
                 "findings_count": len(executive_summary.get("key_findings", [])),
             },
-            message="Executive summary generated",
+            message=f"Executive summary — {len(executive_summary.get('key_findings', []))} key finding(s), recommendation: {executive_summary.get('recommendation', 'pending').upper().replace('_', ' ')}",
         )
 
     async def _generate_detailed_report(self) -> StepResult:
@@ -273,7 +273,7 @@ class DeliveryAgent(BaseAgent):
         return StepResult(
             success=True,
             data={"appendix_generated": True},
-            message="Data appendix generated",
+            message="Data appendix — building supporting tables, chart data, and raw data references",
         )
 
     async def _compliance_review(self) -> StepResult:
@@ -657,7 +657,7 @@ class DeliveryAgent(BaseAgent):
                 "severity": "info",
                 "data": audit,
             }],
-            message="Audit trail generated",
+            message=f"Audit trail — logging all {len(self.state.get('distributions', []))} distribution(s) and data source accesses for compliance",
         )
 
     async def _finalize_delivery(self) -> StepResult:
@@ -703,5 +703,5 @@ class DeliveryAgent(BaseAgent):
             success=True,
             data={"deliverables": deliverables, "status": "finalized"},
             findings=findings,
-            message="All deliverables finalized",
+            message=f"Pipeline complete — executive summary, {len(self.state.get('detailed_report', {}).get('sections', []))} report sections, compliance {self.state.get('compliance', {}).get('status', 'n/a')} ✅",
         )
