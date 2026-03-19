@@ -26,7 +26,7 @@ You tell it the company name, click a button, and it goes off and reads financia
 Click **STATUS** in the top bar. If you see a green **OPERATIONAL** badge, you're good to go.
 
 ### 2. Make sure Demo mode is on
-Look for the little amber **DEMO** pill in the top right. If it says **LIVE**, click it once to switch to demo. Demo mode uses fake (but realistic) data so you don't need to connect anything real.
+The app runs in Demo mode by default. Demo mode uses fake (but realistic) data so you don't need to connect anything real — just open the dashboard and it works.
 
 ### 3. Open the Dashboard
 Click **DASHBOARD**. No login needed in demo mode. It'll automatically create a test company called "Zendesk Inc" and start running the analysis.
@@ -96,7 +96,7 @@ Finally, it writes up a proper report — executive summary, full findings, ever
 | What you see | Fake "Zendesk Inc" data | Real data from your actual connected systems |
 | Credentials needed | None | You'll need to connect your accounts |
 | Good for | Showing people how it works | Actually using it for a real deal |
-| How to toggle | Amber **DEMO** pill in the top right | Green **LIVE** pill |
+| How to switch | Default when you open the app | Set `keen-data-mode: live` in browser storage, or use the in-app toggle |
 
 ---
 
