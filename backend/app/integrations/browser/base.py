@@ -7,7 +7,7 @@ as one POST to /v1/automation/run-sse.  There is no persistent session state.
 
 Subclasses implement:
   login_url       Class attribute — URL of the login page
-  _build_goal()   Returns a complete NL goal for login + extraction per query type
+  _build_goal()   Returns a complete NL goal string per query type
 """
 
 from __future__ import annotations
@@ -35,6 +35,10 @@ class BaseBrowserConnector(BaseConnector):
     Subclasses implement:
       login_url      Class attribute — starting URL (typically the login page)
       _build_goal()  Returns a complete NL goal string per query_type
+
+    The optional `on_event` async callback surfaces TinyFish live events
+    (e.g. the browser streaming URL) to the calling agent so they can be
+    forwarded to the frontend in real time.
     """
 
     system_name: str = "browser"
@@ -44,11 +48,14 @@ class BaseBrowserConnector(BaseConnector):
     login_url: str = ""
     auth_flow: AuthFlowType = AuthFlowType.BROWSER
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, on_event: Any | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._tinyfish = TinyFishClient()
         self._credentials: dict = {}
         self._company_name: str = ""
+        # Optional async callback(event_type: str, data: dict) forwarded from the
+        # research agent's on_progress hook.  Used to emit browser_stream events.
+        self._on_event = on_event
 
     # ── Abstract interface for subclasses ─────────────────────────────────────
 
@@ -114,6 +121,10 @@ class BaseBrowserConnector(BaseConnector):
 
         Each call is an independent, stateless TinyFish run. The goal string
         contains everything TinyFish needs to log in and extract data.
+
+        If self._on_event is set, emits a `browser_stream` event as soon as
+        TinyFish provides a live browser streaming URL — enabling the frontend
+        to show a real-time browser view during extraction.
         """
         query_type = query.get("type", "")
         company_name = query.get("company_name") or self._company_name
@@ -134,6 +145,17 @@ class BaseBrowserConnector(BaseConnector):
             )
             return []
 
+        # Build streaming URL callback to forward live browser view to the frontend
+        on_event = self._on_event
+
+        async def _on_streaming_url(streaming_url: str) -> None:
+            if on_event:
+                await on_event("browser_stream", {
+                    "source": self.system_name,
+                    "url": streaming_url,
+                    "query_type": query_type,
+                })
+
         try:
             goal = self._build_goal(query_type, company_name, self._credentials)
             logger.info(
@@ -147,6 +169,7 @@ class BaseBrowserConnector(BaseConnector):
             result = await self._tinyfish.run(
                 url=self.login_url,
                 goal=goal,
+                on_streaming_url=_on_streaming_url,
             )
 
             # Normalize to list[dict]

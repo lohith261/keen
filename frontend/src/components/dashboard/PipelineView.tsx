@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Search, BarChart3, FileText, CheckCircle2, Clock, XCircle,
   AlertTriangle, Info, Loader2, PauseCircle, Terminal, KeyRound, RotateCcw,
+  Globe, ExternalLink, Zap,
 } from 'lucide-react';
 import { connectAgentStatus, engagementsApi, type Engagement } from '../../lib/apiClient';
 import CredentialsModal from './CredentialsModal';
@@ -16,7 +17,7 @@ interface AgentState {
 
 interface LogEntry {
   id: string;
-  type: 'init' | 'step_start' | 'step_done' | 'finding' | 'agent_start' | 'agent_done' | 'error';
+  type: 'init' | 'step_start' | 'step_done' | 'finding' | 'agent_start' | 'agent_done' | 'error' | 'browser_stream';
   message: string;
   timestamp: string;
   agent?: string;
@@ -28,6 +29,12 @@ interface Finding {
   severity: 'info' | 'warning' | 'critical';
   source_system: string;
   timestamp: string;
+}
+
+interface BrowserStream {
+  url: string;
+  source: string;
+  query_type: string;
 }
 
 interface Props {
@@ -63,6 +70,16 @@ const AGENT_COLORS: Record<string, { bar: string; ring: string; text: string }> 
   purple: { bar: 'bg-purple-500', ring: 'border-purple-500/40', text: 'text-purple-400' },
   green:  { bar: 'bg-green-500',  ring: 'border-green-500/40',  text: 'text-green-400' },
 };
+
+/**
+ * Sources powered by TinyFish browser automation.
+ * When the research agent is extracting from one of these, we surface
+ * the TinyFish branding and live streaming URL in the UI.
+ */
+const TINYFISH_SOURCES = new Set([
+  'bloomberg', 'capiq', 'pitchbook', 'sales_navigator',
+  'quickbooks', 'zoominfo', 'marketo', 'dynamics', 'sap', 'oracle',
+]);
 
 /** Map raw snake_case step names to human-readable activity strings */
 function stepToActivity(step: string, agent: string): string {
@@ -102,6 +119,17 @@ function stepToActivity(step: string, agent: string): string {
   return step.replace(/_/g, ' ');
 }
 
+/** Return true when the current research step is TinyFish-powered */
+function isTinyFishStep(stepName: string): boolean {
+  if (!stepName) return false;
+  const s = stepName.toLowerCase();
+  if (s.startsWith('extract_') || s.startsWith('authenticate_')) {
+    const src = s.replace(/^(extract_|authenticate_)/, '');
+    return TINYFISH_SOURCES.has(src);
+  }
+  return false;
+}
+
 /** Startup log entries shown immediately when pipeline begins */
 const STARTUP_LOG: LogEntry[] = [
   { id: 'init-0', type: 'init', message: 'Initialising KEEN pipeline...', timestamp: '' },
@@ -117,27 +145,29 @@ function now(): string {
 
 function logColor(type: LogEntry['type']): string {
   switch (type) {
-    case 'init':        return 'text-theme-text-muted';
-    case 'agent_start': return 'text-blue-400';
-    case 'agent_done':  return 'text-green-400';
-    case 'step_start':  return 'text-theme-text-muted';
-    case 'step_done':   return 'text-green-400';
-    case 'finding':     return 'text-amber-400';
-    case 'error':       return 'text-red-400';
-    default:            return 'text-theme-text-muted';
+    case 'init':           return 'text-theme-text-muted';
+    case 'agent_start':    return 'text-blue-400';
+    case 'agent_done':     return 'text-green-400';
+    case 'step_start':     return 'text-theme-text-muted';
+    case 'step_done':      return 'text-green-400';
+    case 'finding':        return 'text-amber-400';
+    case 'error':          return 'text-red-400';
+    case 'browser_stream': return 'text-cyan-400';
+    default:               return 'text-theme-text-muted';
   }
 }
 
 function logPrefix(type: LogEntry['type']): string {
   switch (type) {
-    case 'init':        return '›';
-    case 'agent_start': return '▶';
-    case 'agent_done':  return '✓';
-    case 'step_start':  return '  ·';
-    case 'step_done':   return '  ✓';
-    case 'finding':     return '  ⚑';
-    case 'error':       return '  ✗';
-    default:            return '›';
+    case 'init':           return '›';
+    case 'agent_start':    return '▶';
+    case 'agent_done':     return '✓';
+    case 'step_start':     return '  ·';
+    case 'step_done':      return '  ✓';
+    case 'finding':        return '  ⚑';
+    case 'error':          return '  ✗';
+    case 'browser_stream': return '  🐟';
+    default:               return '›';
   }
 }
 
@@ -153,6 +183,8 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
   const [findings, setFindings] = useState<Finding[]>([]);
   const [overallStatus, setOverallStatus] = useState(engagement.status);
   const [wsOnline, setWsOnline] = useState(true);
+  // Live TinyFish browser stream state
+  const [browserStream, setBrowserStream] = useState<BrowserStream | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const findingsEndRef = useRef<HTMLDivElement>(null);
@@ -215,6 +247,10 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
         }
         if (stage === 'completed' && stepName) {
           appendLog({ type: 'step_done', message: stepToActivity(stepName, agentType).replace(/\.\.\.$/, ' — done'), agent: agentType });
+          // Clear the browser stream panel when a TinyFish extraction step completes
+          if (stepName.toLowerCase().startsWith('extract_')) {
+            setBrowserStream(null);
+          }
         }
       }
 
@@ -244,6 +280,8 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
         }
         if (status === 'completed' && meta) {
           appendLog({ type: 'agent_done', message: `${meta.label} completed`, agent: agentType });
+          // Clear browser stream when research agent finishes
+          if (agentType === 'research') setBrowserStream(null);
         }
         if (status === 'failed' && meta) {
           appendLog({ type: 'error', message: `${meta.label} failed`, agent: agentType });
@@ -264,6 +302,20 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           ...prev,
         ]);
         appendLog({ type: 'finding', message: `Finding: ${title}${source ? ` [${source}]` : ''}` });
+      }
+
+      // ── TinyFish live browser streaming URL ──────────────────────────────────
+      if (event === 'browser_stream') {
+        const streamUrl   = (data.url as string) ?? '';
+        const source      = (data.source as string) ?? '';
+        const queryType   = (data.query_type as string) ?? '';
+        if (streamUrl) {
+          setBrowserStream({ url: streamUrl, source, query_type: queryType });
+          appendLog({
+            type: 'browser_stream',
+            message: `TinyFish live browser: ${source}${queryType ? ` / ${queryType}` : ''}`,
+          });
+        }
       }
 
       if (event === 'orchestrator') {
@@ -308,6 +360,7 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
       onEngagementUpdate(fresh);
       setOverallStatus('running');
       setFindings([]);
+      setBrowserStream(null);
       setGlobalLog(STARTUP_LOG.map((e) => ({ ...e, timestamp: now() })));
       setAgents({
         research: { status: 'queued', progress_pct: 0, current_step_name: '', activity: '', step_log: [] },
@@ -324,6 +377,10 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
   const isDone   = overallStatus === 'completed';
   const isFailed = overallStatus === 'failed';
   const isPaused = overallStatus === 'paused';
+
+  // Derived: is the research agent currently running a TinyFish-powered step?
+  const researchStep = agents.research?.current_step_name ?? '';
+  const showTinyFishBadge = agents.research?.status === 'running' && isTinyFishStep(researchStep);
 
   return (
     <div className="space-y-4">
@@ -408,6 +465,8 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           const pct   = Math.round(agent.progress_pct);
           const clr   = AGENT_COLORS[color];
           const isRunning = agent.status === 'running';
+          // Show TinyFish badge on Research card when TinyFish is driving extraction
+          const showTFBadge = type === 'research' && isRunning && isTinyFishStep(agent.current_step_name);
 
           return (
             <div
@@ -421,6 +480,14 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${isRunning ? clr.text : 'text-theme-text-muted'}`} />
                   <span className="text-xs font-semibold tracking-wide">{label.toUpperCase()}</span>
+                  {/* TinyFish powered badge */}
+                  {showTFBadge && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono
+                                     bg-cyan-500/15 border border-cyan-500/30 text-cyan-400">
+                      <Zap className="w-2.5 h-2.5" />
+                      TINYFISH
+                    </span>
+                  )}
                 </div>
                 {STATUS_ICONS[agent.status] ?? <Clock className="w-3.5 h-3.5 text-theme-text-muted" />}
               </div>
@@ -462,6 +529,66 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           );
         })}
       </div>
+
+      {/* ── TinyFish Live Browser Panel ───────────────────────────────────────── */}
+      {/* Appears when TinyFish emits a STREAMING_URL during browser-based extraction */}
+      {browserStream && (
+        <div className="border border-cyan-500/30 rounded-xl overflow-hidden bg-theme-bg/50">
+          {/* Panel header */}
+          <div className="px-4 py-2.5 border-b border-cyan-500/20 bg-cyan-500/5
+                          flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[10px] font-mono font-semibold text-cyan-400 tracking-widest">
+                LIVE BROWSER
+              </span>
+              <span className="flex items-center gap-1 text-[9px] font-mono text-cyan-400/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                {browserStream.source.replace(/_/g, ' ').toUpperCase()}
+                {browserStream.query_type && ` · ${browserStream.query_type.replace(/_/g, ' ')}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Powered by TinyFish badge */}
+              <a
+                href="https://tinyfish.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-[9px] font-mono text-cyan-400/70
+                           hover:text-cyan-400 transition-colors"
+              >
+                <Zap className="w-2.5 h-2.5" />
+                Powered by TinyFish
+              </a>
+              {/* Open in new tab */}
+              <a
+                href={browserStream.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[9px] font-mono text-cyan-400/70
+                           hover:text-cyan-400 transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Full screen
+              </a>
+            </div>
+          </div>
+
+          {/* Live browser iframe */}
+          <div className="relative bg-black">
+            <iframe
+              src={browserStream.url}
+              className="w-full"
+              style={{ height: '420px', border: 'none' }}
+              title={`TinyFish live browser — ${browserStream.source}`}
+              sandbox="allow-scripts allow-same-origin"
+            />
+            {/* Subtle cyan glow overlay at the top */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r
+                            from-transparent via-cyan-500/60 to-transparent" />
+          </div>
+        </div>
+      )}
 
       {/* Lower panel: pipeline log + findings */}
       <div className="grid grid-cols-2 gap-3">

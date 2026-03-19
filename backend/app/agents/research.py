@@ -284,7 +284,16 @@ class ResearchAgent(BaseAgent):
                     module_path, class_name = connector_spec
                     module = importlib.import_module(module_path)
                     connector_class = getattr(module, class_name)
-                    live_connector: BaseConnector = connector_class()
+
+                    # Browser-based connectors (TinyFish) accept an on_event
+                    # callback so they can forward the live streaming URL to the
+                    # frontend in real time.  REST connectors don't need it.
+                    is_browser_connector = "browser" in module_path
+                    live_connector: BaseConnector = (
+                        connector_class(on_event=self.on_progress)
+                        if is_browser_connector
+                        else connector_class()
+                    )
 
                     # Load credentials from vault for this engagement
                     credentials: dict = {}
