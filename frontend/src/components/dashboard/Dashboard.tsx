@@ -4,7 +4,7 @@ import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, Search, Trash2,
   Activity, TrendingUp, BarChart2, LogOut, FileText, Filter,
-  MessageSquare, LineChart,
+  MessageSquare, LineChart, Scale,
 } from 'lucide-react';
 import { engagementsApi, findingsApi, type Engagement, type Finding } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
@@ -20,8 +20,9 @@ import PortfolioPanel from './PortfolioPanel';
 import CommercialDDPanel from './CommercialDDPanel';
 import ExternalVerificationPanel from './ExternalVerificationPanel';
 import TechnicalDDPanel from './TechnicalDDPanel';
+import LegalDDPanel from './LegalDDPanel';
 
-type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring' | 'commercial-dd' | 'external-verification' | 'technical-dd';
+type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring' | 'commercial-dd' | 'external-verification' | 'technical-dd' | 'legal-dd';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   draft:     { label: 'Draft',     color: 'text-theme-text-muted', Icon: Clock },
@@ -330,6 +331,12 @@ export default function Dashboard() {
                         <span className="text-purple-400">Tech DD</span>
                       </>
                     )}
+                    {dashView === 'legal-dd' && (
+                      <>
+                        <span>/</span>
+                        <span className="text-purple-400">Legal DD</span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -566,7 +573,7 @@ export default function Dashboard() {
           )}
 
           {/* ── Pipeline / Results / Documents / Transcripts / Benchmarks / Monitoring view ── */}
-          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring', 'commercial-dd', 'external-verification', 'technical-dd'] as DashView[]).includes(dashView) && selected && (
+          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring', 'commercial-dd', 'external-verification', 'technical-dd', 'legal-dd'] as DashView[]).includes(dashView) && selected && (
             <div className="space-y-4">
               {/* Back + tab switcher */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -682,6 +689,17 @@ export default function Dashboard() {
                     <BarChart2 className="w-3 h-3" />
                     TECH DD
                   </button>
+                  <button
+                    onClick={() => setDashView('legal-dd')}
+                    className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                      dashView === 'legal-dd'
+                        ? 'bg-theme-text text-theme-bg font-semibold'
+                        : 'text-theme-text-muted hover:text-theme-text'
+                    }`}
+                  >
+                    <Scale className="w-3 h-3" />
+                    LEGAL DD
+                  </button>
                 </div>
               </div>
 
@@ -730,6 +748,12 @@ export default function Dashboard() {
               )}
               {dashView === 'technical-dd' && (
                 <TechnicalDDPanel
+                  engagementId={selected.id}
+                  companyName={selected.target_company ?? selected.company_name}
+                />
+              )}
+              {dashView === 'legal-dd' && (
+                <LegalDDPanel
                   engagementId={selected.id}
                   companyName={selected.target_company ?? selected.company_name}
                 />
