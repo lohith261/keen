@@ -214,7 +214,13 @@ export const engagementsApi = {
     request<Engagement>(`/engagements/${id}/resume`, { method: 'POST' }),
 
   restart: (id: string) =>
-    request<Engagement>(`/engagements/${id}/restart`, { method: 'POST' }),
+    request<Engagement>(`/engagements/${id}/restart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // Pass the current data mode so the backend updates the engagement config
+      // before re-running — ensures live mode actually uses live connectors.
+      body: JSON.stringify({ demo_mode: isDemoMode() }),
+    }),
 
   delete: (id: string) =>
     request<void>(`/engagements/${id}`, { method: 'DELETE' }),

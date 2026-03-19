@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -299,11 +300,16 @@ async def resume_engagement(
     return engagement
 
 
+class RestartBody(BaseModel):
+    demo_mode: bool | None = None  # Override the demo_mode stored in engagement config
+
+
 @router.post("/{engagement_id}/restart", response_model=EngagementWithRuns)
 async def restart_engagement(
     engagement_id: UUID,
     background_tasks: BackgroundTasks,
     request: Request,
+    body: RestartBody = RestartBody(),
     db: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Reset a completed or failed engagement back to draft and re-run the full pipeline."""
@@ -328,6 +334,14 @@ async def restart_engagement(
     engagement.status = EngagementStatus.DRAFT
     engagement.started_at = None
     engagement.completed_at = None
+
+    # Apply demo_mode override if provided (e.g. frontend toggling live vs demo)
+    if body.demo_mode is not None:
+        updated_config = dict(engagement.config or {})
+        updated_config["demo_mode"] = body.demo_mode
+        engagement.config = updated_config
+        flag_modified(engagement, "config")
+
     await db.flush()
 
     # Create fresh agent runs
