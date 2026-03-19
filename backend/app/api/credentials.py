@@ -18,9 +18,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth_deps import AuthUser, get_current_user
 from app.auth.vault import CredentialVault
 from app.dependencies import get_session
 from app.models.credential import Credential
+from app.models.engagement import Engagement
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,25 @@ class CredentialListResponse(BaseModel):
     total: int
 
 
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+
+async def _check_engagement_access(
+    engagement_id: UUID,
+    current_user: AuthUser,
+    db: AsyncSession,
+) -> None:
+    """Raise 404/403 if engagement doesn't exist or isn't owned by current_user."""
+    engagement = await db.get(Engagement, engagement_id)
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorised to manage credentials for this engagement",
+        )
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 
@@ -71,6 +92,7 @@ async def store_credentials(
     system_name: str,
     body: CredentialUpsert,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> dict:
     """
     Encrypt and store credentials for an enterprise system associated with an engagement.
@@ -78,6 +100,8 @@ async def store_credentials(
     Credentials are encrypted with AES-256-GCM before storage.
     If credentials already exist for this system, they are replaced.
     """
+    await _check_engagement_access(engagement_id, current_user, db)
+
     vault = CredentialVault(db)
 
     # Delete existing credentials first (upsert pattern)
@@ -108,11 +132,14 @@ async def store_credentials(
 async def list_credentials(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> CredentialListResponse:
     """
     Return which enterprise systems have credentials stored for this engagement.
     Never returns the decrypted credential data.
     """
+    await _check_engagement_access(engagement_id, current_user, db)
+
     result = await db.execute(
         select(Credential).where(Credential.engagement_id == engagement_id)
     )
@@ -140,10 +167,13 @@ async def delete_credentials(
     engagement_id: UUID,
     system_name: str,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> dict:
     """
     Permanently remove stored credentials for a system from this engagement.
     """
+    await _check_engagement_access(engagement_id, current_user, db)
+
     vault = CredentialVault(db)
     deleted = await vault.delete_credentials(engagement_id, system_name)
     await db.commit()

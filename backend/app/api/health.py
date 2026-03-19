@@ -125,14 +125,15 @@ async def llm_health() -> dict:
             for model_name in ("gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.0-pro"):
                 url = (
                     f"https://generativelanguage.googleapis.com/v1/models/"
-                    f"{model_name}:generateContent?key={settings.gemini_api_key}"
+                    f"{model_name}:generateContent"
                 )
                 payload = {
                     "contents": [{"parts": [{"text": "hi"}]}],
                     "generationConfig": {"maxOutputTokens": 1},
                 }
+                headers = {"x-goog-api-key": settings.gemini_api_key}
                 async with httpx.AsyncClient(timeout=10.0) as client:
-                    resp = await client.post(url, json=payload)
+                    resp = await client.post(url, json=payload, headers=headers)
                 if resp.status_code == 200:
                     return {"provider": "gemini", "ok": True, "detail": model_name}
                 if resp.status_code == 404:

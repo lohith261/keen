@@ -138,6 +138,7 @@ async def list_engagements(
 async def get_engagement(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
     """Get engagement details including agent run summaries."""
     result = await db.execute(
@@ -148,6 +149,8 @@ async def get_engagement(
     engagement = result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to access this engagement")
     return engagement
 
 
@@ -156,11 +159,14 @@ async def update_engagement(
     engagement_id: UUID,
     payload: EngagementUpdate,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
     """Update engagement details (only in DRAFT status)."""
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to update this engagement")
     if engagement.status != EngagementStatus.DRAFT:
         raise HTTPException(
             status_code=400,
@@ -182,6 +188,7 @@ async def start_engagement(
     background_tasks: BackgroundTasks,
     request: Request,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
     """Start agent orchestration for an engagement."""
     result = await db.execute(
@@ -192,6 +199,8 @@ async def start_engagement(
     engagement = result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to start this engagement")
     if engagement.status not in (EngagementStatus.DRAFT, EngagementStatus.PAUSED):
         raise HTTPException(
             status_code=400,
@@ -243,11 +252,14 @@ async def start_engagement(
 async def pause_engagement(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
     """Pause a running engagement (checkpoint all active agents)."""
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to pause this engagement")
     if engagement.status != EngagementStatus.RUNNING:
         raise HTTPException(
             status_code=400,
@@ -277,6 +289,7 @@ async def resume_engagement(
     background_tasks: BackgroundTasks,
     request: Request,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
     """Resume a paused engagement from the last checkpoint."""
     result = await db.execute(
@@ -287,6 +300,8 @@ async def resume_engagement(
     engagement = result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to resume this engagement")
     if engagement.status != EngagementStatus.PAUSED:
         raise HTTPException(
             status_code=400,
@@ -328,6 +343,7 @@ async def restart_engagement(
     request: Request,
     body: RestartBody = RestartBody(),
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> Engagement:
     """Reset a completed or failed engagement back to draft and re-run the full pipeline."""
     result = await db.execute(
@@ -338,6 +354,8 @@ async def restart_engagement(
     engagement = result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to restart this engagement")
     # Allow force-restart even from RUNNING (e.g. after a server restart left the
     # engagement stuck in RUNNING with no active background task).
     # We simply proceed — old AgentRuns are deleted below, which implicitly
@@ -412,11 +430,14 @@ async def delete_engagement(
 async def get_engagement_findings(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> list[Finding]:
     """Get all findings across all agents for an engagement."""
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to access this engagement")
 
     result = await db.execute(
         select(Finding)
@@ -436,6 +457,7 @@ async def get_engagement_findings(
 async def export_pdf(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> StreamingResponse:
     """
     Generate and download a full PDF due diligence report for a completed engagement.
@@ -459,6 +481,8 @@ async def export_pdf(
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to export this engagement")
 
     # Gather deliverables from engagement config.
     # The delivery agent stores them at:
@@ -552,6 +576,7 @@ async def export_pdf(
 async def export_excel(
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),
 ) -> StreamingResponse:
     """
     Generate and download a structured Excel workbook for a completed engagement.
@@ -572,6 +597,8 @@ async def export_excel(
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
+    if engagement.user_id and engagement.user_id != current_user.sub:
+        raise HTTPException(status_code=403, detail="Not authorised to export this engagement")
 
     pipeline_data = engagement.config.get("pipeline_data", {})
     deliverables = (

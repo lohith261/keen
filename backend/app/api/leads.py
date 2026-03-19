@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth_deps import AuthUser, get_current_user
 from app.dependencies import get_session
 from app.models.lead import Lead
 from app.schemas.lead import LeadCreate, LeadResponse
@@ -18,7 +19,7 @@ async def create_lead(
     payload: LeadCreate,
     db: AsyncSession = Depends(get_session),
 ) -> Lead:
-    """Submit a 'Request Access' form."""
+    """Submit a 'Request Access' form (public endpoint — no auth required)."""
     lead = Lead(
         name=payload.name,
         email=payload.email,
@@ -37,8 +38,9 @@ async def list_leads(
     skip: int = 0,
     limit: int = 50,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),  # requires login
 ) -> list[Lead]:
-    """List all leads (admin endpoint)."""
+    """List all leads (requires authentication)."""
     result = await db.execute(
         select(Lead).order_by(Lead.created_at.desc()).offset(skip).limit(limit)
     )
@@ -49,8 +51,9 @@ async def list_leads(
 async def get_lead(
     lead_id: UUID,
     db: AsyncSession = Depends(get_session),
+    current_user: AuthUser = Depends(get_current_user),  # requires login
 ) -> Lead:
-    """Get a single lead by ID."""
+    """Get a single lead by ID (requires authentication)."""
     lead = await db.get(Lead, lead_id)
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")

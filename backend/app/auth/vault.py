@@ -40,7 +40,16 @@ class CredentialVault:
     def _load_key(self, key_str: str) -> bytes:
         """Load or generate an AES-256 key."""
         if not key_str:
-            logger.warning("No encryption key configured — generating ephemeral key")
+            if settings.environment == "production":
+                raise RuntimeError(
+                    "CREDENTIAL_ENCRYPTION_KEY is not set. "
+                    "Credentials cannot be stored or retrieved in production without an encryption key. "
+                    "Generate one with: python -c \"import base64,os; print(base64.b64encode(os.urandom(32)).decode())\""
+                )
+            logger.error(
+                "CREDENTIAL_ENCRYPTION_KEY not configured — using ephemeral key. "
+                "All credentials will be LOST on restart. Set CREDENTIAL_ENCRYPTION_KEY in production."
+            )
             return AESGCM.generate_key(bit_length=256)
         # Key should be base64-encoded 32 bytes
         try:
@@ -49,7 +58,16 @@ class CredentialVault:
                 raise ValueError(f"Key must be 32 bytes, got {len(key)}")
             return key
         except Exception:
-            logger.warning("Invalid encryption key format — generating ephemeral key")
+            if settings.environment == "production":
+                raise RuntimeError(
+                    "CREDENTIAL_ENCRYPTION_KEY is set but has an invalid format. "
+                    "It must be a base64-encoded 32-byte key. "
+                    "Generate one with: python -c \"import base64,os; print(base64.b64encode(os.urandom(32)).decode())\""
+                )
+            logger.error(
+                "Invalid CREDENTIAL_ENCRYPTION_KEY format — using ephemeral key. "
+                "All credentials will be LOST on restart."
+            )
             return AESGCM.generate_key(bit_length=256)
 
     def _encrypt(self, data: dict) -> bytes:

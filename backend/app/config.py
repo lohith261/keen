@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,21 @@ class Settings(BaseSettings):
     debug: bool = True
     secret_key: str = "CHANGE-ME"
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
+
+    @model_validator(mode="after")
+    def _validate_production_secrets(self) -> "Settings":
+        if self.environment == "production":
+            if self.secret_key in ("CHANGE-ME", "", "changeme"):
+                raise ValueError(
+                    "SECRET_KEY must be set to a strong random value in production. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                )
+            if not self.credential_encryption_key:
+                raise ValueError(
+                    "CREDENTIAL_ENCRYPTION_KEY must be set in production. "
+                    "Generate one with: python -c \"import base64,os; print(base64.b64encode(os.urandom(32)).decode())\""
+                )
+        return self
 
     # ── Supabase ─────────────────────────────────────────
     supabase_url: str = ""
