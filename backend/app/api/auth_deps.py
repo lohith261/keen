@@ -113,7 +113,8 @@ async def _verify_token(token: str) -> AuthUser:
                 token,
                 key,
                 algorithms=[alg, "ES256", "RS256", "HS256"],
-                options={"verify_aud": False},
+                # Supabase tokens carry aud="authenticated"; verify it.
+                audience="authenticated",
             )
             return AuthUser(
                 sub=payload["sub"],

@@ -1,8 +1,10 @@
 """Lead capture endpoints — "Request Access" form from the landing page."""
 
+import time
+from collections import defaultdict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,13 +15,37 @@ from app.schemas.lead import LeadCreate, LeadResponse
 
 router = APIRouter()
 
+# ── Simple in-memory rate limiter ─────────────────────────────────────────────
+# Limits POST /leads to 5 submissions per IP per hour.
+# Uses a sliding-window counter keyed by client IP.
+_RATE_LIMIT_MAX = 5          # max submissions
+_RATE_LIMIT_WINDOW = 3600    # per 1 hour (seconds)
+_ip_submissions: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(ip: str) -> None:
+    now = time.time()
+    window_start = now - _RATE_LIMIT_WINDOW
+    # Drop timestamps outside the window
+    _ip_submissions[ip] = [t for t in _ip_submissions[ip] if t > window_start]
+    if len(_ip_submissions[ip]) >= _RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please wait before submitting again.",
+            headers={"Retry-After": str(_RATE_LIMIT_WINDOW)},
+        )
+    _ip_submissions[ip].append(now)
+
 
 @router.post("", response_model=LeadResponse, status_code=status.HTTP_201_CREATED)
 async def create_lead(
     payload: LeadCreate,
+    request: Request,
     db: AsyncSession = Depends(get_session),
 ) -> Lead:
     """Submit a 'Request Access' form (public endpoint — no auth required)."""
+    client_ip = request.client.host if request.client else "unknown"
+    _check_rate_limit(client_ip)
     lead = Lead(
         name=payload.name,
         email=payload.email,

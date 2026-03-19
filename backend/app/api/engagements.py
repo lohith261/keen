@@ -429,10 +429,12 @@ async def delete_engagement(
 @router.get("/{engagement_id}/findings", response_model=list[FindingResponse])
 async def get_engagement_findings(
     engagement_id: UUID,
+    skip: int = 0,
+    limit: int = 200,
     db: AsyncSession = Depends(get_session),
     current_user: AuthUser = Depends(get_current_user),
 ) -> list[Finding]:
-    """Get all findings across all agents for an engagement."""
+    """Get findings across all agents for an engagement (paginated)."""
     engagement = await db.get(Engagement, engagement_id)
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
@@ -444,6 +446,8 @@ async def get_engagement_findings(
         .join(AgentRun)
         .where(AgentRun.engagement_id == engagement_id)
         .order_by(Finding.created_at.desc())
+        .offset(skip)
+        .limit(min(limit, 500))  # hard cap at 500 per page
     )
     return list(result.scalars().all())
 

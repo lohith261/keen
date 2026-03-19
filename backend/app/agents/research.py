@@ -371,8 +371,16 @@ class ResearchAgent(BaseAgent):
             if connector_spec:
                 try:
                     module_path, class_name = connector_spec
-                    module = importlib.import_module(module_path)
-                    connector_class = getattr(module, class_name)
+                    try:
+                        module = importlib.import_module(module_path)
+                        connector_class = getattr(module, class_name)
+                    except (ImportError, AttributeError) as import_exc:
+                        logger.error(
+                            "Failed to import connector %s.%s for '%s': %s — "
+                            "check that all connector dependencies are installed",
+                            module_path, class_name, source, import_exc,
+                        )
+                        raise  # re-raise so the outer except logs it as well
 
                     # Browser-based connectors (TinyFish) accept an on_event
                     # callback so they can forward the live streaming URL to the
@@ -396,7 +404,8 @@ class ResearchAgent(BaseAgent):
                     logger.info("Live connector: authenticated to %s via vault credentials", source)
                 except Exception as exc:
                     logger.warning(
-                        "Live connector authentication failed for %s: %s — will return empty data",
+                        "Live connector setup failed for '%s': %s — "
+                        "this source will return empty data for this run",
                         source, exc,
                     )
             else:

@@ -13,6 +13,7 @@ DELETE /engagements/{id}/documents/{doc_id} Delete a document
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from uuid import UUID
@@ -33,6 +34,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+# ── Magic byte signatures ─────────────────────────────────────────────────────
+# Maps expected file_type strings → list of accepted magic byte prefixes.
+# Files whose bytes don't match are rejected even if the extension looks right.
+_MAGIC_BYTES: dict[str, list[bytes]] = {
+    "pdf":  [b"%PDF"],
+    "xlsx": [b"PK\x03\x04"],          # ZIP-based (Office Open XML)
+    "xls":  [b"\xd0\xcf\x11\xe0"],    # OLE2 compound file
+    "pptx": [b"PK\x03\x04"],
+    "docx": [b"PK\x03\x04"],
+    "csv":  [],                         # plain text — no magic bytes
+    "txt":  [],
+}
+
+
+def _verify_magic_bytes(data: bytes, file_type: str) -> bool:
+    """Return True if file bytes match the expected magic bytes for file_type."""
+    signatures = _MAGIC_BYTES.get(file_type, [])
+    if not signatures:
+        return True   # txt/csv: accept any bytes
+    return any(data.startswith(sig) for sig in signatures)
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -99,6 +121,16 @@ async def upload_document(
             detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)} MB",
         )
 
+    # Verify magic bytes — reject files that lie about their type
+    if not _verify_magic_bytes(data, file_type):
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"File content does not match the declared type '{file_type}'. "
+                "Please upload a valid file."
+            ),
+        )
+
     # Create DB record in "processing" state
     doc = Document(
         id=uuid.uuid4(),
@@ -112,9 +144,12 @@ async def upload_document(
     db.add(doc)
     await db.flush()
 
-    # Extract text synchronously
+    # Extract text in a thread pool so large files don't block the event loop
+    loop = asyncio.get_event_loop()
     try:
-        extracted_text, page_count = extract_text(data, file_type)
+        extracted_text, page_count = await loop.run_in_executor(
+            None, extract_text, data, file_type
+        )
         doc.extracted_text = extracted_text
         doc.page_count = page_count
         doc.status = "ready"
