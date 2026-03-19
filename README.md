@@ -25,14 +25,16 @@ You tell it the company name, click a button, and it goes off and reads financia
 ### 1. Check everything's working
 Click **STATUS** in the top bar. If you see a green **OPERATIONAL** badge, you're good to go.
 
-### 2. Make sure Demo mode is on
-The app runs in Demo mode by default. Demo mode uses fake (but realistic) data so you don't need to connect anything real — just open the dashboard and it works.
+### 2. Open the Dashboard
+Click **DASHBOARD**. No login needed — the app runs in Live mode by default, but you can connect your own data sources later if you want. For a quick look, just create a new engagement and let it run with the demo data.
 
-### 3. Open the Dashboard
-Click **DASHBOARD**. No login needed in demo mode. It'll automatically create a test company called "Zendesk Inc" and start running the analysis.
+### 3. Create an engagement
+Click **+ New Engagement**, type a company name (it'll auto-suggest from SEC filings as you type), and hit **Start Pipeline**.
 
 ### 4. Watch it work
-Three AI agents run one after another — Research, Analysis, then Delivery. You can see exactly what each one is doing in real time. The whole thing takes a couple of minutes.
+Three AI agents run one after another — Research, Analysis, then Delivery. You can see exactly what each one is doing in real time, including a live view of the browser when it's navigating tools like LinkedIn or Bloomberg. The whole thing takes a couple of minutes.
+
+You can **pause**, **resume**, or **restart** the pipeline at any point without losing progress.
 
 ### 5. Look at the findings
 Once it's done, click the **RESULTS** tab. You'll see a list of things KEEN found — like:
@@ -42,8 +44,10 @@ Once it's done, click the **RESULTS** tab. You'll see a list of things KEEN foun
 - An engineer who left the company that nobody flagged
 - Overdue customer invoices that are 4+ months old
 
+Each engagement has its own unique URL — you can bookmark it, share it, or refresh without losing your place.
+
 ### 6. Export the report
-Hit **PDF** or **XLSX** to download a proper report you could actually hand to someone.
+Hit **PDF** or **XLSX** to download a proper report you could actually hand to someone. You can also push it straight to **Google Sheets** or **Google Drive**.
 
 ---
 
@@ -54,7 +58,7 @@ Hit **PDF** or **XLSX** to download a proper report you could actually hand to s
 ### Step 1: Research
 KEEN connects to a bunch of business software systems — things like Salesforce (where sales teams track deals), NetSuite (accounting software), SEC EDGAR (US government company filings), HubSpot (marketing data), and Crunchbase (startup funding info).
 
-For systems that don't have a simple connection, it uses a tool called **TinyFish** that literally opens a web browser, logs in, and reads the data like a human would — except automatically. Think Bloomberg, LinkedIn, SAP, Oracle, and others.
+For systems that don't have a simple connection, it uses a tool called **TinyFish** that literally opens a web browser, logs in, and reads the data like a human would — except automatically. Think Bloomberg, LinkedIn, SAP, Oracle, and others. While this is happening, you can watch the live browser window directly in the dashboard.
 
 It pulls all of this data together into one place.
 
@@ -71,19 +75,26 @@ Finally, it writes up a proper report — executive summary, full findings, ever
 | Feature | Status |
 |---|---|
 | Full 3-step AI pipeline (Research → Analysis → Delivery) | ✅ Works |
-| Demo mode with realistic fake data | ✅ Works |
 | 5 live data connections (Salesforce, NetSuite, SEC, HubSpot, Crunchbase) | ✅ Works |
 | Browser automation for locked-down systems (via TinyFish) | ✅ Works |
+| Live browser view — watch the AI navigate in real time | ✅ Works |
+| Pause, resume, and restart a pipeline mid-run | ✅ Works |
 | PDF and Excel report export | ✅ Works |
-| Auto-send to Slack, email, Google Drive, SharePoint | ✅ Works |
+| Push report to Google Sheets / Google Drive | ✅ Works |
+| Auto-send to Slack, email, SharePoint | ✅ Works |
 | Upload your own documents (PDF, Excel, Word, etc.) | ✅ Works |
-| Expert call transcripts (integrates with Tegus, Third Bridge) | ✅ Works |
+| Expert call transcripts (Tegus, Third Bridge + manual upload) | ✅ Works |
 | Deal comparison against similar deals (benchmarking) | ✅ Works |
 | Ongoing monitoring of a company after acquisition | ✅ Works |
-| Legal contract scanning | ✅ Works |
+| Customer interviews, channel checks, win/loss analysis | ✅ Works |
+| External verification — court records, patents, bank statements | ✅ Works |
 | Technical review of a company's GitHub codebase | ✅ Works |
-| Unique URL for each analysis (shareable, refresh-safe) | ✅ Works |
+| Virtual Data Room ingestion (Datasite, Intralinks) | ✅ Works |
+| Unique URL for each analysis — shareable and refresh-safe | ✅ Works |
+| Dark and light theme | ✅ Works |
 | Sign in / accounts (so your work is saved) | ✅ Works |
+| Encrypted vault for storing API keys and credentials | ✅ Works |
+| Legal contract clause scanning | 🔲 Backend ready, UI coming soon |
 | Billing / pricing | 🔲 Not built yet |
 | Admin tools | 🔲 Not built yet |
 
@@ -96,7 +107,14 @@ Finally, it writes up a proper report — executive summary, full findings, ever
 | What you see | Fake "Zendesk Inc" data | Real data from your actual connected systems |
 | Credentials needed | None | You'll need to connect your accounts |
 | Good for | Showing people how it works | Actually using it for a real deal |
-| How to switch | Default when you open the app | Set `keen-data-mode: live` in browser storage, or use the in-app toggle |
+| Default | No — app defaults to Live | Yes — this is the default |
+| How to switch | Set `keen-data-mode: demo` in your browser's local storage | Set `keen-data-mode: live` (or clear it) |
+
+---
+
+## Before you run in Live mode
+
+When you first create an engagement in Live mode, you'll see a **Credentials** button. This is where you add the API keys or logins for each system you want KEEN to pull from. The credentials are encrypted and stored securely — they never leave your account.
 
 ---
 
