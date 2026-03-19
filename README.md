@@ -94,7 +94,7 @@ Finally, it writes up a proper report — executive summary, full findings, ever
 | Dark and light theme | ✅ Works |
 | Sign in / accounts (so your work is saved) | ✅ Works |
 | Encrypted vault for storing API keys and credentials | ✅ Works |
-| Legal contract clause scanning | 🔲 Backend ready, UI coming soon |
+| Legal contract clause scanning (CoC, IP, non-compete, litigation, regulatory) | ✅ Works |
 | Billing / pricing | 🔲 Not built yet |
 | Admin tools | 🔲 Not built yet |
 
