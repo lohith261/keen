@@ -30,6 +30,14 @@ createRoot(document.getElementById('root')!).render(
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/dashboard/:engagementId"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Catch-all → landing */}
               <Route path="*" element={<App />} />

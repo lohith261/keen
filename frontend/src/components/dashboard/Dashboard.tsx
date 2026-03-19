@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   PauseCircle, Search, Trash2,
@@ -123,6 +123,7 @@ function BenchmarkPanelWrapper({ engagement }: { engagement: Engagement }) {
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { engagementId } = useParams<{ engagementId: string }>();
   const { isDemoMode } = useDemoMode();
   const { user, signOut } = useAuth();
   const [engagements, setEngagements] = useState<Engagement[]>([]);
@@ -143,6 +144,18 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // On load, if URL has an engagementId, auto-open that engagement
+  useEffect(() => {
+    if (!engagementId || loading) return;
+    engagementsApi.get(engagementId).then((eng) => {
+      setSelected(eng);
+      setDashView(eng.status === 'completed' ? 'results' : 'pipeline');
+    }).catch(() => {
+      // Invalid ID — fall back to list
+      navigate('/dashboard', { replace: true });
+    });
+  }, [engagementId, loading]);
 
   // Self-running demo: auto-create + auto-start when demo-mode user has no engagements
   useEffect(() => {
@@ -190,9 +203,11 @@ export default function Dashboard() {
     setSelected(engagement);
     setDashView('pipeline');
     setShowModal(false);
+    navigate(`/dashboard/${engagement.id}`);
   };
 
   const openEngagement = async (engagement: Engagement) => {
+    navigate(`/dashboard/${engagement.id}`);
     try {
       const fresh = await engagementsApi.get(engagement.id);
       setSelected(fresh);
@@ -217,6 +232,7 @@ export default function Dashboard() {
       if (selected?.id === id) {
         setSelected(null);
         setDashView('list');
+        navigate('/dashboard');
       }
     } catch {}
     setDeletingId(null);
@@ -257,7 +273,7 @@ export default function Dashboard() {
                 {dashView !== 'list' && selected && (
                   <div className="hidden md:flex items-center gap-1.5 text-[10px] font-mono text-theme-text-muted">
                     <button
-                      onClick={() => setDashView('list')}
+                      onClick={() => { setSelected(null); setDashView('list'); navigate('/dashboard'); }}
                       className="hover:text-theme-text transition-colors"
                     >
                       Engagements
@@ -555,7 +571,7 @@ export default function Dashboard() {
               {/* Back + tab switcher */}
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => setDashView('list')}
+                  onClick={() => { setSelected(null); setDashView('list'); navigate('/dashboard'); }}
                   className="flex items-center gap-1.5 text-[11px] font-mono text-theme-text-muted
                              hover:text-theme-text transition-colors mr-2"
                 >
