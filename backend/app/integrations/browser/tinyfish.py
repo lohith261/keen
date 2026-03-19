@@ -112,6 +112,9 @@ class TinyFishClient:
             "url": url,
             "goal": goal,
             "browser_profile": browser_profile,
+            # Tag all KEEN requests for TinyFish analytics — shows real production usage
+            # to TinyFish and is important for the accelerator partnership.
+            "api_integration": "KEEN",
         }
         if proxy_config is not None:
             payload["proxy_config"] = proxy_config
