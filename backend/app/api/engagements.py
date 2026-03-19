@@ -54,19 +54,36 @@ async def _run_orchestrator(engagement_id: UUID, redis: Any | None) -> None:
             )
             result = await orch.run()
 
-            # Persist pipeline_data into engagement.config so the UI can read it
-            engagement = await session.get(Engagement, engagement_id)
-            if engagement and result.get("pipeline_data"):
-                engagement.config = {
-                    **engagement.config,
-                    "pipeline_data": result["pipeline_data"],
-                }
-                flag_modified(engagement, "config")
-
+            # ── Commit #1: findings + engagement status ───────────────────────
+            # Commit ALL findings and status updates produced by the agents
+            # *before* attempting to store the (potentially large) pipeline_data
+            # blob. This ensures findings survive even if pipeline_data storage
+            # fails (which would otherwise trigger a rollback and erase them).
             await session.commit()
+
         except Exception:
             await session.rollback()
             logger.exception("Orchestrator background task failed for %s", engagement_id)
+            return
+
+        # ── Commit #2: pipeline_data in engagement.config ─────────────────────
+        # Separate transaction so a serialisation failure here never rolls back
+        # the already-committed findings.
+        try:
+            async with async_session_factory() as config_session:
+                engagement = await config_session.get(Engagement, engagement_id)
+                if engagement and result.get("pipeline_data"):
+                    engagement.config = {
+                        **engagement.config,
+                        "pipeline_data": result["pipeline_data"],
+                    }
+                    flag_modified(engagement, "config")
+                    await config_session.commit()
+        except Exception:
+            logger.exception(
+                "Failed to persist pipeline_data for %s (findings already committed)",
+                engagement_id,
+            )
 
 
 @router.post("", response_model=EngagementResponse, status_code=status.HTTP_201_CREATED)

@@ -504,9 +504,12 @@ export default function ResultsPanel({ engagement }: Props) {
     }
   };
 
+  // Re-fetch whenever the engagement id changes OR the pipeline transitions to
+  // completed — this ensures findings that were committed at the end of the
+  // orchestrator run are picked up without the user having to manually refresh.
   useEffect(() => {
     fetchFindings();
-  }, [engagement.id]);
+  }, [engagement.id, engagement.status]);
 
   if (loading) {
     return (
