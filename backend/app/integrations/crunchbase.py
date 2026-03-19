@@ -72,7 +72,7 @@ class CrunchbaseConnector(BaseConnector):
 
     async def _resolve_permalink(self, client: httpx.AsyncClient) -> str:
         """Search for the company and return its Crunchbase permalink."""
-        resp = await client.get(
+        resp = await client.post(
             f"{_BASE_URL}/searches/organizations",
             params=self._params(),
             json={
