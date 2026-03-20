@@ -34,6 +34,7 @@ import {
   FileLock2,
 } from 'lucide-react';
 import WebGLBackground from './components/WebGLBackground';
+import { PipelineDemo } from './components/PipelineDemo';
 import ScrollReveal from './components/ScrollReveal';
 import ParallaxSection from './components/ParallaxSection';
 import ScrollIndicator from './components/ScrollIndicator';
@@ -470,6 +471,9 @@ function App() {
           </div>
         </div>
       </section>
+
+      {/* ── Pipeline Demo ────────────────────────────────────────────────── */}
+      <PipelineDemo />
 
       {/* ── How It Works ─────────────────────────────────────────────────── */}
       <section className="relative py-16 md:py-24 px-4 md:px-6">
