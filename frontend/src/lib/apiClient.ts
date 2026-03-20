@@ -17,20 +17,26 @@ function isDemoMode(): boolean {
 }
 
 /**
- * Read the Supabase access token from localStorage without React context.
- * Supabase stores the session under the key:
- *   sb-{project_ref}-auth-token
+ * Read the Supabase access token from sessionStorage.
+ * We configure the Supabase client to use sessionStorage with key 'keen-auth'
+ * so tokens are cleared when the tab closes (reduces XSS window).
  */
 function getAuthToken(): string | null {
   try {
-    // Try all supabase session keys in localStorage
+    // Primary: sessionStorage with our custom key (set in supabaseClient.ts)
+    const raw = sessionStorage.getItem('keen-auth');
+    if (raw) {
+      const parsed = JSON.parse(raw) as { access_token?: string };
+      if (parsed.access_token) return parsed.access_token;
+    }
+    // Fallback: legacy localStorage keys (sb-*-auth-token)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw) as { access_token?: string };
-          return parsed.access_token ?? null;
+        const legacyRaw = localStorage.getItem(key);
+        if (legacyRaw) {
+          const parsed = JSON.parse(legacyRaw) as { access_token?: string };
+          if (parsed.access_token) return parsed.access_token;
         }
       }
     }
