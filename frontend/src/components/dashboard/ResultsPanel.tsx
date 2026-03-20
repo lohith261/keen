@@ -160,13 +160,40 @@ function ExecutiveSummaryCard({ finding }: { finding: Finding }) {
   );
 }
 
-function FindingCard({ finding }: { finding: Finding }) {
-  const [expanded, setExpanded] = useState(false);
+// Browser-sourced systems that should show a TinyFish attribution badge
+const TINYFISH_SYSTEMS = new Set([
+  'bloomberg', 'capiq', 'pitchbook', 'sales_navigator',
+  'quickbooks', 'zoominfo', 'marketo', 'dynamics', 'sap', 'oracle',
+]);
+
+// Human-readable source names
+const SOURCE_LABELS: Record<string, string> = {
+  sales_navigator: 'LinkedIn Sales Navigator',
+  sec_edgar: 'SEC EDGAR',
+  bloomberg: 'Bloomberg Terminal',
+  capiq: 'Capital IQ',
+  pitchbook: 'PitchBook',
+  zoominfo: 'ZoomInfo',
+  salesforce_vs_dynamics: 'Salesforce ↔ Dynamics',
+  salesforce_vs_netsuite: 'Salesforce ↔ NetSuite',
+  sap_vs_oracle: 'SAP ↔ Oracle',
+  sap_vs_netsuite: 'SAP ↔ NetSuite',
+};
+
+function getSourceLabel(raw: string): string {
+  const lower = raw.toLowerCase().replace(/\s+/g, '_');
+  return SOURCE_LABELS[lower] ?? raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function FindingCard({ finding, autoExpand = false }: { finding: Finding; autoExpand?: boolean }) {
+  const [expanded, setExpanded] = useState(autoExpand);
   const sev = (finding.severity as SevKey) in SEVERITY_CONFIG
     ? (finding.severity as SevKey)
     : 'info';
   const cfg = SEVERITY_CONFIG[sev];
   const Icon = cfg.icon;
+  const src = (finding.source_system ?? '').toLowerCase();
+  const isTinyFish = TINYFISH_SYSTEMS.has(src);
 
   return (
     <div className={`border ${cfg.border} rounded-xl overflow-hidden`}>
@@ -177,11 +204,18 @@ function FindingCard({ finding }: { finding: Finding }) {
         <Icon className={`w-4 h-4 ${cfg.color} flex-shrink-0 mt-0.5`} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold leading-snug">{finding.title}</p>
-          {finding.source_system && (
-            <p className="text-[10px] font-mono text-theme-text-muted mt-0.5">
-              {finding.source_system.replace(/_/g, ' → ').toUpperCase()}
-            </p>
-          )}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {finding.source_system && (
+              <span className="text-[10px] font-mono text-theme-text-muted">
+                {getSourceLabel(finding.source_system)}
+              </span>
+            )}
+            {isTinyFish && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400 bg-cyan-500/8">
+                🐟 TinyFish
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {finding.requires_human_review && (
@@ -206,6 +240,11 @@ function FindingCard({ finding }: { finding: Finding }) {
             <span className="text-[9px] font-mono px-2 py-0.5 rounded-full border border-theme-border text-theme-text-muted">
               {finding.finding_type.replace(/_/g, ' ').toUpperCase()}
             </span>
+            {isTinyFish && (
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full border border-cyan-500/30 text-cyan-400">
+                🐟 via TinyFish browser automation
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -217,10 +256,12 @@ function SeverityGroup({
   severity,
   findings,
   defaultOpen = false,
+  autoExpandCards = false,
 }: {
   severity: SevKey;
   findings: Finding[];
   defaultOpen?: boolean;
+  autoExpandCards?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   if (findings.length === 0) return null;
@@ -248,7 +289,7 @@ function SeverityGroup({
       {open && (
         <div className="px-4 py-3 space-y-2 border-t border-theme-border bg-theme-bg/20">
           {findings.map((f) => (
-            <FindingCard key={f.id} finding={f} />
+            <FindingCard key={f.id} finding={f} autoExpand={autoExpandCards} />
           ))}
         </div>
       )}
@@ -552,12 +593,13 @@ export default function ResultsPanel({ engagement }: Props) {
       <div className="border border-theme-border rounded-xl p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-sm font-semibold">{engagement.company_name} — Due Diligence Findings</h3>
-            <p className="text-[11px] font-mono text-theme-text-muted mt-1">
+            <p className="text-[10px] font-mono text-theme-text-muted uppercase tracking-widest mb-1">Due Diligence Findings</p>
+            <h3 className="text-base font-bold">{engagement.company_name}</h3>
+            <p className="text-[11px] font-mono text-theme-text-muted mt-0.5">
               {engagement.completed_at
                 ? `Completed ${new Date(engagement.completed_at).toLocaleString()}`
-                : 'Completed'}
-              {' · '}{regularFindings.length} findings
+                : 'Pipeline complete'}
+              {' · '}<span className="font-semibold text-theme-text">{regularFindings.length} finding{regularFindings.length !== 1 ? 's' : ''}</span>
             </p>
           </div>
 
@@ -681,6 +723,24 @@ export default function ResultsPanel({ engagement }: Props) {
         </div>
       </div>
 
+      {/* TinyFish attribution footer */}
+      <div className="flex items-center justify-between px-4 py-3 border border-cyan-500/20 rounded-xl bg-cyan-500/5">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🐟</span>
+          <span className="text-[10px] font-mono text-cyan-400">
+            Browser extractions powered by <span className="font-semibold">TinyFish</span> — autonomous browser automation for closed enterprise systems
+          </span>
+        </div>
+        <a
+          href="https://tinyfish.ai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] font-mono text-cyan-400/60 hover:text-cyan-400 transition-colors flex-shrink-0"
+        >
+          tinyfish.ai →
+        </a>
+      </div>
+
       {briefView ? (
         <DealBrief engagement={engagement} findings={findings} />
       ) : (
@@ -691,17 +751,27 @@ export default function ResultsPanel({ engagement }: Props) {
           )}
 
           {regularFindings.length === 0 ? (
-            <div className="border border-dashed border-theme-border rounded-xl py-16 text-center space-y-2">
-              <Info className="w-8 h-8 text-theme-text-muted mx-auto" />
-              <p className="text-sm font-semibold">No findings recorded</p>
-              <p className="text-xs text-theme-text-muted font-mono">
-                The pipeline completed but produced no findings
-              </p>
+            <div className="border border-dashed border-theme-border rounded-xl py-16 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full border border-theme-border bg-theme-surface flex items-center justify-center mx-auto">
+                <Info className="w-5 h-5 text-theme-text-muted" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">No findings recorded</p>
+                <p className="text-xs text-theme-text-muted font-mono mt-1">
+                  The pipeline completed — all data sources cross-checked clean,<br />or results are still propagating. Try refreshing.
+                </p>
+              </div>
+              <button
+                onClick={fetchFindings}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono border border-theme-border rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-border/30 transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" /> Refresh findings
+              </button>
             </div>
           ) : (
             <div className="space-y-3">
-              <SeverityGroup severity="critical" findings={criticals} defaultOpen />
-              <SeverityGroup severity="warning"  findings={warnings}  defaultOpen />
+              <SeverityGroup severity="critical" findings={criticals} defaultOpen autoExpandCards />
+              <SeverityGroup severity="warning"  findings={warnings}  defaultOpen autoExpandCards />
               <SeverityGroup severity="info"     findings={infos} />
             </div>
           )}
