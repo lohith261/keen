@@ -872,6 +872,22 @@ export const technicalDDApi = {
     request<void>(`/engagements/${engagementId}/technical-dd/${reportId}`, { method: 'DELETE' }),
 };
 
+// ── Chat endpoints ──────────────────────────────────────
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: string[];
+}
+
+export const chatApi = {
+  ask: (engagementId: string, message: string) =>
+    request<{ answer: string; sources: string[] }>(`/engagements/${engagementId}/chat`, {
+      method: 'POST',
+      body: { message } as unknown as Record<string, unknown>,
+    }),
+};
+
 // ── WebSocket ───────────────────────────────────────────
 
 export function connectAgentStatus(

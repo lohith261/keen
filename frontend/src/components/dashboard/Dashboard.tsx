@@ -21,8 +21,9 @@ import CommercialDDPanel from './CommercialDDPanel';
 import ExternalVerificationPanel from './ExternalVerificationPanel';
 import TechnicalDDPanel from './TechnicalDDPanel';
 import LegalDDPanel from './LegalDDPanel';
+import { ChatPanel } from './ChatPanel';
 
-type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring' | 'commercial-dd' | 'external-verification' | 'technical-dd' | 'legal-dd';
+type DashView = 'list' | 'pipeline' | 'results' | 'documents' | 'transcripts' | 'benchmarks' | 'monitoring' | 'commercial-dd' | 'external-verification' | 'technical-dd' | 'legal-dd' | 'chat';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   draft:     { label: 'Draft',     color: 'text-theme-text-muted', Icon: Clock },
@@ -573,7 +574,7 @@ export default function Dashboard() {
           )}
 
           {/* ── Pipeline / Results / Documents / Transcripts / Benchmarks / Monitoring view ── */}
-          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring', 'commercial-dd', 'external-verification', 'technical-dd', 'legal-dd'] as DashView[]).includes(dashView) && selected && (
+          {(['pipeline', 'results', 'documents', 'transcripts', 'benchmarks', 'monitoring', 'commercial-dd', 'external-verification', 'technical-dd', 'legal-dd', 'chat'] as DashView[]).includes(dashView) && selected && (
             <div className="space-y-4">
               {/* Back + tab switcher */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -700,6 +701,19 @@ export default function Dashboard() {
                     <Scale className="w-3 h-3" />
                     LEGAL DD
                   </button>
+                  {canShowResults && (
+                    <button
+                      onClick={() => setDashView('chat')}
+                      className={`flex items-center gap-1 px-3 py-1 text-[10px] font-mono rounded-md transition-colors ${
+                        dashView === 'chat'
+                          ? 'bg-orange-500 text-white font-semibold'
+                          : 'text-orange-400 hover:text-orange-300 border border-orange-500/30'
+                      }`}
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      ASK KEEN
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -757,6 +771,14 @@ export default function Dashboard() {
                   engagementId={selected.id}
                   companyName={selected.target_company ?? selected.company_name}
                 />
+              )}
+              {dashView === 'chat' && (
+                <div className="border border-theme-border rounded-xl overflow-hidden bg-theme-bg" style={{ height: '70vh' }}>
+                  <ChatPanel
+                    engagementId={selected.id}
+                    companyName={selected.target_company ?? selected.company_name}
+                  />
+                </div>
               )}
             </div>
           )}
