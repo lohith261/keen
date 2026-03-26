@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy import JSON, String
 
+from app.api.auth_deps import AuthUser, get_current_user
 from app.database import Base, get_db
 from app.main import app
 
@@ -81,7 +82,11 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
                 await session.rollback()
                 raise
 
+    async def override_get_current_user() -> AuthUser:
+        return AuthUser(sub="test-user-id", email="test@keen.ai", role="authenticated", raw={})
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

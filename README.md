@@ -46,7 +46,10 @@ Once it's done, click the **RESULTS** tab. You'll see a list of things KEEN foun
 
 Each engagement has its own unique URL — you can bookmark it, share it, or refresh without losing your place.
 
-### 6. Export the report
+### 6. Ask KEEN
+Click the **Ask KEEN** chat button on any completed engagement. You can ask plain-English questions about the data — "What were the main red flags?", "How does the revenue compare across systems?", "Which findings need immediate attention?" — and get sourced, concise answers backed by the actual pipeline data.
+
+### 7. Export the report
 Hit **PDF** or **XLSX** to download a proper report you could actually hand to someone. You can also push it straight to **Google Sheets** or **Google Drive**.
 
 ---
@@ -79,6 +82,7 @@ Finally, it writes up a proper report — executive summary, full findings, ever
 | Browser automation for locked-down systems (via TinyFish) | ✅ Works |
 | Live browser view — watch the AI navigate in real time | ✅ Works |
 | Pause, resume, and restart a pipeline mid-run | ✅ Works |
+| Ask KEEN — RAG chatbot for Q&A over completed engagements | ✅ Works |
 | PDF and Excel report export | ✅ Works |
 | Push report to Google Sheets / Google Drive | ✅ Works |
 | Auto-send to Slack, email, SharePoint | ✅ Works |
@@ -170,11 +174,15 @@ python3 -c "import base64, os; print(base64.b64encode(os.urandom(32)).decode())"
 | `CORS_ORIGINS` | Which websites are allowed to talk to the backend |
 
 ### AI keys — need at least one
-| Variable | Which AI |
-|---|---|
-| `ANTHROPIC_API_KEY` | Claude (this is the main one) |
-| `GEMINI_API_KEY` | Google Gemini (backup) |
-| `GROQ_API_KEY` | Groq (backup backup) |
+The LLM fallback chain tries keys in this order: OpenAI → Claude → Gemini → Groq → OpenRouter. The first one that works is used; the rest act as automatic backups.
+
+| Variable | Which AI | Priority |
+|---|---|---|
+| `OPENAI_API_KEY` | GPT-4o | 1st |
+| `ANTHROPIC_API_KEY` | Claude (recommended) | 2nd |
+| `GEMINI_API_KEY` | Google Gemini | 3rd |
+| `GROQ_API_KEY` | Groq LPU | 4th |
+| `OPENROUTER_API_KEY` | OpenRouter (any model, last resort) | 5th |
 
 ### For live mode
 | Variable | What it unlocks |
@@ -187,6 +195,25 @@ python3 -c "import base64, os; print(base64.b64encode(os.urandom(32)).decode())"
 | `VITE_API_URL` | Where the backend is (e.g. `https://keen-backend.fly.dev`) |
 | `VITE_SUPABASE_URL` | Supabase project address |
 | `VITE_SUPABASE_ANON_KEY` | Supabase public key |
+
+---
+
+## Running the test suite
+
+The project has a full automated test suite. Run everything with one command from the repo root:
+
+```bash
+make test
+```
+
+Or run backend and frontend separately:
+
+```bash
+make test-backend   # pytest — 45 tests covering API endpoints, LLM fallback chain, credentials vault
+make test-frontend  # Vitest — 6 tests covering apiClient, auth token handling, error parsing
+```
+
+The backend tests use an in-memory SQLite database and mock the auth layer, so no external services are needed. Just activate your virtual environment first (`source backend/.venv/bin/activate`).
 
 ---
 
