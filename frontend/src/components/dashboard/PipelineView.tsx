@@ -4,7 +4,7 @@ import {
   AlertTriangle, Info, Loader2, PauseCircle, Terminal, KeyRound, RotateCcw,
   Globe, ExternalLink, Zap,
 } from 'lucide-react';
-import { connectAgentStatus, engagementsApi, type Engagement } from '../../lib/apiClient';
+import { connectAgentStatus, engagementsApi, ApiError, type Engagement } from '../../lib/apiClient';
 import CredentialsModal from './CredentialsModal';
 
 interface AgentState {
@@ -385,8 +385,10 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
     try { await engagementsApi.resume(engagement.id); setOverallStatus('running'); } catch {}
   };
   const [restarting, setRestarting] = useState(false);
+  const [restartError, setRestartError] = useState('');
   const handleRestart = async () => {
     setRestarting(true);
+    setRestartError('');
     try {
       const fresh = await engagementsApi.restart(engagement.id);
       onEngagementUpdate(fresh);
@@ -399,7 +401,13 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
         analysis: { status: 'queued', progress_pct: 0, current_step_name: '', activity: '', step_log: [] },
         delivery: { status: 'queued', progress_pct: 0, current_step_name: '', activity: '', step_log: [] },
       });
-    } catch { /* silent */ }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setRestartError('Not authenticated. Please sign in.');
+      } else if (err instanceof Error) {
+        setRestartError(err.message);
+      }
+    }
     setRestarting(false);
   };
 
@@ -421,6 +429,15 @@ export default function PipelineView({ engagement, onEngagementUpdate }: Props) 
           engagementId={engagement.id}
           onClose={() => setShowCredentials(false)}
         />
+      )}
+
+      {/* Restart error banner */}
+      {restartError && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-red-500/30
+                        bg-red-500/8 text-red-400 text-[11px] font-mono">
+          <span className="flex-shrink-0">✗</span>
+          {restartError}
+        </div>
       )}
 
       {/* WebSocket offline banner */}

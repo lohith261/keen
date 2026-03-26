@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, FlaskConical, Radio, Loader2, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
-import { engagementsApi, type Engagement } from '../../lib/apiClient';
+import { engagementsApi, ApiError, type Engagement } from '../../lib/apiClient';
 import { useDemoMode } from '../../context/DemoModeContext';
 
 interface EdgarHit {
@@ -118,7 +118,11 @@ export default function NewEngagementModal({ onClose, onCreated }: Props) {
       await engagementsApi.start(engagement.id);
       onCreated({ ...engagement, status: 'running' });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to start engagement');
+      if (err instanceof ApiError && err.status === 401) {
+        setError('Not authenticated. Please sign in before starting a pipeline.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to start engagement');
+      }
       setLoading(false);
     }
   };
