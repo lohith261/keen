@@ -234,6 +234,36 @@ async def chat_with_pipeline(
         except Exception as exc:
             logger.warning("OpenAI chat fallback failed: %s", exc)
 
+    if not answer and settings.openrouter_api_key:
+        try:
+            import openai
+            client = openai.OpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url="https://openrouter.ai/api/v1",
+            )
+            response = client.chat.completions.create(
+                model="anthropic/claude-sonnet-4-5",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are KEEN's pipeline analyst. You answer questions about a completed "
+                            "due diligence engagement using only the data provided below. "
+                            "Always cite the source system for every claim you make, using the format [Source: Name]. "
+                            "If the data doesn't contain enough information to answer, say so clearly. "
+                            "Be concise, precise, and professional.\n\n"
+                            "PIPELINE DATA:\n"
+                            f"{context}"
+                        ),
+                    },
+                    {"role": "user", "content": body.message},
+                ],
+                max_tokens=1024,
+            )
+            answer = response.choices[0].message.content or ""
+        except Exception as exc:
+            logger.warning("OpenRouter chat fallback failed: %s", exc)
+
     if not answer:
         raise HTTPException(
             status_code=503,

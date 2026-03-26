@@ -20,10 +20,11 @@ from app.llm.exceptions import LLMError, LLMParseError, LLMUnavailableError
 
 logger = logging.getLogger(__name__)
 
-OPENAI_DEFAULT_MODEL  = "gpt-4o"
-CLAUDE_DEFAULT_MODEL  = "claude-sonnet-4-20250514"
-GEMINI_DEFAULT_MODEL  = "gemini-2.0-flash"
-GROQ_DEFAULT_MODEL    = "llama-3.3-70b-versatile"
+OPENAI_DEFAULT_MODEL      = "gpt-4o"
+CLAUDE_DEFAULT_MODEL      = "claude-sonnet-4-20250514"
+GEMINI_DEFAULT_MODEL      = "gemini-2.0-flash"
+GROQ_DEFAULT_MODEL        = "llama-3.3-70b-versatile"
+OPENROUTER_DEFAULT_MODEL  = "anthropic/claude-sonnet-4-5"
 
 
 # ── Shared JSON parser ─────────────────────────────────────────────────────────
@@ -457,6 +458,100 @@ class GroqProvider(BaseLLMProvider):
             raise LLMError(f"[Groq] API error: {exc}") from exc
 
 
+# ── OpenRouter provider ────────────────────────────────────────────────────────
+
+class OpenRouterProvider(BaseLLMProvider):
+    """OpenRouter — any model via OpenAI-compatible API.
+
+    Used as the last-resort fallback when all direct-provider keys fail.
+    Default model: anthropic/claude-sonnet-4-5 (excellent for analysis tasks,
+    routed through OpenRouter's infra independently of the direct Anthropic key).
+    """
+
+    name = "openrouter"
+
+    def __init__(self, api_key: str, model: str = OPENROUTER_DEFAULT_MODEL) -> None:
+        import openai as _openai  # OpenRouter is OpenAI-API-compatible
+        self._openai = _openai
+        self._client = _openai.AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+        )
+        self.model = model
+
+    async def complete_json(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+    ) -> dict:
+        raw = await self._send(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+        try:
+            return _parse_json(raw)
+        except LLMParseError:
+            logger.warning("[OpenRouter] JSON parse failed — retrying with explicit instruction")
+            raw = await self._send(
+                system_prompt,
+                (
+                    "Your previous response was not valid JSON. "
+                    "Respond ONLY with valid JSON — no markdown, no commentary.\n\n"
+                    + user_prompt
+                ),
+                max_tokens=max_tokens,
+                temperature=0.1,
+            )
+            return _parse_json(raw)
+
+    async def complete_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> str:
+        return await self._send(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+
+    async def _send(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: int,
+        temperature: float,
+    ) -> str:
+        start = time.monotonic()
+        try:
+            response = await self._client.chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_prompt},
+                ],
+            )
+            text = response.choices[0].message.content or ""
+            logger.info(
+                "[OpenRouter] model=%s prompt_len=%d response_len=%d latency=%.1fs",
+                self.model, len(user_prompt), len(text), time.monotonic() - start,
+            )
+            return text
+
+        except self._openai.AuthenticationError as exc:
+            raise LLMUnavailableError(f"[OpenRouter] Invalid API key: {exc}") from exc
+        except self._openai.RateLimitError as exc:
+            raise LLMUnavailableError(f"[OpenRouter] Rate limit / quota exceeded: {exc}") from exc
+        except self._openai.APIStatusError as exc:
+            if exc.status_code in (429, 529):
+                raise LLMUnavailableError(f"[OpenRouter] Overloaded ({exc.status_code}): {exc}") from exc
+            raise LLMError(f"[OpenRouter] API error {exc.status_code}: {exc}") from exc
+        except self._openai.APIError as exc:
+            raise LLMError(f"[OpenRouter] API error: {exc}") from exc
+
+
 # ── Fallback client ────────────────────────────────────────────────────────────
 
 class FallbackLLMClient:
@@ -539,10 +634,11 @@ def get_llm_client() -> FallbackLLMClient:
     """Return a lazily-initialized FallbackLLMClient singleton.
 
     Registers whichever providers have API keys configured, in priority order:
-      1. OpenAI   (OPENAI_API_KEY)
-      2. Claude   (ANTHROPIC_API_KEY)
-      3. Gemini   (GEMINI_API_KEY)
-      4. Groq     (GROQ_API_KEY)
+      1. OpenAI      (OPENAI_API_KEY)
+      2. Claude      (ANTHROPIC_API_KEY)
+      3. Gemini      (GEMINI_API_KEY)
+      4. Groq        (GROQ_API_KEY)
+      5. OpenRouter  (OPENROUTER_API_KEY) — last-resort fallback
 
     At least one key must be set; multiple keys recommended for resilience.
     """
@@ -567,10 +663,15 @@ def get_llm_client() -> FallbackLLMClient:
             providers.append(GroqProvider(api_key=settings.groq_api_key))
             logger.info("[LLM] Groq provider registered (%s)", "fallback" if providers else "primary")
 
+        if settings.openrouter_api_key:
+            providers.append(OpenRouterProvider(api_key=settings.openrouter_api_key))
+            logger.info("[LLM] OpenRouter provider registered (last-resort fallback, model=%s)", OPENROUTER_DEFAULT_MODEL)
+
         if not providers:
             raise LLMUnavailableError(
                 "No LLM API keys configured. "
-                "Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY in your .env file."
+                "Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, "
+                "or OPENROUTER_API_KEY in your .env file."
             )
 
         _client = FallbackLLMClient(providers)
